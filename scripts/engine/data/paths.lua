@@ -51,6 +51,26 @@ return {
 								character_info = 'characters.lua',
 								font_info = 'fonts.lua',
 								texture_info = 'textures.lua',
+
+								skeletal_animations = {
+									path = 'skeletal_animations',
+									children = {
+										skeletal_animation = '%s.lua',
+									}
+								},
+								skeletons = {
+									path = 'skeletons',
+									children = {
+										skeleton = '%s.lua'
+									}
+								},
+								particle_rigs = {
+									path = 'particle_rigs',
+									children = {
+										particle_rig = '%s.lua'
+									}
+								}
+				
 							}
 						},
 						dialogue = 'dialogue',

@@ -259,6 +259,10 @@ function MainMenu:Window()
 			imgui.EndMenu() -- Load
 		end
 
+		if imgui.MenuItem('Reinit Editor') then
+			tdengine.editor.init()
+		end
+
 		imgui.EndMenu() -- Layout
 	end
 end

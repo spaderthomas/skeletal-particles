@@ -6,6 +6,7 @@ function DialogueEditor:init(params)
 	self.gnodes = {}
 	self.loaded = ''
 	self.queued_to_load = nil
+	self.hidden = false
 
 	local node_editor_params = {
 		name = 'Dialogue Editor',
@@ -108,6 +109,8 @@ function DialogueEditor:init(params)
 end
 
 function DialogueEditor:update(dt)
+	if self.hidden then return end
+	
 	self:update_timers()
 	self:draw_sidebar()
 	self.node_editor:update(dt)

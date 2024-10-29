@@ -98,6 +98,10 @@ function EditorUtility:draw_grid()
 
   local nx, ny = tdengine.window.get_native_resolution():unpack()
   local camera = tdengine.find_entity_editor('EditorCamera')
+  if tdengine.tick then
+    local game_camera = tdengine.entity.find('Camera')
+    camera = game_camera or camera
+  end
   local slop = 300
 
   local min = tdengine.vec2(

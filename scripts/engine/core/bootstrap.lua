@@ -704,15 +704,6 @@ function tdengine.init_phase_0()
         full_path = full_parent .. data.path
       end
   
-  
-      if data.format then
-        local format_string = string.format('%s/%s', full_path, data.format.format)
-        table.insert(collected_paths, {
-          name = data.format.name,
-          path = format_string
-        })
-      end
-  
       if data.children then
         local child_paths = collect_paths(data.children, full_path .. '/')
         for index, path in pairs(child_paths) do
@@ -773,6 +764,8 @@ function tdengine.init_phase_2()
   tdengine.shaders.init()
   tdengine.math.init()
   tdengine.save.init()
+  tdengine.editor.init()
+  tdengine.persistent.init()
 
   tdengine.app:on_start_game()
 
@@ -780,8 +773,6 @@ function tdengine.init_phase_2()
   -- if tdengine.is_packaged_build then
   -- tdengine.scene.play('splash')
   -- else
-  tdengine.editor.init()
-  tdengine.persistent.init()
 
 
   -- Use the editor layout

@@ -12,6 +12,8 @@ function StateEditor:init(params)
 end
 
 function StateEditor:update(dt)
+  if tdengine.editor.find('DialogueEditor').hidden then return end
+  
   -- This flag only applies to whether we're dirty this frame
   self.dirty = false
 

@@ -174,6 +174,19 @@ function tdengine.entity.clear_add_queue()
   tdengine.entity.created_entities = {}
 end
 
+function tdengine.entity.find(name)
+  for entity in tdengine.entity.iterate() do
+    if entity.name == name then
+      return entity
+      end
+  end
+
+  for entity in tdengine.entity.iterate_persistent() do
+    if entity.name == name then
+      return entity
+      end
+  end
+end
 
 
 --------------------

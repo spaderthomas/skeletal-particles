@@ -1,0 +1,76 @@
+local App = tdengine.define_app()
+
+function App:init()
+	self.native_resolution = tdengine.vec2(426, 240)
+
+	self.window_flags = tdengine.enum.bitwise_or(
+		tdengine.enums.WindowFlags.Windowed,
+		tdengine.enums.WindowFlags.Border
+	)
+end
+
+function App:on_init_game()
+	tdengine.ffi.create_window('Skeletal Particles', self.native_resolution.x, self.native_resolution.y, self.window_flags)
+
+	local icon_path = tdengine.ffi.resolve_format_path('image', 'logo/icon.png'):to_interned()
+	tdengine.ffi.set_window_icon(icon_path)
+
+	local render_targets = {
+		scene = tdengine.gpu.add_render_target('scene', self.native_resolution.x, self.native_resolution.y),
+		ping_pong = tdengine.gpu.add_render_target('ping_pong', self.native_resolution.x, self.native_resolution.y),
+		post_process = tdengine.gpu.add_render_target('post_process', self.native_resolution.x, self.native_resolution.y),
+}
+
+	-- Command buffers
+	local command_buffers = {}
+
+	local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
+	buffer_descriptor.num_vertex_attributes = 3
+	buffer_descriptor.max_vertices = 64 * 1024
+	buffer_descriptor.max_draw_calls = 256
+	buffer_descriptor.vertex_attributes = ffi.new('VertexAttribute[3]')
+	buffer_descriptor.vertex_attributes[0].count = 3
+	buffer_descriptor.vertex_attributes[0].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+	buffer_descriptor.vertex_attributes[1].count = 4
+	buffer_descriptor.vertex_attributes[1].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+	buffer_descriptor.vertex_attributes[2].count = 2
+	buffer_descriptor.vertex_attributes[2].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+	command_buffers.scene = tdengine.gpu.add_command_buffer('scene', buffer_descriptor)
+
+	buffer_descriptor.max_vertices = 600
+	buffer_descriptor.max_draw_calls = 10
+	command_buffers.post_process = tdengine.gpu.add_command_buffer('post_process', buffer_descriptor)
+	command_buffers.fluid = tdengine.gpu.add_command_buffer('fluid', buffer_descriptor)
+
+	-- Render passes
+	tdengine.gpu.add_render_pass('scene', command_buffers.scene, render_targets.scene, render_targets.ping_pong,
+		tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('fluid', command_buffers.scene, render_targets.scene, render_targets.ping_pong,
+		tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('post_process', command_buffers.post_process, render_targets.post_process, nil,
+		tdengine.enums.GpuLoadOp.None)
+
+end
+
+function App:on_start_game()
+	tdengine.find_entity_editor('EditorUtility').style.grid.size = 12
+	
+	tdengine.editor.find('DialogueEditor').hidden = true
+
+	tdengine.ffi.use_editor_layout('skeletal-240')
+end
+
+function App:on_end_frame()
+	local game_view = tdengine.editor.find('GameView')
+	game_view:render_view(self.native_resolution:scale(3), 'Game (2x)')
+end
+
+
+function App:on_swapchain_ready()
+	if tdengine.is_packaged_build then
+		--local swapchain = tdengine.ffi.gpu_acquire_swapchain()
+		--tdengine.ffi.blit_render_target(self.renderer.command_buffers.post_processing, self.renderer.targets.scene, swapchain)
+	end
+
+	tdengine.ffi.render_imgui()
+end

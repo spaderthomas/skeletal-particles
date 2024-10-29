@@ -70,6 +70,8 @@ end
 -- UPDATE --
 ------------
 function TextEditor:update()
+  if tdengine.editor.find('DialogueEditor').hidden then return end
+
   tdengine.editor.begin_window('Dialogue Node Text')
 
   self.frame = self.frame + 1

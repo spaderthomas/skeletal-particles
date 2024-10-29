@@ -21,11 +21,6 @@ local function collect_paths(paths, full_parent)
 
 		collected_paths:add(NamedPath:new(name, full_path))
 
-		if data.format then
-			local format_string = string.format('%s/%s', full_path, data.format.format)
-			collected_paths:add(NamedPath:new(data.format.name, format_string))
-		end
-
 		if data.children then
 			collected_paths:concatenate(collect_paths(data.children, full_path))
 		end

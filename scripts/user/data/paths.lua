@@ -5,42 +5,19 @@ return {
 			children = {
 				screenshots = {
 					path = 'screenshots',
-					format = {
-						name = 'screenshot',
-						format = '%s',
-					},
+					children = {
+						screenshot = '%s'
+					}
 				},
 				saves = {
 					path = 'saves',
-					format = {
-						name = 'save',
-						format = '%s.lua',
-					},
+					children = {
+						save = '%s.lua'
+					}
 				},
 			}
 		}
 	},
 	install_paths = {
-		skeletal_animations = {
-			path = 'skeletal_animations',
-			format = {
-				name = 'skeletal_animation',
-				format = '%s.lua',
-			}
-		},
-		skeletons = {
-			path = 'skeleton',
-			format = {
-				name = 'skeleton',
-				format = '%s.lua',
-			}
-		},
-		particle_rigs = {
-			path = 'particle_rigs',
-			format = {
-				name = 'particle_rig',
-				format = '%s.lua',
-			}
-		}
 	}
 }

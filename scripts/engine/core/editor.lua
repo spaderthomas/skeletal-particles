@@ -8,6 +8,10 @@ function tdengine.editor.define(name)
   return class
 end
 
+function tdengine.editor.find(name)
+  return tdengine.editor.entities[name]
+end
+
 function tdengine.editor.begin_window(name, flags)
   tdengine.editor.impl:begin_window(name, flags)
 end
