@@ -1,0 +1,13 @@
+#include "common.glsl"
+
+out vec4 color;
+in vec4 f_color;
+in vec2 f_uv;
+
+uniform sampler2D source;
+
+void main() {
+	vec4 source_color = texture(source, f_uv);
+	source_color.a = 1.0;
+	color = source_color;
+}

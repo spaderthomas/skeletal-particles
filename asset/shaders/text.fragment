@@ -1,0 +1,14 @@
+#include "common.glsl"
+
+in vec2 f_uv;
+in vec4 f_color;
+
+out vec4 color;
+
+uniform sampler2D sampler;
+
+void main() {
+    // Textures are stored in just the red component -- really just a grayscale value
+	vec4 sampled = vec4(1.f, 1.f, 1.f, texture(sampler, f_uv).r);
+    color = f_color * sampled;
+} 

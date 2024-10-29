@@ -1,0 +1,102 @@
+#include "common.glsl"
+
+layout (local_size_x = THREADS_PER_WORKGROUP) in;
+
+#include "fluid.glsl"
+
+
+void update_predicted_position(uint i) {
+	//particles[i].predicted_position = particles[i].position + particles[i].local_velocity * dt;
+	particles[i].predicted_position = particles[i].position;
+	//system.velocity 
+}
+
+void update_density(uint i) {
+	fluid[i].density = 0;
+	
+	for (uint j = 0; j < system.num_particles; j++) {
+		float dist = distance(particles[i].predicted_position, particles[j].predicted_position);
+		float influence = SMOOTHING_KERNEL_LAGUE_SMOOTH(dist);
+		fluid[i].density += system.particle_mass * influence;
+	}
+
+	float density_error = fluid[i].density - calc_target_density();
+	fluid[i].pressure = system.pressure * density_error;
+
+}
+
+void update_viscosity(uint i) {
+	
+}
+
+void update_acceleration(uint i) {
+	vec2 rng_seed = gl_GlobalInvocationID.xy;
+
+	// Calculate the acceleration
+	vec2 external_force = system.gravity * vec2(0.0, -1.0);
+	
+	vec2 pressure = vec2(0.0, 0.0);
+	vec2 viscosity = vec2(0.0, 0.0);
+	for (uint j = 0; j < system.num_particles; j++) {
+		if (i == j) continue;
+		
+		// Pressure
+		float shared_pressure = (fluid[i].pressure + fluid[j].pressure) / 2.0;
+
+		vec2 offset = particles[j].predicted_position - particles[i].predicted_position;
+		float dist = length(offset);
+		vec2 dir = normalize(offset);
+		if (dist < 0.00001) {
+			dir.x = RANDOM_FLOAT(rng_seed, 0.0, 0.5);
+			dir.y = RANDOM_FLOAT(rng_seed, 0.0, 0.5);
+		}
+		
+		float slope = SMOOTHING_KERNEL_LAGUE_SPIKY_DERIVATIVE(dist);
+
+		float pressure_amount = shared_pressure * slope * system.particle_mass / fluid[j].density;
+		pressure += pressure_amount * dir;
+
+		// Viscosity
+		viscosity += SMOOTHING_KERNEL_LAGUE_SMOOTH(dist) * (particles[j].local_velocity - particles[i].local_velocity) / fluid[j].density;
+	}
+
+	viscosity *= system.viscosity;
+	
+	vec2 acceleration = external_force - pressure + viscosity;
+	particles[i].local_velocity += acceleration * system.dt;
+	
+	particles[i].position += particles[i].local_velocity * system.dt;
+	particles[i].position += system.velocity * .5;
+
+	CapsuleHitResult result = is_within_system(particles[i].position);
+	if (!result.hit) {
+		vec2 dir = normalize(result.closest_point - particles[i].position);
+		//particles[i].local_velocity += dir;
+		//particles[i].position += particles[i].local_velocity * dt;
+	}
+
+	resolve_system_collision(i);
+}
+
+void select_kernel(uint i) {
+	if (fluid_kernel == FLUID_KERNEL_UPDATE_DENSITY) {
+		update_density(i);
+	}
+	else if (fluid_kernel == FLUID_KERNEL_UPDATE_PREDICTED_POSITION) {
+		update_predicted_position(i);
+	}
+	else if (fluid_kernel == FLUID_KERNEL_UPDATE_VISCOSITY) {
+		update_viscosity(i);
+	} 
+	else if (fluid_kernel == FLUID_KERNEL_UPDATE_ACCELERATION) {
+		update_acceleration(i); 
+	}
+}
+
+void main() {
+	uint i = claim_index();
+
+	if (i < system.num_particles) {
+		select_kernel(i);
+	}
+}

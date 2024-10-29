@@ -1,0 +1,58 @@
+#include "common.glsl"
+#include "fluid_eulerian.glsl"
+
+out vec4 color;
+
+in vec4 f_color;
+in vec2 f_uv;
+
+const bool visualize_bilinear_interp = false;
+const bool visualize_velocity_field_x = false;
+const bool visualize_velocity_field_y = false;
+const float magnify = 3.0;
+
+void main() {
+	uint grid_size = system.grid_size;
+	uint num_cells = grid_size * grid_size;
+
+	color = black;
+
+	uint index = uv_to_buffer(f_uv.x, f_uv.y);
+	if (visualize_bilinear_interp) {
+		//color = vec4(0.0, fluid[index].padding[0], fluid[index].padding[1], 1.0);
+		if (fluid[index].padding[0] > 0.0) {
+			color = paynes_gray;
+		}
+		else if (fluid[index].padding[1] > 0.0) {
+			color = mindaro;
+		}
+		else {
+			color = black;
+		}
+		
+		vec2 grid = f_uv * buffer_width;
+		uint special_index = sim_to_buffer(2);
+		
+		vec2 source;
+		source.x = fluid[special_index].padding[2];
+		source.y = fluid[special_index].padding[3];
+		if (distance(grid, source) < 0.1) {
+			color = indian_red;
+		}
+	}
+	
+	if (visualize_velocity_field_x) {
+		color.g = clamp(fluid[index].velocity.x, 0.0, 1.0);
+	}
+	if (visualize_velocity_field_y) {
+		color.b = clamp(fluid[index].velocity.y, 0.0, 1.0);
+	}
+	
+	color.r = clamp(fluid[index].density * magnify, 0.0, 1.0);
+	if (is_boundary(index)) {
+		color = mix(color, white, 0.5);
+	}
+
+	color.a = 0.5;
+}
+

@@ -1,0 +1,41 @@
+#include "common.glsl"
+
+layout (local_size_x = THREADS_PER_WORKGROUP) in;
+
+#include "fluid_eulerian.glsl"
+
+void init(uint sim_index) {
+	uint i = sim_to_buffer(sim_index);
+	vec2 seed = gl_GlobalInvocationID.xy;
+
+	float dmax = float(i) / num_sim_cells;
+
+	//fluid[i].velocity.x = RANDOM_FLOAT(seed, 0.0, 1.0);
+	//fluid[i].velocity.y = RANDOM_FLOAT(seed, 0.0, 1.0);
+	fluid[i].velocity.x = 0.0;
+	fluid[i].velocity.y = 0.0;
+	if (mod(sim_index, 10) == 0.0) {
+		fluid[i].velocity.x = 10.0;
+		fluid[i].velocity.y = 10.0;
+	}
+
+	//fluid[i].density = smoothstep(0.0, 1.0, buffer_to_01(i));
+	//fluid[i].density = RANDOM_FLOAT(seed, 0.0, 1.0);
+	//fluid[i].density = RANDOM_FLOAT(seed, 0.0, dmax);
+	fluid[i].density = 0.0;
+}
+
+
+void select_kernel(uint i) {
+	if (fluid_kernel == EULERIAN_FLUID_KERNEL_INIT) {
+		init(i);
+	}
+}
+
+void main() {
+	uint sim_index = claim_index();
+	
+	if (sim_index < system.grid_size * system.grid_size) {
+		select_kernel(sim_index);
+	}
+}

@@ -1,0 +1,142 @@
+#include "common.glsl"
+
+layout (local_size_x = THREADS_PER_WORKGROUP) in;
+
+#include "fluid_eulerian.glsl"
+
+
+void update_sources(uint sim_index) {
+	uint i = sim_to_buffer(sim_index);
+	fluid[i].density += source[i].density * dt;
+	fluid[i].velocity = source[i].velocity;
+	clear_debug_fields(i);
+}
+
+void update_buffered_density(uint sim_index) {
+	uint i = sim_to_buffer(sim_index);
+	fluid[i].buffered_density = fluid[i].density;
+}
+
+void update_diffuse(uint sim_index) {
+	uint i = sim_to_buffer(sim_index);
+	float a = dt * num_sim_cells * diffusion;
+	
+	BufferNeighbors n = buffer_neighbors(i);
+	float neighbor_average = (fluid[n.left].buffered_density + fluid[n.right].buffered_density + fluid[n.up].buffered_density + fluid[n.down].buffered_density) / 4.0;
+	fluid[i].density = (fluid[i].buffered_density + a * neighbor_average) / (1 + a);
+	
+	//float neighbor_sum = (fluid[n.left].buffered_density + fluid[n.right].buffered_density + fluid[n.up].buffered_density + fluid[n.down].buffered_density);
+	//fluid[i].density = (fluid[i].buffered_density + a * neighbor_sum) / (1 + a * 4);
+}
+
+void update_diffuse_bounds(uint i) {
+	if (i >= system.grid_size) {
+		return;
+	}
+
+	BufferBoundary b = buffer_boundary(i + 1);
+	fluid[b.buffer_left].density = fluid[b.sim_left].density;
+	fluid[b.buffer_left].buffered_density = fluid[b.sim_left].density;
+
+	fluid[b.buffer_right].density = fluid[b.sim_right].density;
+	fluid[b.buffer_right].buffered_density = fluid[b.sim_right].density;
+
+	fluid[b.buffer_bottom].density = fluid[b.sim_bottom].density;
+	fluid[b.buffer_bottom].buffered_density = fluid[b.sim_bottom].density;
+
+	fluid[b.buffer_top].density = fluid[b.sim_top].density;	
+	fluid[b.buffer_top].buffered_density = fluid[b.sim_top].density;	
+}
+
+void update_diffuse_corners(uint i) {
+	if (i > 0) { return; }
+
+	BufferCorners c = buffer_corners();
+	fluid[c.bl].density = (fluid[IX(BUFFER_MIN + 1, BUFFER_MIN)].density + fluid[IX(BUFFER_MIN, BUFFER_MIN + 1)].density) / 2;
+	fluid[c.bl].buffered_density = fluid[c.bl].density;
+	
+	fluid[c.tl].density = (fluid[IX(BUFFER_MIN + 1, BUFFER_MAX)].density + fluid[IX(BUFFER_MIN, BUFFER_MAX - 1)].density) / 2;
+	fluid[c.tl].buffered_density = fluid[c.tl].density;
+	
+	fluid[c.br].density = (fluid[IX(BUFFER_MAX - 1, BUFFER_MIN)].density + fluid[IX(BUFFER_MAX, BUFFER_MIN + 1)].density) / 2;
+	fluid[c.br].buffered_density = fluid[c.br].density;
+	
+	fluid[c.tr].density = (fluid[IX(BUFFER_MAX - 1, BUFFER_MAX)].density + fluid[IX(BUFFER_MAX, BUFFER_MAX - 1)].density) / 2;
+	fluid[c.tr].buffered_density = fluid[c.tr].density;
+}
+
+void update_advect(uint sim_index) {
+	uint i = sim_to_buffer(sim_index);
+
+	fluid[i].velocity.x = ranged_sin(master_time * 1, -20.0, 20.0);
+	
+	vec2 dv = fluid[i].velocity * dt * system.grid_size;
+
+	vec2 b = buffer_to_buffer2(i);
+	vec2 source = b - dv;
+	source = clamp(source, vec2(0.0, 0.0), vec2(sim_width, sim_width));
+
+	fluid[i].padding[2] = source.x; 
+	fluid[i].padding[3] = source.y; 
+
+	int bx0 = int(floor(source.x));
+	int by0 = int(floor(source.y));
+	int bx1 = bx0 + 1;
+	int by1 = by0 + 1;
+
+	float s1 = source.x - bx0;
+	float s0 = 1.0 - s1;
+	float t1 = source.y - by0;
+	float t0 = 1.0 - t1;
+	float ix = t0 * fluid[IX(bx0, by0)].density + t1 * fluid[IX(bx0, by1)].density;
+	float iy = t0 * fluid[IX(bx1, by0)].density + t1 * fluid[IX(bx1, by1)].density;
+	fluid[i].density = s0 * ix + s1 * iy;
+
+	if (sim_index == 2) {
+		fluid[IX(bx0, by0)].padding[0] = 1.0;
+		fluid[IX(bx0, by1)].padding[0] = 1.0;
+		fluid[IX(bx1, by0)].padding[0] = 1.0;
+		fluid[IX(bx1, by1)].padding[0] = 1.0;
+		fluid[i].padding[1] = 1.0;
+	}
+	
+
+		#if 0
+	float x = i - dt0 * u[i];
+	y = j-dt0*v[i];
+	if (x<0.5) x=0.5; if (x>N+0.5) x=N+ 0.5; i0=(int)x; i1=i0+ 1;
+	if (y<0.5) y=0.5; if (y>N+0.5) y=N+ 0.5; j0=(int)y; j1=j0+1;
+	s1 = x-i0; s0 = 1-s1; t1 = y-j0; t0 = 1-t1;
+	d[i] = s0*(t0*d0[IX(i0,j0)]+t1*d 0[IX(i0,j1)])+
+		s1*(t0*d0[IX(i1,j0)]+t1*d 0[IX(i1,j1)]);
+#endif	
+}
+
+void select_kernel(uint i) {
+	if (fluid_kernel == EULERIAN_FLUID_KERNEL_UPDATE_SOURCES) {
+		update_sources(i);
+	}
+	else if (fluid_kernel == EULERIAN_FLUID_KERNEL_UPDATE_BUFFERED_DENSITY) {
+		update_buffered_density(i);
+	}
+	else if (fluid_kernel == EULERIAN_FLUID_KERNEL_UPDATE_DIFFUSE) {
+		update_diffuse(i);
+	}
+	else if (fluid_kernel == EULERIAN_FLUID_KERNEL_UPDATE_DIFFUSE_BOUNDS) {
+		update_diffuse_bounds(i);
+	}
+	else if (fluid_kernel == EULERIAN_FLUID_KERNEL_UPDATE_DIFFUSE_CORNERS) {
+		update_diffuse_corners(i);
+	}
+	else if (fluid_kernel == EULERIAN_FLUID_KERNEL_UPDATE_ADVECT) {
+		//update_advect(i);
+	}
+}
+
+void main() {
+	uint sim_index = claim_index();
+
+	if (sim_index < system.grid_size * system.grid_size) {
+		select_kernel(sim_index);
+	}
+}

@@ -1,0 +1,10 @@
+#include "common.glsl"
+
+out vec4 frag_color;
+
+in vec4 color;
+
+void main () {
+	//discard;
+    frag_color = color; 
+}
