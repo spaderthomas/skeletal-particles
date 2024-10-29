@@ -52,6 +52,7 @@ function EngineStats:init(params)
 	self.gui_drag = imgui.extensions.TableEditor(tdengine.gui.drag)
 	self.gui_menu = imgui.extensions.TableEditor(tdengine.gui.menu)
 	self.save_data = imgui.extensions.TableEditor(tdengine.scene.save_data)
+	self.app = imgui.extensions.TableEditor(tdengine.app)
 
 	self.metrics = { 
 		target_fps = 0,
@@ -107,11 +108,20 @@ end
 function EngineStats:engine_viewer()
 	tdengine.editor.begin_window('Engine')
 
+	imgui.PushFont('editor-bold-16')
+	imgui.Text('User')
+	imgui.PopFont()
 	if imgui.TreeNode('App') then
-		tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_engine_viewer)
+		self.app:draw()
 		imgui.TreePop()
 	end
-	tdengine.ffi.set_target_fps(144)
+
+	tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_engine_viewer)
+
+	imgui.PushFont('editor-bold-16')
+	imgui.Text('Engine')
+	imgui.PopFont()
+
 	if imgui.TreeNode('Time') then
 		self.metrics.target_fps = tdengine.ffi.get_target_fps()
 		self.metrics.actual_fps = math.floor(1000.0 / self.metrics.frame.average)
@@ -121,9 +131,11 @@ function EngineStats:engine_viewer()
 	end
 
 	if imgui.TreeNode('Window') then
-		imgui.extensions.Vec2('native', tdengine.window.get_native_resolution())
-		imgui.extensions.Vec2('content area', tdengine.window.get_content_area())
-		imgui.extensions.Vec2('game area', tdengine.window.get_game_area_size())
+		local main_view = tdengine.editor.find('GameViewManager'):find_main_view()
+		imgui.extensions.TableField('Main View', main_view.name)
+		imgui.extensions.Vec2('Content Area', tdengine.window.get_content_area())
+		imgui.extensions.Vec2('Native Resolution', tdengine.window.get_native_resolution())
+		imgui.extensions.Vec2('Game View', tdengine.window.get_game_area_size())
 		imgui.TreePop()
 	end
 

@@ -1,60 +1,97 @@
-local GameView = tdengine.editor.define('GameView')
+GameView = tdengine.class.define('GameView')
 
-function GameView:init()
-  self.game_area = {
-    position = tdengine.vec2(),
-    dimension = tdengine.vec2(),
+tdengine.enum.define(
+  'GameViewSize',
+  {
+    Force_16_9 = 0,
+    ExactSize = 1
   }
+)
 
-  self.fill_window = false
+tdengine.enum.define(
+  'GameViewPriority',
+  {
+    Standard = 0,
+    Main = 1
+  }
+)
+
+
+function GameView:init(name, size_calculation, size, priority)
+  self.size_calculation = size_calculation
+  self.name = name
+  self.size = size:copy()
+  self.priority = priority
+
+  self.position = tdengine.vec2()
 end
 
 function GameView:update()
-  if self.fill_window then
-    self:calc_resolution()
-    self:render_main_view(self.game_area.dimension)
-  else
-    self:set_resolution(tdengine.app.native_resolution)
-    self:render_view(tdengine.app.native_resolution, 'Game')
+  imgui.PushStyleVar_2(ffi.C.ImGuiStyleVar_WindowPadding, 0, 0)
+  tdengine.editor.begin_window(self.name)
+
+  if self.priority == tdengine.enums.GameViewPriority.Main then
+    if self.size_calculation == tdengine.enums.GameViewSize.ExactSize then
+      tdengine.window.set_game_area_size(self.size)
+
+      self.position.x, self.position.y = imgui.GetCursorScreenPos()
+      tdengine.window.set_game_area_position(self.position)
+    elseif self.size_calculation == tdengine.enums.GameViewSize.Force_16_9 then
+
+    end
+
+    self.focus = imgui.IsWindowFocused()
+    self.hover = imgui.IsWindowHovered()
+    ffi.C.set_game_focus(self.focus and self.hover)
   end
-end
-
-function GameView:calc_resolution()
-  local cx, _ = imgui.GetContentRegionAvail()
-  local resolution = tdengine.vec2(cx, math.floor(cx * 9 / 16))
-  self:set_resolution(resolution)
-end
-
-function GameView:set_resolution(resolution)
-  imgui.PushStyleVar_2(ffi.C.ImGuiStyleVar_WindowPadding, 0, 0)
-  tdengine.editor.begin_window('Game')
-
-  self.game_area.dimension = resolution:copy()
-  tdengine.window.set_game_area_size(self.game_area.dimension)
-
-  local wx, wy = imgui.GetCursorScreenPos()
-  self.game_area.position.x = wx
-  self.game_area.position.y = wy
-  tdengine.window.set_game_area_position(self.game_area.position)
-
-  self.focus = imgui.IsWindowFocused()
-  self.hover = imgui.IsWindowHovered()
-  ffi.C.set_game_focus(self.focus and self.hover)
-
-  tdengine.editor.end_window()
-  imgui.PopStyleVar()
-end
-
-function GameView:render_view(resolution, window_name)
-  imgui.PushStyleVar_2(ffi.C.ImGuiStyleVar_WindowPadding, 0, 0)
-  tdengine.editor.begin_window(window_name)
 
   local texture = tdengine.gpu.find_render_pass('scene').render_target.color_buffer
   imgui.Image(
     texture,
-    imgui.ImVec2(resolution.x, resolution.y),
+    imgui.ImVec2(self.size.x, self.size.y),
     imgui.ImVec2(0, 1), imgui.ImVec2(1, 0))
 
   tdengine.editor.end_window()
   imgui.PopStyleVar()
+end
+
+
+local GameViewManager = tdengine.editor.define('GameViewManager')
+
+function GameViewManager:init()
+  self.game_views = tdengine.data_types.Array:new()
+
+  local default_view = GameView:new('Game', tdengine.enums.GameViewSize.ExactSize, tdengine.app.native_resolution, tdengine.enums.GameViewPriority.Main)
+  self:add_view(default_view)
+end
+
+function GameViewManager:find_main_view()
+  for game_view in self.game_views:iterate_values() do
+    if game_view.priority == tdengine.enums.GameViewPriority.Main then
+      return game_view
+    end
+  end
+end
+
+function GameViewManager:add_view(view)
+  if view.priority == tdengine.enums.GameViewPriority.Main then
+    log.info('Setting main game view to %s', view.name)
+
+    local main_view = self:find_main_view()
+    if main_view then
+      main_view.priority = tdengine.enums.GameViewPriority.Standard
+    end
+  end
+
+  self.game_views:add(view)
+end
+
+function GameViewManager:update()
+  for game_view in self.game_views:iterate_values() do
+    game_view:update()
+  end
+
+  local main_view = self:find_main_view()
+  self.focus = main_view.focus
+  self.hover = main_view.hover
 end

@@ -6,7 +6,7 @@ function EditorCamera:init()
 end
 
 function EditorCamera:update()
-  if not tdengine.tick then return end
+  if tdengine.tick then return end
   tdengine.ffi.set_camera(self.offset:floor():unpack())
 end
 

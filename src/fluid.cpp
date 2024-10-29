@@ -6,11 +6,6 @@ void init_fluid() {
 	EulerianFluidSim::init();
 }
 
-void update_fluid() {
-	LagrangianFluidSim::update();
-	EulerianFluidSim::update();		
-}
-
 void sync_gpu_buffer(u32 handle, void* data, u32 size) {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, handle);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, size, data, GL_STATIC_DRAW);
@@ -67,26 +62,9 @@ namespace LagrangianFluidSim {
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 	}
 
-
-	void update_system(LagrangianFluidSim::System& system) {
-		set_shader_immediate("fluid_update");
-		run_kernel(system, LagrangianFluidSim::Kernel::update_predicted_position);
-		run_kernel(system, LagrangianFluidSim::Kernel::update_density);
-		run_kernel(system, LagrangianFluidSim::Kernel::update_viscosity);
-		run_kernel(system, LagrangianFluidSim::Kernel::update_acceleration);
-	}
-
-	void update() {
-		for (auto& system : systems) {		
-			update_system(system);
-		}
-	}
-
-
 	void init() {
 		systems.init(32);
 	}
-
 }
 
 ArenaHandle lf_create(u32 num_particles) {
@@ -220,7 +198,7 @@ void lf_set_timestep(ArenaHandle handle, float dt) {
 	gpu_system.dt = dt;
 }
 
-void lf_draw_particles(ArenaHandle handle) {
+void lf_draw(ArenaHandle handle) {
 	auto system = LagrangianFluidSim::systems[handle];
 	if (!system) return;
 
@@ -233,6 +211,18 @@ void lf_draw_particles(ArenaHandle handle) {
 		
 	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, system->indirect_draw_command);
 	glDrawArraysIndirect(GL_TRIANGLES, 0);
+}
+
+void lf_update(ArenaHandle handle) {
+	auto system = LagrangianFluidSim::systems[handle];
+	if (!system) return;
+
+	set_shader_immediate("fluid_update");
+	LagrangianFluidSim::run_kernel(*system, LagrangianFluidSim::Kernel::update_predicted_position);
+	LagrangianFluidSim::run_kernel(*system, LagrangianFluidSim::Kernel::update_density);
+	LagrangianFluidSim::run_kernel(*system, LagrangianFluidSim::Kernel::update_viscosity);
+	LagrangianFluidSim::run_kernel(*system, LagrangianFluidSim::Kernel::update_acceleration);
+
 }
 
 
@@ -270,49 +260,6 @@ namespace EulerianFluidSim {
 		bind_ssbos(system);
 		glDispatchCompute(num_workgroups, 1, 1);
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	}
-
-
-	void update_system(EulerianFluidSim::System& system) {
-		sync_gpu_buffer(system.source, system.sources.data, sizeof(Source) * system.num_cells);
-		set_shader_immediate("fluid_eulerian_update");
-
-		run_kernel(system, EulerianFluidSim::Kernel::update_sources);
-		
-		for (u32 i = 0; i < system.gauss_seidel_iterations; i++) {
-			run_kernel(system, EulerianFluidSim::Kernel::update_buffered_density);
-			run_kernel(system, EulerianFluidSim::Kernel::update_diffuse);
-			run_kernel(system, EulerianFluidSim::Kernel::update_diffuse_bounds, system.num_boundary_workgroups);
-			run_kernel(system, EulerianFluidSim::Kernel::update_diffuse_corners, 1);
-		}
-		
-		run_kernel(system, EulerianFluidSim::Kernel::update_buffered_density);
-		run_kernel(system, EulerianFluidSim::Kernel::update_advect);
-	}
-
-	void update() {
-		for (auto& system : systems) {		
-			update_system(system);
-		}
-	}
-
-	void draw() {
-		for (auto& system : systems) {
-			// Render the fluid simulation
-			set_active_shader("fluid_eulerian");
-			set_draw_mode(DrawMode::Triangles);
-			set_world_space(true);
-
-			bind_ssbos(system);
-
-			Vector2 uv [6] = fm_quad(1.0, 0.0, 0.0, 1.0);
-			float px = 0;
-			float py = system.render_size;
-			float dx = system.render_size;
-			float dy = system.render_size;
-			push_quad(px, py, dx, dy, uv, 1.f);
-			//render_draw_calls();
-		}
 	}
 
 	void init() {
@@ -431,3 +378,41 @@ void ef_bind(ArenaHandle handle) {
 	EulerianFluidSim::bind_ssbos(*system);
 }
 
+void ef_update(ArenaHandle handle) {
+	auto system = EulerianFluidSim::systems[handle];
+	if (!system) return;
+
+	sync_gpu_buffer(system->source, system->sources.data, sizeof(EulerianFluidSim::Source) * system->num_cells);
+	set_shader_immediate("fluid_eulerian_update");
+
+	EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_sources);
+	
+	for (u32 i = 0; i < system->gauss_seidel_iterations; i++) {
+		EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_buffered_density);
+		EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_diffuse);
+		EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_diffuse_bounds, system->num_boundary_workgroups);
+		EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_diffuse_corners, 1);
+	}
+	
+	EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_buffered_density);
+	EulerianFluidSim::run_kernel(*system, EulerianFluidSim::Kernel::update_advect);
+}
+
+void ef_draw(ArenaHandle handle) {
+	auto system = EulerianFluidSim::systems[handle];
+	if (!system) return;
+
+	// Render the fluid simulation
+	set_active_shader("fluid_eulerian");
+	set_draw_mode(DrawMode::Triangles);
+	set_world_space(true);
+
+	ef_bind(handle);
+
+	Vector2 uv [6] = fm_quad(1.0, 0.0, 0.0, 1.0);
+	float px = 0;
+	float py = system->render_size;
+	float dx = system->render_size;
+	float dy = system->render_size;
+	push_quad(px, py, dx, dy, uv, 1.f);
+}

@@ -123,7 +123,7 @@ function tdengine.input.update()
 	if not tdengine.tick then
 		self.internal.context_stack:clear()
 
-		local view = tdengine.find_entity_editor('GameView')
+		local view = tdengine.find_entity_editor('GameViewManager')
 		if view.hover then
 			self.push_context(tdengine.enums.InputContext.Game)
 		else

@@ -108,7 +108,6 @@ int main() {
 
 		UserCallbacks::on_update();
 		update_game();
-		update_fluid();
 		update_time();
 	}
 

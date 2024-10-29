@@ -490,7 +490,8 @@ void lf_set_pressure(ArenaHandle handle, float pressure);
 void lf_set_gravity(ArenaHandle handle, float gravity);
 void lf_set_timestep(ArenaHandle handle, float dt);
 void lf_bind(ArenaHandle handle);
-void lf_draw_particles(ArenaHandle handle);
+void lf_update(ArenaHandle handle);
+void lf_draw(ArenaHandle handle);
 
 ArenaHandle ef_create(u32 grid_size);
 void ef_destroy(ArenaHandle handle);
@@ -504,6 +505,8 @@ void ef_clear_density_source(ArenaHandle handle);
 void ef_set_density_source(ArenaHandle handle, u32 x, u32 y, float amount);
 void ef_set_gauss_seidel(ArenaHandle handle, u32 iterations);
 void ef_bind(ArenaHandle handle);
+void ef_update(ArenaHandle handle);
+void ef_draw(ArenaHandle handle);
 ]]
 
 ffi = require('ffi')
@@ -769,17 +772,6 @@ function tdengine.init_phase_2()
 
   tdengine.app:on_start_game()
 
-  -- Start the game
-  -- if tdengine.is_packaged_build then
-  -- tdengine.scene.play('splash')
-  -- else
-
-
-  -- Use the editor layout
-  tdengine.resolution_aware_layout('default')
-
-  -- Then, just load a scene.
   local scene_editor = tdengine.find_entity_editor('SceneEditor')
   scene_editor:load('default')
-  -- end
 end

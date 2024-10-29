@@ -139,26 +139,6 @@ return {
 	---------------------
 	-- EDITOR BULLSHIT --
 	---------------------
-	['editor-3'] = {
-		font = 'inconsolata',
-		size = 3,
-		imgui = true
-	},
-	['editor-4'] = {
-		font = 'inconsolata',
-		size = 4,
-		imgui = true
-	},
-	['editor-6'] = {
-		font = 'inconsolata',
-		size = 6,
-		imgui = true
-	},
-	['editor-8'] = {
-		font = 'inconsolata',
-		size = 8,
-		imgui = true
-	},
 	['editor-12'] = {
 		font = 'inconsolata',
 		size = 12,
@@ -179,11 +159,6 @@ return {
 		size = 24,
 		imgui = true
 	},
-	['editor-28'] = {
-		font = 'inconsolata',
-		size = 28,
-		imgui = true
-	},
 	['editor-32'] = {
 		font = 'inconsolata',
 		size = 32,
@@ -194,21 +169,23 @@ return {
 		size = 36,
 		imgui = true
 	},
-	['editor-40'] = {
-		font = 'inconsolata',
-		size = 40,
-		imgui = true
-	},
-	['editor-44'] = {
-		font = 'inconsolata',
-		size = 48,
-		imgui = true
-	},
 	['editor-48'] = {
 		font = 'inconsolata',
 		size = 48,
 		imgui = true
 	},
+
+	['editor-bold-16'] = {
+		font = 'inconsolata-extrabold',
+		size = 16,
+		imgui = true
+	},
+	['editor-bold-24'] = {
+		font = 'inconsolata-extrabold',
+		size = 24,
+		imgui = true
+	},
+
 	['editor-bold-32'] = {
 		font = 'inconsolata-extrabold',
 		size = 32,

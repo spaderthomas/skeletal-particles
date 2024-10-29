@@ -591,6 +591,14 @@ imgui.extensions.TextColored = function(text, color)
 	imgui.PopStyleColor()
 end
 
+function imgui.extensions.TreeNodeFont(label, font)
+	imgui.PushFont(font)
+	local tree_expanded = imgui.TreeNode(label)
+	imgui.PopFont()
+
+	return tree_expanded
+end
+
 imgui.extensions.ComboBox = function(label, active, items, on_select, ...)
 	local change = false
 	if imgui.BeginCombo(label, active) then

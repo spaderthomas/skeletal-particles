@@ -1,6 +1,7 @@
 local App = tdengine.define_app()
 
 function App:init()
+	self.upscaled_view = 'Game (2x)'
 	self.native_resolution = tdengine.vec2(426, 240)
 
 	self.window_flags = tdengine.enum.bitwise_or(
@@ -14,6 +15,8 @@ function App:on_init_game()
 
 	local icon_path = tdengine.ffi.resolve_format_path('image', 'logo/icon.png'):to_interned()
 	tdengine.ffi.set_window_icon(icon_path)
+
+	tdengine.ffi.set_target_fps(144)
 
 	local render_targets = {
 		scene = tdengine.gpu.add_render_target('scene', self.native_resolution.x, self.native_resolution.y),
@@ -49,22 +52,27 @@ function App:on_init_game()
 		tdengine.enums.GpuLoadOp.None)
 	tdengine.gpu.add_render_pass('post_process', command_buffers.post_process, render_targets.post_process, nil,
 		tdengine.enums.GpuLoadOp.None)
-
 end
 
 function App:on_start_game()
 	tdengine.find_entity_editor('EditorUtility').style.grid.size = 12
-	
+
 	tdengine.editor.find('DialogueEditor').hidden = true
+
+  local upscaled_view = GameView:new(self.upscaled_view, tdengine.enums.GameViewSize.ExactSize, tdengine.app.native_resolution:scale(3), tdengine.enums.GameViewPriority.Main)
+  tdengine.editor.find('GameViewManager'):add_view(upscaled_view)
 
 	tdengine.ffi.use_editor_layout('skeletal-240')
 end
 
 function App:on_end_frame()
-	local game_view = tdengine.editor.find('GameView')
-	game_view:render_view(self.native_resolution:scale(3), 'Game (2x)')
+	local skeleton_viewer = tdengine.entity.find('SkeletonViewer')
+	for system in tdengine.iterator.values(skeleton_viewer.animation.particle_systems) do
+		tdengine.gpu.bind_render_pass('fluid')
+		tdengine.ffi.lf_draw(system.handle)
+		tdengine.gpu.submit_render_pass('fluid')
+	end
 end
-
 
 function App:on_swapchain_ready()
 	if tdengine.is_packaged_build then

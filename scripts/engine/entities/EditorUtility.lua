@@ -90,14 +90,14 @@ end
 function EditorUtility:draw_grid()
   if not self.enabled.grid then return end
 
-  tdengine.ffi.begin_world_space()
+  tdengine.ffi.set_world_space(true)
   tdengine.ffi.set_layer(tdengine.editor.layers.grid)
 
   local grid_size = self.style.grid.size
   local line_thickness = 1.5
 
   local nx, ny = tdengine.window.get_native_resolution():unpack()
-  local camera = tdengine.find_entity_editor('EditorCamera')
+  local camera = tdengine.editor.find('EditorCamera')
   if tdengine.tick then
     local game_camera = tdengine.entity.find('Camera')
     camera = game_camera or camera

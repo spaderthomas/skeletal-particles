@@ -110,7 +110,7 @@ function EntityList:draw_entity(id)
   end
   imgui.PushStyleColor(ffi.C.ImGuiCol_Text, header_color:to_u32())
 
-  local tree_expanded = imgui.TreeNode(self:build_label(entity))
+  local tree_expanded = imgui.extensions.TreeNodeFont(self:build_label(entity), 'editor-bold-16')
   self:check_context_menu(entity)
   self:draw_metadata(entity)
 
@@ -217,7 +217,7 @@ end
 function SceneEditor:update()
   if tdengine.tick then return end
 
-  local game_view = tdengine.find_entity_editor('GameView')
+  local game_view = tdengine.find_entity_editor('GameViewManager')
   if not game_view.hover then return end
 
   self:update_state()

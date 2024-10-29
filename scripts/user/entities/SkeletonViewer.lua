@@ -248,6 +248,8 @@ function SkeletalAnimationController:update_particle_system(system)
 
   local delta = system.bounding_volume.b:subtract(last_position)
   tdengine.ffi.lf_set_velocity(system.handle, delta.x, delta.y)
+
+  tdengine.ffi.lf_update(system.handle)
 end
 
 ---------------------
@@ -279,11 +281,11 @@ function SkeletonViewer:init()
     draw_joints = true,
     draw_bounding_volumes = false,
     animation_speed = 30,
-    scale = .25
+    scale = .0625
   }
 
   self.style = {
-    joint_size = 8 * self.__editor_controls.scale,
+    joint_size = math.max(8 * self.__editor_controls.scale, 2),
     bone_size = 3,
     label_padding = 8,
   }
@@ -344,7 +346,7 @@ end
 
 function SkeletonViewer:update_state()
   if self.state == self.states.Idle then
-    local game_view = tdengine.find_entity_editor('GameView')
+    local game_view = tdengine.find_entity_editor('GameViewManager')
     if tdengine.input.pressed(glfw.keys.MOUSE_BUTTON_1) and game_view.hover then
       self.state = tdengine.enums.SkeletonViewerState.DragWorld
     end
@@ -388,7 +390,7 @@ function SkeletonViewer:update_playground()
 end
 
 function SkeletonViewer:draw_animation()
-  tdengine.ffi.begin_world_space()
+  tdengine.ffi.set_world_space(true)
   if self.__editor_controls.draw_joints then
     for joint_name, joint_sample in pairs(self.animation.joint_state) do
       self:draw_joint(joint_sample.position.x, joint_sample.position.y)
@@ -397,8 +399,7 @@ function SkeletonViewer:draw_animation()
       if joint.children then
         for _, child_id in pairs(joint.children) do
           local child_sample = self.animation.joint_state[child_id]
-          self:draw_bone(joint_sample.position.x, joint_sample.position.y, child_sample.position.x,
-            child_sample.position.y)
+          self:draw_bone(joint_sample.position.x, joint_sample.position.y, child_sample.position.x, child_sample.position.y)
         end
       end
     end

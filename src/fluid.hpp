@@ -87,7 +87,8 @@ FM_LUA_EXPORT void lf_set_gravity(ArenaHandle handle, float gravity);
 FM_LUA_EXPORT void lf_set_timestep(ArenaHandle handle, float dt);
 FM_LUA_EXPORT void lf_draw_all();
 FM_LUA_EXPORT void lf_bind(ArenaHandle handle);
-FM_LUA_EXPORT void lf_draw_particles(ArenaHandle handle);
+FM_LUA_EXPORT void lf_update(ArenaHandle handle);
+FM_LUA_EXPORT void lf_draw(ArenaHandle handle);
 
 ////////////////////////
 // EULERIAN FLUID SIM //
@@ -161,6 +162,8 @@ FM_LUA_EXPORT void ef_set_density_source(ArenaHandle handle, u32 x, u32 y, float
 FM_LUA_EXPORT void ef_set_velocity(ArenaHandle handle, u32 x, u32 y, float vx, float vy);
 FM_LUA_EXPORT void ef_set_gauss_seidel(ArenaHandle handle, u32 iterations);
 FM_LUA_EXPORT void ef_bind(ArenaHandle handle);
+FM_LUA_EXPORT void ef_update(ArenaHandle handle);
+FM_LUA_EXPORT void ef_draw(ArenaHandle handle);
 
 
 ///////////////
