@@ -205,7 +205,7 @@ void lf_draw(ArenaHandle handle) {
 	// Render the particles
 	set_shader_immediate("particle");
 	set_uniform_immediate_mat4("projection", render.projection);
-	set_uniform_immediate_mat4("view",  Matrix4::transform(-1.f * render.camera.x, -1.f * render.camera.y, 0.f));
+	set_uniform_immediate_mat4("view", HMM_Translate(HMM_V3(-render.camera.x, -render.camera.y, 0.f)));
 
 	LagrangianFluidSim::bind_ssbos(*system);
 		

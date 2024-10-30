@@ -15,7 +15,6 @@
 #include "utils/arena.hpp"
 #include "utils/path.hpp"
 #include "utils/vector.hpp"
-#include "utils/matrix.hpp"
 #include "utils/quad.hpp"
 #include "utils/colors.hpp"
 #include "utils/defer.hpp"

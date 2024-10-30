@@ -90,8 +90,8 @@ struct GlState {
 };
 
 struct GlStateDiff {
-	Matrix4 camera;
-	Matrix4 no_camera;
+	HMM_Mat4 camera;
+	HMM_Mat4 no_camera;
 	GlState* current = nullptr;
 
 	void apply(GlState* state);
@@ -178,7 +178,7 @@ void gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 */
 
 struct RenderEngine {
-	Matrix4 projection;
+	HMM_Mat4 projection;
 	Vector2 camera;
 
 	u8* screenshot;
@@ -250,18 +250,18 @@ FM_LUA_EXPORT void set_uniform_texture(const char* name, i32 value);
 FM_LUA_EXPORT void set_uniform_i32(const char* name, i32 value);
 FM_LUA_EXPORT void set_uniform_f32(const char* name, float value);
 FM_LUA_EXPORT void set_uniform_vec2(const char* name, Vector2 value);
-void set_uniform_vec3(const char* name, glm::vec3 value);
-void set_uniform_vec4(const char* name, glm::vec4 value);
-void set_uniform_mat4(const char* name, Matrix4 value);
-void set_uniform_mat3(const char* name, glm::mat3 value);
+FM_LUA_EXPORT void set_uniform_vec3(const char* name, HMM_Vec3 value);
+FM_LUA_EXPORT void set_uniform_vec4(const char* name, HMM_Vec4 value);
+FM_LUA_EXPORT void set_uniform_mat3(const char* name, HMM_Mat3 value);
+FM_LUA_EXPORT void set_uniform_mat4(const char* name, HMM_Mat4 value);
 
-i32 find_uniform_index(const char* name);
+FM_LUA_EXPORT i32 find_uniform_index(const char* name);
 void set_shader_immediate(Shader* shader);
-void set_shader_immediate(const char* name);
-void set_uniform_immediate_mat4(const char* name, Matrix4 value);
-void set_uniform_immediate_mat3(const char* name, glm::mat3 value);
-void set_uniform_immediate_vec4(const char* name, glm::vec4 value);
-void set_uniform_immediate_vec3(const char* name, glm::vec3 value);
+FM_LUA_EXPORT void set_shader_immediate(const char* name);
+FM_LUA_EXPORT void set_uniform_immediate_mat4(const char* name, HMM_Mat4 value);
+FM_LUA_EXPORT void set_uniform_immediate_mat3(const char* name, HMM_Mat3 value);
+FM_LUA_EXPORT void set_uniform_immediate_vec4(const char* name, HMM_Vec4 value);
+FM_LUA_EXPORT void set_uniform_immediate_vec3(const char* name, HMM_Vec3 value);
 FM_LUA_EXPORT void set_uniform_immediate_vec2(const char* name, Vector2 value);
 FM_LUA_EXPORT void set_uniform_immediate_i32(const char* name, i32 value);
 FM_LUA_EXPORT void set_uniform_immediate_f32(const char* name, float value);

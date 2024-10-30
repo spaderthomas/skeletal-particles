@@ -247,14 +247,7 @@ void set_active_shader(const char* name) {
 }
 	
 void set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far) {
-	render.projection.zero();
-	render.projection[0][0] = 2.f / (right - left);
-	render.projection[1][1] = 2.f / (top - bottom);
-	render.projection[2][2] = 2.f / (_far - _near) * -1;
-	render.projection[3][0] = (right + left) / (right - left) * -1.f;
-	render.projection[3][1] = (top + bottom) / (top - bottom) * -1.f;
-	render.projection[3][2] = (_far + _near) / (_far - _near) * -1.f;
-	render.projection[3][3] = 1.f;
+	render.projection = HMM_Orthographic_RH_NO(left, right, bottom, top, _near, _far);
 }
 
 void begin_scissor(float px, float py, float dx, float dy) {
@@ -299,22 +292,22 @@ void set_uniform(Uniform& uniform) {
 	// CASE 3: The uniform was already set, but to the same thing, so do nothing.
 }
 
-void set_uniform_mat4(const char* name, Matrix4 value) {
+void set_uniform_mat4(const char* name, HMM_Mat4 value) {
 	auto uniform = Uniform(name, value);
 	set_uniform(uniform);
 }
 
-void set_uniform_mat3(const char* name, glm::mat3 value) {
+void set_uniform_mat3(const char* name, HMM_Mat3 value) {
 	auto uniform = Uniform(name, value);
 	set_uniform(uniform);
 }
 
-void set_uniform_vec4(const char* name, glm::vec4 value) {
+void set_uniform_vec4(const char* name, HMM_Vec4 value) {
 	auto uniform = Uniform(name, value);
 	set_uniform(uniform);
 }
 
-void set_uniform_vec3(const char* name, glm::vec3 value) {
+void set_uniform_vec3(const char* name, HMM_Vec3 value) {
 	auto uniform = Uniform(name, value);
 	set_uniform(uniform);
 }
@@ -391,14 +384,14 @@ void set_uniform_immediate(const Uniform& uniform) {
 	}
 }
 
-void set_uniform_immediate_vec4(const char* name, glm::vec4 vec) {
+void set_uniform_immediate_vec4(const char* name, HMM_Vec4 vec) {
 	i32 index = find_uniform_index(name);
-	glUniform4f(index, vec.x, vec.y, vec.z, vec.w);
+	glUniform4f(index, vec.X, vec.Y, vec.Z, vec.W);
 }
 
-void set_uniform_immediate_vec3(const char* name, glm::vec3 vec) {
+void set_uniform_immediate_vec3(const char* name, HMM_Vec3 vec) {
 	i32 index = find_uniform_index(name);
-	glUniform3f(index, vec.x, vec.y, vec.z);
+	glUniform3f(index, vec.X, vec.Y, vec.Z);
 }
 
 void set_uniform_immediate_vec2(const char* name, Vector2 vec) {
@@ -406,12 +399,12 @@ void set_uniform_immediate_vec2(const char* name, Vector2 vec) {
 	glUniform2f(index, vec.x, vec.y);
 }
 
-void set_uniform_immediate_mat3(const char* name, glm::mat3 mat) {
+void set_uniform_immediate_mat3(const char* name, HMM_Mat3 matrix) {
 	i32 index = find_uniform_index(name);
-	glUniformMatrix3fv(index, 1, GL_FALSE, glm::value_ptr(mat));
+	glUniformMatrix3fv(index, 1, GL_FALSE, (const float*)&matrix);
 }
 
-void set_uniform_immediate_mat4(const char* name, Matrix4 matrix) {
+void set_uniform_immediate_mat4(const char* name, HMM_Mat4 matrix) {
 	i32 index = find_uniform_index(name);
 	glUniformMatrix4fv(index, 1, GL_FALSE, (const float*)&matrix);
 }
@@ -726,8 +719,8 @@ int DrawCall::compare(const void* a, const void* b) {
 
 void GlStateDiff::apply(GlState* state) {
 	if (is_first_draw_call()) {
-		this->camera = Matrix4::transform(-1.f * render.camera.x, -1.f * render.camera.y, 0.f);
-		this->no_camera = Matrix4::identity();
+		this->camera = HMM_Translate(HMM_V3(-render.camera.x, -render.camera.y, 0.f));
+		this->no_camera = HMM_M4D(1.0);
 	}
 
 	if (need_apply_scissor(state)) {

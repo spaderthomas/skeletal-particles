@@ -20,10 +20,10 @@ struct Uniform {
 	char name [max_name_len];
 	
 	union {
-		Matrix4 mat4;
-		glm::mat3 mat3;
-		glm::vec4 vec4;
-		glm::vec3 vec3;
+		HMM_Mat4 mat4;
+		HMM_Mat3 mat3;
+		HMM_Vec4 vec4;
+		HMM_Vec3 vec3;
 		Vector2 vec2;
 		int32 i32;
 		float32 f32;
@@ -32,10 +32,10 @@ struct Uniform {
 
 	Uniform();
 	Uniform(const char* name);
-	Uniform(const char* name, const Matrix4& m);
-	Uniform(const char* name, const glm::mat3& m);
-	Uniform(const char* name, const glm::vec4& v);
-	Uniform(const char* name, const glm::vec3& v);
+	Uniform(const char* name, const HMM_Mat4& m);
+	Uniform(const char* name, const HMM_Mat3& m);
+	Uniform(const char* name, const HMM_Vec4& v);
+	Uniform(const char* name, const HMM_Vec3& v);
 	Uniform(const char* name, const Vector2& v);
 	Uniform(const char* name, int32 i);
 	Uniform(const char* name, float32 f);

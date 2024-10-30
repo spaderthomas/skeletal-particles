@@ -147,16 +147,16 @@ Uniform::Uniform() : kind(UniformKind::I32), i32(0) {}
 Uniform::Uniform(const char* name) : kind(UniformKind::I32), i32(0) {
 	strncpy(this->name, name, max_name_len);
 }
-Uniform::Uniform(const char* name, const Matrix4& m) : kind(UniformKind::Matrix4), mat4(m) {
+Uniform::Uniform(const char* name, const HMM_Mat4& m) : kind(UniformKind::Matrix4), mat4(m) {
 	strncpy(this->name, name, max_name_len);
 }
-Uniform::Uniform(const char* name, const glm::mat3& m) : kind(UniformKind::Matrix3), mat3(m) {
+Uniform::Uniform(const char* name, const HMM_Mat3& m) : kind(UniformKind::Matrix3), mat3(m) {
 	strncpy(this->name, name, max_name_len);
 }
-Uniform::Uniform(const char* name, const glm::vec4& v) : kind(UniformKind::Vector4), vec4(v) {
+Uniform::Uniform(const char* name, const HMM_Vec4& v) : kind(UniformKind::Vector4), vec4(v) {
 	strncpy(this->name, name, max_name_len);
 }
-Uniform::Uniform(const char* name, const glm::vec3& v) : kind(UniformKind::Vector3), vec3(v) {
+Uniform::Uniform(const char* name, const HMM_Vec3& v) : kind(UniformKind::Vector3), vec3(v) {
 	strncpy(this->name, name, max_name_len);
 }
 Uniform::Uniform(const char* name, const Vector2& v) : kind(UniformKind::Vector2), vec2(v) {
@@ -176,9 +176,9 @@ bool are_uniforms_equal(Uniform& a, Uniform& b) {
     // Then, compare the union members based on `kind`
     switch (a.kind) {
         case UniformKind::Matrix4:
-            return a.mat4 == b.mat4;
-        case UniformKind::Matrix3:
-            return a.mat3 == b.mat3;
+			return !std::memcmp(&a.mat4, &b.mat4, sizeof(HMM_Mat4));
+		case UniformKind::Matrix3:
+			return std::memcmp(&a.mat3, &b.mat3, sizeof(HMM_Mat3));
         case UniformKind::Vector4:
             return a.vec4 == b.vec4;
         case UniformKind::Vector3:
