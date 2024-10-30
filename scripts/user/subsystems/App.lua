@@ -67,10 +67,12 @@ end
 
 function App:on_end_frame()
 	local skeleton_viewer = tdengine.entity.find('SkeletonViewer')
-	for system in tdengine.iterator.values(skeleton_viewer.animation.particle_systems) do
-		tdengine.gpu.bind_render_pass('fluid')
-		tdengine.ffi.lf_draw(system.handle)
-		tdengine.gpu.submit_render_pass('fluid')
+	if skeleton_viewer then
+		for system in tdengine.iterator.values(skeleton_viewer.animation.particle_systems) do
+			tdengine.gpu.bind_render_pass('fluid')
+			tdengine.ffi.lf_draw(system.handle)
+			tdengine.gpu.submit_render_pass('fluid')
+		end
 	end
 end
 

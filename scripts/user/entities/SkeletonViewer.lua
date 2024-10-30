@@ -117,8 +117,9 @@ function SkeletalAnimationController:init(params)
   self.particle_systems = tdengine.module.read(rig_path)
   for index, system in pairs(self.particle_systems) do
     system.bounding_volume = BoundingVolume:new(system.bounding_volume)
+    system.bounding_volume.radius = system.bounding_volume.radius / 4
     system.attachment = tdengine.enum.load(system.attachment)
-    system.handle = tdengine.ffi.lf_create(system.num_particles)
+    system.handle = tdengine.ffi.lf_create(system.num_particles / 4)
 
     tdengine.ffi.lf_set_velocity(system.handle, 0, 0)
     tdengine.ffi.lf_init(system.handle)
