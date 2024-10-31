@@ -52,7 +52,7 @@ function EngineStats:init(params)
 	self.gui_drag = imgui.extensions.TableEditor(tdengine.gui.drag)
 	self.gui_menu = imgui.extensions.TableEditor(tdengine.gui.menu)
 	self.save_data = imgui.extensions.TableEditor(tdengine.scene.save_data)
-	self.app = imgui.extensions.TableEditor(tdengine.app)
+	self.subsystems = {}
 
 	self.metrics = { 
 		target_fps = 0,
@@ -111,9 +111,16 @@ function EngineStats:engine_viewer()
 	imgui.PushFont('editor-bold-16')
 	imgui.Text('User')
 	imgui.PopFont()
-	if imgui.TreeNode('App') then
-		self.app:draw()
-		imgui.TreePop()
+
+	for name, subsystem in pairs(tdengine.subsystem.subsystems) do
+		if not self.subsystems[name] then
+			self.subsystems[name] = imgui.extensions.TableEditor(subsystem)
+		end
+
+		if imgui.TreeNode(name) then
+			self.subsystems[name]:draw()
+			imgui.TreePop()
+		end
 	end
 
 	tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_engine_viewer)

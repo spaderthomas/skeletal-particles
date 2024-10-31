@@ -16,6 +16,12 @@ function SampleEntity:deinit()
 end
 
 function SampleEntity:play()
+  self.positions = {}
+  self.jitters = {}
+  for i = 0, 20 do
+    table.insert(self.positions, tdengine.math.random_float(0, 400))
+    table.insert(self.jitters, tdengine.math.random_float(0, 1.0))
+  end
 end
 
 function SampleEntity:stop()
@@ -26,6 +32,21 @@ end
 
 function SampleEntity:draw()
   self:draw_shapes()
+
+  local prepared_text = tdengine.ffi.prepare_text('best', 0, 0, 'tiny5')
+  tdengine.ffi.draw_prepared_text(prepared_text)
+
+  tdengine.ffi.draw_quad(100, 0, 100, 52, tdengine.colors.white:to_vec4())
+
+  tdengine.ffi.draw_image('animal-well.png', 500, 0)
+
+  for i = 1, 20 do
+    tdengine.ffi.set_layer(i)
+    local yoff = tdengine.math.ranged_sin(tdengine.elapsed_time * self.jitters[i], 0.0, 20.0)
+    tdengine.ffi.draw_circle_sdf(self.positions[i], 50 + yoff, 8, tdengine.colors.indian_red:to_vec4(), 2)
+  end
+
+
 end
  
 function SampleEntity:on_load_game()
@@ -38,6 +59,7 @@ end
 
 
 function SampleEntity:draw_shapes()
+  if not self.__draw_shapes then return end
   tdengine.ffi.set_world_space(true)
   tdengine.ffi.set_layer(100)
 

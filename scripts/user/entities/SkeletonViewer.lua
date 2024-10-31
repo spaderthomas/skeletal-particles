@@ -117,9 +117,9 @@ function SkeletalAnimationController:init(params)
   self.particle_systems = tdengine.module.read(rig_path)
   for index, system in pairs(self.particle_systems) do
     system.bounding_volume = BoundingVolume:new(system.bounding_volume)
-    system.bounding_volume.radius = system.bounding_volume.radius / 4
+    system.bounding_volume.radius = system.bounding_volume.radius / 2
     system.attachment = tdengine.enum.load(system.attachment)
-    system.handle = tdengine.ffi.lf_create(system.num_particles / 4)
+    system.handle = tdengine.ffi.lf_create(system.num_particles / 2)
 
     tdengine.ffi.lf_set_velocity(system.handle, 0, 0)
     tdengine.ffi.lf_init(system.handle)
@@ -270,7 +270,6 @@ function SkeletonViewer:init()
   self.state = self.states.Idle
   self.layers = {
     bounding_volume = 99,
-    joint = 100,
     bone = 100,
     rotation_marker = 101,
     joint = 102,
@@ -282,7 +281,7 @@ function SkeletonViewer:init()
     draw_joints = true,
     draw_bounding_volumes = false,
     animation_speed = 30,
-    scale = .0625
+    scale = .125
   }
 
   self.style = {

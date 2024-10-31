@@ -45,7 +45,7 @@ function GameView:update()
     ffi.C.set_game_focus(self.focus and self.hover)
   end
 
-  local texture = tdengine.gpu.find_render_pass('scene').render_target.color_buffer
+  local texture = tdengine.gpu.find_render_pass('post_process').render_target.color_buffer
   imgui.Image(
     texture,
     imgui.ImVec2(self.size.x, self.size.y),
@@ -75,10 +75,9 @@ end
 
 function GameViewManager:add_view(view)
   if view.priority == tdengine.enums.GameViewPriority.Main then
-    log.info('Setting main game view to %s', view.name)
-
     local main_view = self:find_main_view()
     if main_view then
+      log.info('Setting main game view to %s', view.name)
       main_view.priority = tdengine.enums.GameViewPriority.Standard
     end
   end

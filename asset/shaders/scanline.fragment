@@ -1,0 +1,258 @@
+#include "common.glsl"
+
+out vec4 color;
+
+in vec4 f_color;
+in vec2 f_uv;
+
+uniform sampler2D new_frame;
+
+// #define hardScan -8.0
+// #define shape 2.0
+// #define brightBoost 1.0
+// #define hardPix -3.0
+// #define warpX 0.031
+// #define warpY 0.041
+
+// #define input_size render_target
+// #define output_size (render_target * 4)
+
+// vec2 Dist(vec2 pos)
+// {
+//     pos = pos*render_target.xy;
+    
+//     return -((pos - floor(pos)) - vec2(0.5));
+// }
+
+// float Gaus(float pos, float scale)
+// {
+//     return exp2(scale*pow(abs(pos), shape));
+// }
+
+// float Scan(vec2 pos, float off)
+// {
+//     float dst = Dist(pos).y;
+
+//     return Gaus(dst + off, hardScan);
+// }
+
+// vec3 Fetch(vec2 pos,vec2 off){
+//   pos = (floor(pos * render_target.xy + off) + vec2(0.5,0.5)) / render_target.xy;
+// 	return texture(new_frame, pos.xy).xyz;
+// }
+
+// // 3-tap Gaussian filter along horz line.
+// vec3 Horz3(vec2 pos, float off)
+// {
+//     vec3 b    = Fetch(pos, vec2(-1.0, off));
+//     vec3 c    = Fetch(pos, vec2( 0.0, off));
+//     vec3 d    = Fetch(pos, vec2( 1.0, off));
+//     float dst = Dist(pos).x;
+
+//     // Convert distance to weight.
+//     float scale = hardPix;
+//     float wb = Gaus(dst-1.0,scale);
+//     float wc = Gaus(dst+0.0,scale);
+//     float wd = Gaus(dst+1.0,scale);
+
+//     // Return filtered sample.
+//     return (b*wb+c*wc+d*wd)/(wb+wc+wd);
+// }
+
+// // 5-tap Gaussian filter along horz line.
+// vec3 Horz5(vec2 pos,float off){
+//     vec3 a = Fetch(pos,vec2(-2.0, off));
+//     vec3 b = Fetch(pos,vec2(-1.0, off));
+//     vec3 c = Fetch(pos,vec2( 0.0, off));
+//     vec3 d = Fetch(pos,vec2( 1.0, off));
+//     vec3 e = Fetch(pos,vec2( 2.0, off));
+    
+//     float dst = Dist(pos).x;
+//     // Convert distance to weight.
+//     float scale = hardPix;
+//     float wa = Gaus(dst - 2.0, scale);
+//     float wb = Gaus(dst - 1.0, scale);
+//     float wc = Gaus(dst + 0.0, scale);
+//     float wd = Gaus(dst + 1.0, scale);
+//     float we = Gaus(dst + 2.0, scale);
+    
+//     // Return filtered sample.
+//     return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
+// }
+
+// // Allow nearest three lines to effect pixel.
+// vec3 Tri(vec2 pos)
+// {
+//     vec3 a = Horz3(pos,-1.0);
+//     vec3 b = Horz5(pos, 0.0);
+//     vec3 c = Horz3(pos, 1.0);
+    
+//     float wa = Scan(pos,-1.0); 
+//     float wb = Scan(pos, 0.0);
+//     float wc = Scan(pos, 1.0);
+    
+//     return a*wa + b*wb + c*wc;
+// }
+
+// vec2 Warp(vec2 pos)
+// {
+//     pos  = pos*2.0-1.0;    
+//     pos *= vec2(1.0 + (pos.y*pos.y)*warpX, 1.0 + (pos.x*pos.x)*warpY);
+    
+//     return pos*0.5 + 0.5;
+// }
+// vec4 lotte() {
+// 	vec2 pos = Warp(f_uv * (render_target.xy / input_size.xy)) * (input_size.xy / render_target.xy);
+// 	return vec4(Tri(f_uv), 1.0); 
+
+// }
+
+vec4 sample_neighbor(vec2 uv, int pixel_offset) {
+	const vec2 uv_per_px = 1.0 / render_target;
+
+	uv.x += pixel_offset * uv_per_px.x;
+	uv = clamp(uv, vec2(0.0), vec2(1.0));
+	return texture(new_frame, uv);
+}
+
+// float edge_distance(vec2 uv) {
+// 	const uint num_neighbors = 4;
+// 	const float num_weights = 10;
+
+// 	float distance = 0.0;
+// 	for (int i = 0; i < num_neighbors; i++) {
+// 		float weight = (num_neighbors - i) / (2 * num_weights);
+// 		int pixel_offset = i + 1;
+// 		vec4 neighbor_sample = sample_neighbor(f_uv, -pixel_offset);
+// 		neighbor_sample = rgb_to_hsv_4(neighbor_sample);
+// 		HSV_VALUE(neighbor_sample)
+// 	}
+
+// }
+
+
+float horizontal_edge_strength(vec2 uv) {
+	vec4 sample_color = rgb_to_hsv_4(texture(new_frame, uv));
+
+	float edge_strength = 1.0;
+
+	vec4 right = sample_neighbor(uv, 1);
+	right = rgb_to_hsv_4(right);
+	edge_strength += (HSV_VALUE(sample_color) - HSV_VALUE(right)) * 4;
+
+	for (int i = 1; i <= 4; i++) {
+		int pixel_offset = i;
+		vec4 left = sample_neighbor(uv, -pixel_offset);
+		left = rgb_to_hsv_4(left);
+
+		// edge_strength += length(center.rgb - left.rgb);
+		edge_strength += HSV_VALUE(left) - HSV_VALUE(sample_color);
+	}
+
+	edge_strength /= 6.0;
+
+	edge_strength = clamp(edge_strength, 0.0, 1.0);
+	return edge_strength * step(0.4, edge_strength);
+}
+
+vec4 lightest_left(vec2 uv) {
+	vec4 lightest = rgb_to_hsv_4(texture(new_frame, uv));
+
+	int index = 0;
+	for (int i = 1; i <= 4; i++) {
+		int pixel_offset = i;
+		vec4 left = sample_neighbor(uv, -pixel_offset);
+		left = rgb_to_hsv_4(left);
+
+		if (HSV_VALUE(left) > HSV_VALUE(lightest)) {
+			lightest = left;
+			index = 1;
+		}
+	}
+
+	return hsv_to_rgb_4(lightest);
+}
+
+void main() {
+	vec2 uv = f_uv + camera / render_target;
+	vec4 sample_color = texture(new_frame, f_uv);
+	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
+
+	const float scanline_height_px =3;
+	const float scanline_height = scanline_height_px / render_target.y;
+
+	const float num_scanlines = render_target.y / scanline_height_px;
+	float scan_position = fract(uv.y * num_scanlines);
+	float scanline_power = triangle_wave(scan_position - .5);
+	scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
+	scanline_power = 1.0 - scanline_power;
+	scanline_power = ease_in_out_cubic(scanline_power);
+
+	vec4 scanline_color = rgb_to_hsv_4(sample_color);
+	HSV_HUE(scanline_color) = max(HSV_HUE(scanline_color), 210.0 / 360.0);
+	HSV_SATURATION(scanline_color) = HSV_SATURATION(scanline_color) + (scanline_power * .2);
+	HSV_VALUE(scanline_color) = HSV_VALUE(scanline_color) - (scanline_power * .1);
+	scanline_color = hsv_to_rgb_4(scanline_color);
+
+	// Calculate the average brightness of your left neighbors
+	const uint num_neighbors = 4;
+	const float num_weights = 10;
+
+	// vec4 horizontal_bleed_color = sample_color * 0.5;
+	vec4 horizontal_bleed_color = lightest_left(f_uv) * 0.5;
+	for (int i = 0; i < num_neighbors; i++) {
+		float weight = (num_neighbors - i) / (2 * num_weights);
+		int pixel_offset = i + 1;
+		horizontal_bleed_color += sample_neighbor(f_uv, pixel_offset) * weight;
+		horizontal_bleed_color += sample_neighbor(f_uv, -pixel_offset) * weight;
+	}
+
+	float edge_strength = horizontal_edge_strength(f_uv);
+	float bleed_strength = 1.0 - edge_strength;
+	bleed_strength *= step(bleed_strength, 0.75);
+	bleed_strength = map_range(bleed_strength, 0.0, 0.75, 0.0, 1.0);
+	horizontal_bleed_color = rgb_to_hsv_4(horizontal_bleed_color);
+	HSV_HUE(horizontal_bleed_color) = max(HSV_HUE(horizontal_bleed_color), 0.15);
+	HSV_HUE(horizontal_bleed_color) -= bleed_strength * .075;
+	HSV_SATURATION(horizontal_bleed_color) += bleed_strength;
+	HSV_VALUE(horizontal_bleed_color) -= bleed_strength * .05;
+
+	horizontal_bleed_color = clamp(horizontal_bleed_color, vec4(0.0), vec4(1.0));
+	float t = HSV_VALUE(horizontal_bleed_color);
+	horizontal_bleed_color = hsv_to_rgb_4(horizontal_bleed_color);
+
+
+	if (HSV_VALUE(sample_color_hsv) > 0.5) {
+		color = mix(scanline_color, horizontal_bleed_color, 0.5);
+	}
+	else {
+		color = scanline_color + horizontal_bleed_color;
+	}
+	// color = scanline_color + (horizontal_bleed_color * (1.0 - t));
+	// color = clamp(color, vec4(0.0), vec4(1.0));
+	// color = make_red(bleed_strength);
+
+	// color = red;
+	// color = sample_color;
+	// color = mix(sample_color, make_red(bleed_strength), .75);
+	return;
+
+	// float neighbor_strength = neighbor_brightness - sample_brightness;
+
+	// scanline_power *= sample_brightness;
+
+	// vec4 neighbor_color = rgb_to_hsv_4(sample_color);
+	// // HSV_SATURATION(neighbor_color) = 1.0;
+	// neighbor_color = hsv_to_rgb_4(neighbor_color);
+	// color = neighbor_color;
+
+	// sample_color = mix(sample_color, neighbor_color, neighbor_strength);
+	// color = mix(sample_color, scanline_color, scanline_power);
+	// color = sample_color;
+
+	// color = mix(black, hsv_to_rgb_4(neighbor_color), neighbor_strength);
+	// color = make_red(scanline_power);
+	// color = make_red(neighbor_strength);
+	// color = make_red(max(scanline_power, neighbor_strength));
+	//color = sample_color;
+}

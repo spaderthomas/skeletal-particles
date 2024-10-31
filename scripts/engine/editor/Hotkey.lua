@@ -7,7 +7,6 @@ function Hotkey:init()
       [glfw.keys.S] = function() self:save_scene() end,
       [glfw.keys.O] = function() self:open_scene() end,
       [glfw.keys.R] = function() self:toggle_play_mode() end,
-      [glfw.keys.P] = function() self:toggle_colliders() end,
     },
     single = {
       [glfw.keys.F5] = function() self:toggle_play_mode() end,
@@ -63,12 +62,12 @@ function Hotkey:check_single_hotkeys(hotkeys, channel)
 end
 
 function Hotkey:save_dialogue()
-  local dialogue_editor = tdengine.find_entity_editor('DialogueEditor')
+  local dialogue_editor = tdengine.editor.find('DialogueEditor')
   dialogue_editor:save(dialogue_editor.loaded)
 end
 
 function Hotkey:new_dialogue()
-  tdengine.find_entity_editor('MainMenu').open_new_dialogue_modal = true
+  tdengine.editor.find('MainMenu').open_new_dialogue_modal = true
 end
 
 function Hotkey:open_dialogue()
@@ -93,16 +92,6 @@ function Hotkey:toggle_play_mode()
   tdengine.find_entity_editor('SceneEditor'):toggle_play_mode()
 end
 
-function Hotkey:toggle_colliders()
-  local editor = tdengine.find_entity_editor('ColliderEditor').collider_editor
-  if tdengine.input.mod_down(glfw.keys.SHIFT) then
-    editor:enable_all_colliders()
-  else
-    editor:toggle_colliders()
-  end
-end
-
-
 function Hotkey:open_scene()
   local scenes = tdengine.ffi.resolve_named_path('scenes'):to_interned()
   imgui.SetFileBrowserWorkDir(scenes)
@@ -110,7 +99,7 @@ function Hotkey:open_scene()
 
   -- @hack: I wanted to move the hoykey code out of the main menu, but I forgot that it was
   -- doing more than just drawing a menu. Not a hard fix, just not right now.
-  local main_menu = tdengine.find_entity_editor('MainMenu')
+  local main_menu = tdengine.editor.find('MainMenu')
   main_menu.state = 'choosing_scene'
 end
 

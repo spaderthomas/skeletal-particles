@@ -5,6 +5,12 @@ return {
 		imgui = false
 	},
 
+	['tiny5'] = {
+		font = 'Tiny5-Regular',
+		size = 32,
+		imgui = false
+	},
+
 
 	-----------------
 	-- INCONSOLATA --
