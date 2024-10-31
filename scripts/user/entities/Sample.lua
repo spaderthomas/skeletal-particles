@@ -71,5 +71,3 @@ function SampleEntity:draw_shapes()
   tdengine.ffi.draw_line(300, -200, 500, 0, 2, tdengine.colors.indian_red:to_vec4())
   tdengine.ffi.draw_image_size('studio-logo.png', 500, 0, 200, 200)
 end
-
-print(tdengine.interpolation.EaseIn(0.0, 1.0, 0.54, 2))

@@ -5,8 +5,46 @@ in vec2 f_uv;
 
 out vec4 color;
 
+#define BLOOM_MODE_FILTER 0
+#define BLOOM_MODE_BLUR 1
+#define BLOOM_MODE_COMBINE 2
+
+uniform int mode;
+
+uniform sampler2D unfiltered_frame;
 uniform sampler2D bloomed_frame;
 
+vec4 additive_blend(vec4 sample_color, vec4 bloom_color) {
+  return sample_color + bloom_color;
+}
+
+vec4 screen_blend(vec4 sample_color, vec4 bloom_color) {
+  return 1.0 - (1.0 - sample_color) * (1.0 - bloom_color);
+}
+
 void main () {
-    color = red;
+  const float brightness_threshold = 0.2;
+
+  if (mode == BLOOM_MODE_FILTER) {
+    vec4 sample_color = texture(unfiltered_frame, f_uv);
+    float brightness = calc_brightness(sample_color);
+    
+    color = vec4(sample_color.rgb * is_higher_than(brightness, brightness_threshold), 1.0);
+    // color = sample_color;
+  }
+  else if (mode == BLOOM_MODE_BLUR) {
+    // vec4 blurred_color = box_blur_n_h(bloomed_frame, f_uv, 3);
+    vec4 blurred_color = gaussian_blur_n_h(bloomed_frame, f_uv, .9, 5);
+    color = vec4(blurred_color.rgb, 1.0);
+  }
+  else if (mode == BLOOM_MODE_COMBINE) {
+    vec4 sample_color = texture(unfiltered_frame, f_uv);
+    vec4 bloom_color = texture(bloomed_frame, f_uv);
+    
+    // vec4 final_color = screen_blend(sample_color, bloom_color);
+    vec4 final_color = additive_blend(sample_color, bloom_color);
+
+    color = vec4(final_color.rgb, 1.0);
+  }
+
 }

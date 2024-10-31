@@ -4,6 +4,7 @@ tdengine.lifecycle.callbacks = tdengine.enum.define(
     on_begin_frame = 0,
     on_end_frame = 1,
     on_scene_rendered = 2,
+    on_render_scene = 3,
     on_editor_play = 4,
     on_editor_stop = 5,
     on_main_menu = 6,

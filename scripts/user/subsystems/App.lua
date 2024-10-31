@@ -52,7 +52,8 @@ function App:on_init_game()
 	tdengine.gpu.add_render_pass('fluid', command_buffers.scene, render_targets.scene, render_targets.ping_pong, tdengine.enums.GpuLoadOp.None)
 	tdengine.gpu.add_render_pass('post_process', command_buffers.post_process, render_targets.post_process, nil, tdengine.enums.GpuLoadOp.None)
 	tdengine.gpu.add_render_pass('bloom_filter', command_buffers.post_process, render_targets.bloom_a, nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('bloom_blur', command_buffers.post_process, render_targets.bloom_b, render_targets.bloom_a, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('bloom_blur', command_buffers.post_process, render_targets.bloom_b, render_targets.bloom_a, tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('bloom_combine', command_buffers.post_process, render_targets.post_process, nil, tdengine.enums.GpuLoadOp.None)
 
 end
 
@@ -76,6 +77,16 @@ function App:on_end_frame()
 			tdengine.gpu.submit_render_pass('fluid')
 		end
 	end
+end
+
+function App:on_render_scene()
+	tdengine.gpu.bind_render_pass('scene')
+	tdengine.gpu.submit_render_pass('scene')
+  tdengine.gpu.apply_ping_pong('scene')
+
+	-- local unprocessed_target = tdengine.gpu.find_read_target('scene')
+	-- local processed_target = tdengine.gpu.find_write_target('post_process')
+	-- tdengine.ffi.gpu_blit_target(tdengine.gpu.find_command_buffer('post_process'), unprocessed_target, processed_target)
 end
 
 function App:on_swapchain_ready()

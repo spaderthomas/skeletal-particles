@@ -157,6 +157,102 @@ float ease_in_cubic(float t) {
 	return pow(t, 3);
 }
 
+float is_higher_than(float x, float threshold) {
+	return step(threshold, x);
+}
+
+float high_pass(float x, float threshold) {
+	return x * is_higher_than(x, threshold);
+}
+
+float low_pass(float x, float threshold) {
+	return x * step(x, threshold);
+}
+
+
+vec4 sample_neighbor_h(sampler2D source_texture, vec2 uv, int pixel_offset) {
+	const vec2 uv_per_px = 1.0 / render_target;
+
+	uv.x += pixel_offset * uv_per_px.x;
+	uv = clamp(uv, 0.0, 0.999);
+	return texture(source_texture, uv);
+}
+
+vec4 box_blur_n_h(sampler2D source_texture, vec2 uv, int num_taps) {
+	vec4 blurred_color = vec4(0.0);
+
+	for (int i = 1; i <= num_taps / 2; i++) {
+		blurred_color += sample_neighbor_h(source_texture, uv, i);
+		blurred_color += sample_neighbor_h(source_texture, uv, -i);
+	}
+	blurred_color += sample_neighbor_h(source_texture, uv, 0);
+
+	return blurred_color / num_taps;
+}
+
+float gauss(float x, float sigma) {
+	float power = -(pow(x, 2) / 2 * pow(sigma, 2));
+	return exp(power);
+}
+
+void add_gaussian_blur_h(sampler2D source_texture, vec2 uv, float sigma, int offset, inout float total_weights, inout vec4 blurred_color) {
+	float weight = gauss(offset, sigma);
+	blurred_color += weight * sample_neighbor_h(source_texture, uv, offset);
+	total_weights += weight;
+}
+
+vec4 gaussian_blur_5_h(sampler2D source_texture, vec2 uv, float sigma) {
+	float total_weights = 0.0;
+	vec4 blurred_color = vec4(0.0);
+
+	for (int i = 1; i <= 2; i++) {
+		add_gaussian_blur_h(source_texture, uv, sigma, i, total_weights, blurred_color);
+		add_gaussian_blur_h(source_texture, uv, sigma, -i, total_weights, blurred_color);
+	}
+
+	add_gaussian_blur_h(source_texture, uv, sigma, 0, total_weights, blurred_color);
+
+	return blurred_color / total_weights;
+}
+
+vec4 gaussian_blur_n_h(sampler2D source_texture, vec2 uv, float sigma, uint num_taps) {
+	float total_weights = 0.0;
+	vec4 blurred_color = vec4(0.0);
+
+	for (int i = 1; i <= num_taps / 2; i++) {
+		add_gaussian_blur_h(source_texture, uv, sigma, i, total_weights, blurred_color);
+		add_gaussian_blur_h(source_texture, uv, sigma, -i, total_weights, blurred_color);
+	}
+
+	add_gaussian_blur_h(source_texture, uv, sigma, 0, total_weights, blurred_color);
+
+	return blurred_color / total_weights;
+}
+
+
+// vec4 gaussian_blur_5_h(sampler2D source_texture, vec2 uv, float sigma) {
+// 	float total_weights = 0.0;
+// 	vec4 blurred_color = vec4(0.0);
+
+// 	for (int i = 1; i <= 2; i++) {
+// 		float wr = gauss(i, sigma);
+// 		blurred_color += wr * sample_neighbor_h(source_texture, uv, i);
+
+// 		float wl = gauss(-i, sigma);
+// 		blurred_color += wl * sample_neighbor_h(source_texture, uv, -i);
+	
+// 		total_weights += wl + wr;
+// 	}
+
+// 	float wc = gauss(0, sigma);
+// 	blurred_color += wc * sample_neighbor_h(source_texture, uv, 0);
+// 	total_weights += wc;
+
+// 	return blurred_color / total_weights;
+// }
+
+
+
 // SDF
 #define SDF_CIRCLE 0
 #define SDF_RING 1

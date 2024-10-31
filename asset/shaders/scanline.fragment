@@ -5,7 +5,7 @@ out vec4 color;
 in vec4 f_color;
 in vec2 f_uv;
 
-uniform sampler2D new_frame;
+uniform sampler2D unprocessed_frame;
 
 // #define hardScan -8.0
 // #define shape 2.0
@@ -107,75 +107,9 @@ uniform sampler2D new_frame;
 
 // }
 
-vec4 sample_neighbor(vec2 uv, int pixel_offset) {
-	const vec2 uv_per_px = 1.0 / render_target;
-
-	uv.x += pixel_offset * uv_per_px.x;
-	uv = clamp(uv, vec2(0.0), vec2(1.0));
-	return texture(new_frame, uv);
-}
-
-// float edge_distance(vec2 uv) {
-// 	const uint num_neighbors = 4;
-// 	const float num_weights = 10;
-
-// 	float distance = 0.0;
-// 	for (int i = 0; i < num_neighbors; i++) {
-// 		float weight = (num_neighbors - i) / (2 * num_weights);
-// 		int pixel_offset = i + 1;
-// 		vec4 neighbor_sample = sample_neighbor(f_uv, -pixel_offset);
-// 		neighbor_sample = rgb_to_hsv_4(neighbor_sample);
-// 		HSV_VALUE(neighbor_sample)
-// 	}
-
-// }
-
-
-float horizontal_edge_strength(vec2 uv) {
-	vec4 sample_color = rgb_to_hsv_4(texture(new_frame, uv));
-
-	float edge_strength = 1.0;
-
-	vec4 right = sample_neighbor(uv, 1);
-	right = rgb_to_hsv_4(right);
-	edge_strength += (HSV_VALUE(sample_color) - HSV_VALUE(right)) * 4;
-
-	for (int i = 1; i <= 4; i++) {
-		int pixel_offset = i;
-		vec4 left = sample_neighbor(uv, -pixel_offset);
-		left = rgb_to_hsv_4(left);
-
-		// edge_strength += length(center.rgb - left.rgb);
-		edge_strength += HSV_VALUE(left) - HSV_VALUE(sample_color);
-	}
-
-	edge_strength /= 6.0;
-
-	edge_strength = clamp(edge_strength, 0.0, 1.0);
-	return edge_strength * step(0.4, edge_strength);
-}
-
-vec4 lightest_left(vec2 uv) {
-	vec4 lightest = rgb_to_hsv_4(texture(new_frame, uv));
-
-	int index = 0;
-	for (int i = 1; i <= 4; i++) {
-		int pixel_offset = i;
-		vec4 left = sample_neighbor(uv, -pixel_offset);
-		left = rgb_to_hsv_4(left);
-
-		if (HSV_VALUE(left) > HSV_VALUE(lightest)) {
-			lightest = left;
-			index = 1;
-		}
-	}
-
-	return hsv_to_rgb_4(lightest);
-}
-
 void main() {
 	vec2 uv = f_uv + camera / render_target;
-	vec4 sample_color = texture(new_frame, f_uv);
+	vec4 sample_color = texture(unprocessed_frame, f_uv);
 	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
 
 	const float scanline_height_px = 7;
@@ -203,12 +137,12 @@ void main() {
 	hue_power = ease_out_cubic(hue_power);
 	
 	// Pretty much just double the saturation; for white, we need at least a little to work with
-	float saturation_target = clamp(HSV_SATURATION(scanline_color) * 1.618, 0.2, 1.0);
+	float saturation_target = clamp(HSV_SATURATION(scanline_color) * 1.0, 0.2, 1.0);
 
 	// Dark things should become a good bit darker, while light things should become just a bit darker
 	float value_target = clamp(ease_in_quadratic(HSV_VALUE(scanline_color)), 0.0, 0.9);
 
-	HSV_HUE(scanline_color) = mix(HSV_HUE(scanline_color), scanline_hue, 1.0 - hue_power);
+	// HSV_HUE(scanline_color) = mix(HSV_HUE(scanline_color), scanline_hue, 1.0 - hue_power);
 	HSV_SATURATION(scanline_color) = mix(HSV_SATURATION(scanline_color), saturation_target, scanline_power);
 	HSV_VALUE(scanline_color) = mix(HSV_VALUE(scanline_color), value_target, scanline_power);
 	scanline_color = hsv_to_rgb_4(scanline_color);

@@ -218,3 +218,7 @@ function tdengine.ffi.push_fullscreen_quad()
 	local opacity = 1.0
 	ffi.C.push_quad(0, n.y, n.x, n.y, uvs, opacity);
 end
+
+function tdengine.ffi.set_uniform_enum(name, value)
+	tdengine.ffi.set_uniform_i32(name, value:to_number())
+end

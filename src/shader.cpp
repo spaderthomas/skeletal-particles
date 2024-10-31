@@ -239,4 +239,5 @@ void init_shaders() {
 	add_graphics_shader("fluid_eulerian");
 	add_graphics_shader("scanline");
 	add_graphics_shader("bloom");
+	add_graphics_shader("chromatic_aberration");
 }

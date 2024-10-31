@@ -88,6 +88,10 @@ end
 
 
 
+function tdengine.enum.is_enum(v)
+	return type(v) == 'table' and v.__enum
+end
+
 function tdengine.enum.load(serialized_enum)
 	if not serialized_enum then return nil end
 	local enum_class = tdengine.enum_data[serialized_enum.__enum]

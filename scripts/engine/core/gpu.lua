@@ -33,12 +33,8 @@ end
 
 function tdengine.gpu.render()
   tdengine.ffi.tm_begin('render')
-  -- Render everything that was collected by the scene
-  for index, command_buffer in self.command_buffers:iterate() do
-    tdengine.ffi.gpu_submit_commands(command_buffer.handle)
-  end
 
-  -- If any subsystems need to render after the scene, they do so here
+  tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_render_scene)
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_scene_rendered)
 
   -- After this, the game has rendered everything for a frame. We just need to tell the app to
@@ -49,7 +45,10 @@ function tdengine.gpu.render()
   tdengine.app:on_swapchain_ready()
   tdengine.ffi.gpu_swap_buffers()
 
-
+  -- Update metadata
+  for _, render_pass in pairs(self.render_passes) do
+    render_pass.handle.dirty = false
+  end
   tdengine.ffi.tm_end('render')
 end
 
@@ -61,7 +60,7 @@ function tdengine.gpu.bind_entity(entity)
     self.bind_render_pass('scene')
   end
 end
-a
+
 function tdengine.gpu.bind_render_pass(name)
   -- @hack: When you're typing in the editor, this is ill formed
   if not self.render_passes[name] then return end
@@ -75,15 +74,6 @@ end
 function tdengine.gpu.submit_render_pass(name)
   local render_pass = self.render_passes[name]
   tdengine.ffi.gpu_submit_commands(render_pass.command_buffer)
-
-  local handle = render_pass.handle
-  if handle.ping_pong ~= nil then
-    local temp = handle.render_target
-    handle.render_target = handle.ping_pong
-    handle.ping_pong = temp
-  end
-
-  handle.dirty = false
 end
 
 function tdengine.gpu.add_command_buffer(name, buffer_descriptor)
@@ -135,3 +125,70 @@ function tdengine.gpu.find_command_buffer(name)
     end
   end
 end
+
+function tdengine.gpu.apply_ping_pong(name)
+  local render_pass = self.render_passes[name]
+  
+  if render_pass and render_pass.handle.ping_pong then
+    local temp = render_pass.handle.render_target
+    render_pass.handle.render_target = render_pass.handle.ping_pong
+    render_pass.handle.ping_pong = temp
+  end
+end
+
+function tdengine.gpu.find_current_texture(pass_name)
+  local render_pass = self.render_passes[pass_name]
+  if not render_pass then
+    log.warn('Could not find color buffer because render pass did not exist; render_pass = %s', pass_name)
+  end
+
+  return render_pass.handle.render_target.color_buffer
+end
+
+function tdengine.gpu.find_read_texture(pass_name)
+  local render_pass = self.render_passes[pass_name]
+  if not render_pass then
+    log.warn('Could not find color buffer because render pass did not exist; render_pass = %s', pass_name)
+  end
+
+  return render_pass.handle.ping_pong.color_buffer
+end
+
+function tdengine.gpu.find_write_texture(pass_name)
+  local render_pass = self.render_passes[pass_name]
+  if not render_pass then
+    log.warn('Could not find color buffer because render pass did not exist; render_pass = %s', pass_name)
+  end
+
+  return render_pass.handle.render_target.color_buffer
+end
+
+
+
+function tdengine.gpu.find_current_target(pass_name)
+  local render_pass = self.render_passes[pass_name]
+  if not render_pass then
+    log.warn('Could not find render target because render pass did not exist; render_pass = %s', pass_name)
+  end
+
+  return render_pass.handle.render_target
+end
+
+function tdengine.gpu.find_read_target(pass_name)
+  local render_pass = self.render_passes[pass_name]
+  if not render_pass then
+    log.warn('Could not find render target because render pass did not exist; render_pass = %s', pass_name)
+  end
+
+  return render_pass.handle.ping_pong
+end
+
+function tdengine.gpu.find_write_target(pass_name)
+  local render_pass = self.render_passes[pass_name]
+  if not render_pass then
+    log.warn('Could not find render target because render pass did not exist; render_pass = %s', pass_name)
+  end
+
+  return render_pass.handle.render_target
+end
+

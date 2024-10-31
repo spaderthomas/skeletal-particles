@@ -316,7 +316,7 @@ imgui.internal.draw_table_editor = function(editor)
 					imgui.PopItemWidth()
 				end
 
-			elseif value.__enum then
+			elseif tdengine.enum.is_enum(value) then
 				imgui.extensions.VariableName(display_key, variable_name_color)
 				if imgui.IsItemClicked(1) then
 					open_item_context_menu = true; 
