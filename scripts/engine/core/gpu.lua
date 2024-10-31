@@ -49,17 +49,7 @@ function tdengine.gpu.render()
   tdengine.app:on_swapchain_ready()
   tdengine.ffi.gpu_swap_buffers()
 
-  -- Update metadata
-  for name, render_pass in pairs(self.render_passes) do
-    local handle = render_pass.handle
-    if handle.ping_pong ~= nil then
-      local temp = handle.render_target
-      handle.render_target = handle.ping_pong
-      handle.ping_pong = temp
-    end
 
-    handle.dirty = false
-  end
   tdengine.ffi.tm_end('render')
 end
 
@@ -71,7 +61,7 @@ function tdengine.gpu.bind_entity(entity)
     self.bind_render_pass('scene')
   end
 end
-
+a
 function tdengine.gpu.bind_render_pass(name)
   -- @hack: When you're typing in the editor, this is ill formed
   if not self.render_passes[name] then return end
@@ -85,6 +75,15 @@ end
 function tdengine.gpu.submit_render_pass(name)
   local render_pass = self.render_passes[name]
   tdengine.ffi.gpu_submit_commands(render_pass.command_buffer)
+
+  local handle = render_pass.handle
+  if handle.ping_pong ~= nil then
+    local temp = handle.render_target
+    handle.render_target = handle.ping_pong
+    handle.ping_pong = temp
+  end
+
+  handle.dirty = false
 end
 
 function tdengine.gpu.add_command_buffer(name, buffer_descriptor)

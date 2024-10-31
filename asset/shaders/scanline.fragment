@@ -178,7 +178,7 @@ void main() {
 	vec4 sample_color = texture(new_frame, f_uv);
 	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
 
-	const float scanline_height_px =3;
+	const float scanline_height_px = 7;
 	const float scanline_height = scanline_height_px / render_target.y;
 
 	const float num_scanlines = render_target.y / scanline_height_px;
@@ -189,70 +189,30 @@ void main() {
 	scanline_power = ease_in_out_cubic(scanline_power);
 
 	vec4 scanline_color = rgb_to_hsv_4(sample_color);
-	HSV_HUE(scanline_color) = max(HSV_HUE(scanline_color), 210.0 / 360.0);
-	HSV_SATURATION(scanline_color) = HSV_SATURATION(scanline_color) + (scanline_power * .2);
-	HSV_VALUE(scanline_color) = HSV_VALUE(scanline_color) - (scanline_power * .1);
+
+	float hue_min = 210.0 / 360.0;
+	float white_cutoff = 0.1;
+	if (HSV_SATURATION(scanline_color) < white_cutoff) {
+		HSV_HUE(scanline_color) = hue_min;
+	}
+
+	// The actual color of the scanline is blue; move colors towards blue, with colors farther from blue moving more
+	float scanline_hue = 240.0 / 360.0;
+	float hue_power = HSV_HUE(scanline_color) - scanline_hue;
+	hue_power = map_range(hue_power, -1.0, 1.0, 0.0, 1.0);
+	hue_power = ease_out_cubic(hue_power);
+	
+	// Pretty much just double the saturation; for white, we need at least a little to work with
+	float saturation_target = clamp(HSV_SATURATION(scanline_color) * 1.618, 0.2, 1.0);
+
+	// Dark things should become a good bit darker, while light things should become just a bit darker
+	float value_target = clamp(ease_in_quadratic(HSV_VALUE(scanline_color)), 0.0, 0.9);
+
+	HSV_HUE(scanline_color) = mix(HSV_HUE(scanline_color), scanline_hue, 1.0 - hue_power);
+	HSV_SATURATION(scanline_color) = mix(HSV_SATURATION(scanline_color), saturation_target, scanline_power);
+	HSV_VALUE(scanline_color) = mix(HSV_VALUE(scanline_color), value_target, scanline_power);
 	scanline_color = hsv_to_rgb_4(scanline_color);
 
-	// Calculate the average brightness of your left neighbors
-	const uint num_neighbors = 4;
-	const float num_weights = 10;
-
-	// vec4 horizontal_bleed_color = sample_color * 0.5;
-	vec4 horizontal_bleed_color = lightest_left(f_uv) * 0.5;
-	for (int i = 0; i < num_neighbors; i++) {
-		float weight = (num_neighbors - i) / (2 * num_weights);
-		int pixel_offset = i + 1;
-		horizontal_bleed_color += sample_neighbor(f_uv, pixel_offset) * weight;
-		horizontal_bleed_color += sample_neighbor(f_uv, -pixel_offset) * weight;
-	}
-
-	float edge_strength = horizontal_edge_strength(f_uv);
-	float bleed_strength = 1.0 - edge_strength;
-	bleed_strength *= step(bleed_strength, 0.75);
-	bleed_strength = map_range(bleed_strength, 0.0, 0.75, 0.0, 1.0);
-	horizontal_bleed_color = rgb_to_hsv_4(horizontal_bleed_color);
-	HSV_HUE(horizontal_bleed_color) = max(HSV_HUE(horizontal_bleed_color), 0.15);
-	HSV_HUE(horizontal_bleed_color) -= bleed_strength * .075;
-	HSV_SATURATION(horizontal_bleed_color) += bleed_strength;
-	HSV_VALUE(horizontal_bleed_color) -= bleed_strength * .05;
-
-	horizontal_bleed_color = clamp(horizontal_bleed_color, vec4(0.0), vec4(1.0));
-	float t = HSV_VALUE(horizontal_bleed_color);
-	horizontal_bleed_color = hsv_to_rgb_4(horizontal_bleed_color);
-
-
-	if (HSV_VALUE(sample_color_hsv) > 0.5) {
-		color = mix(scanline_color, horizontal_bleed_color, 0.5);
-	}
-	else {
-		color = scanline_color + horizontal_bleed_color;
-	}
-	// color = scanline_color + (horizontal_bleed_color * (1.0 - t));
-	// color = clamp(color, vec4(0.0), vec4(1.0));
-	// color = make_red(bleed_strength);
-
-	// color = red;
-	// color = sample_color;
-	// color = mix(sample_color, make_red(bleed_strength), .75);
+	color = scanline_color;
 	return;
-
-	// float neighbor_strength = neighbor_brightness - sample_brightness;
-
-	// scanline_power *= sample_brightness;
-
-	// vec4 neighbor_color = rgb_to_hsv_4(sample_color);
-	// // HSV_SATURATION(neighbor_color) = 1.0;
-	// neighbor_color = hsv_to_rgb_4(neighbor_color);
-	// color = neighbor_color;
-
-	// sample_color = mix(sample_color, neighbor_color, neighbor_strength);
-	// color = mix(sample_color, scanline_color, scanline_power);
-	// color = sample_color;
-
-	// color = mix(black, hsv_to_rgb_4(neighbor_color), neighbor_strength);
-	// color = make_red(scanline_power);
-	// color = make_red(neighbor_strength);
-	// color = make_red(max(scanline_power, neighbor_strength));
-	//color = sample_color;
 }

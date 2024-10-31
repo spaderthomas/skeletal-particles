@@ -136,8 +136,25 @@ float ease_in_out_cubic(float t) {
     : 0.5 * pow(2.0 * t - 2.0, 3.0) + 1.0;
 }
 
+
 float interp_in_out_cubic(float x, float y, float t) {
 	return mix(x, y, ease_in_out_cubic(t));
+}
+
+float ease_out_quadratic(float t) {
+	return 1.0 - pow(1.0 - t, 2);
+}
+
+float ease_out_cubic(float t) {
+	return 1.0 - pow(1.0 - t, 3);
+}
+
+float ease_in_quadratic(float t) {
+	return pow(t, 2);
+}
+
+float ease_in_cubic(float t) {
+	return pow(t, 3);
 }
 
 // SDF

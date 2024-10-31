@@ -211,3 +211,10 @@ end
 function tdengine.ffi.gpu_clear_target(target)
 	ffi.C.gpu_clear_target(target)
 end
+
+function tdengine.ffi.push_fullscreen_quad()
+	local n = ffi.C.get_native_resolution()
+	local uvs = nil
+	local opacity = 1.0
+	ffi.C.push_quad(0, n.y, n.x, n.y, uvs, opacity);
+end

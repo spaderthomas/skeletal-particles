@@ -238,4 +238,5 @@ void init_shaders() {
 	add_graphics_shader("fluid");
 	add_graphics_shader("fluid_eulerian");
 	add_graphics_shader("scanline");
+	add_graphics_shader("bloom");
 }

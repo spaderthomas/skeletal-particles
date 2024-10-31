@@ -22,7 +22,9 @@ function App:on_init_game()
 		scene = tdengine.gpu.add_render_target('scene', self.native_resolution.x, self.native_resolution.y),
 		ping_pong = tdengine.gpu.add_render_target('ping_pong', self.native_resolution.x, self.native_resolution.y),
 		post_process = tdengine.gpu.add_render_target('post_process', self.native_resolution.x, self.native_resolution.y),
-}
+		bloom_a = tdengine.gpu.add_render_target('bloom_a', self.native_resolution.x, self.native_resolution.y),
+		bloom_b = tdengine.gpu.add_render_target('bloom_b', self.native_resolution.x, self.native_resolution.y),
+	}
 
 	-- Command buffers
 	local command_buffers = {}
@@ -46,12 +48,12 @@ function App:on_init_game()
 	command_buffers.fluid = tdengine.gpu.add_command_buffer('fluid', buffer_descriptor)
 
 	-- Render passes
-	tdengine.gpu.add_render_pass('scene', command_buffers.scene, render_targets.scene, render_targets.ping_pong,
-		tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('fluid', command_buffers.scene, render_targets.scene, render_targets.ping_pong,
-		tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('post_process', command_buffers.post_process, render_targets.post_process, nil,
-		tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('scene', command_buffers.scene, render_targets.scene, render_targets.ping_pong, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('fluid', command_buffers.scene, render_targets.scene, render_targets.ping_pong, tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('post_process', command_buffers.post_process, render_targets.post_process, nil, tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('bloom_filter', command_buffers.post_process, render_targets.bloom_a, nil, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('bloom_blur', command_buffers.post_process, render_targets.bloom_b, render_targets.bloom_a, tdengine.enums.GpuLoadOp.Clear)
+
 end
 
 function App:on_start_game()

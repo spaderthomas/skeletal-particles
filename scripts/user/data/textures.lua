@@ -7,9 +7,9 @@ return {
         "debug",
         "logo"
       },
-      hash = 35317396,
+      hash = 2293011656,
       high_priority = false,
-      mod_time = 13374702769,
+      mod_time = 13374782647,
       name = "ui-misc.png"
     }
   },
