@@ -17,9 +17,10 @@ tdengine.enum.define(
 )
 
 
-function GameView:init(name, size_calculation, size, priority)
-  self.size_calculation = size_calculation
+function GameView:init(name, render_target, size_calculation, size, priority)
   self.name = name
+  self.render_target = render_target
+  self.size_calculation = size_calculation
   self.size = size:copy()
   self.priority = priority
 
@@ -29,6 +30,9 @@ end
 function GameView:update()
   imgui.PushStyleVar_2(ffi.C.ImGuiStyleVar_WindowPadding, 0, 0)
   tdengine.editor.begin_window(self.name)
+
+  self.focus = imgui.IsWindowFocused()
+  self.hover = imgui.IsWindowHovered()
 
   if self.priority == tdengine.enums.GameViewPriority.Main then
     if self.size_calculation == tdengine.enums.GameViewSize.ExactSize then
@@ -40,14 +44,11 @@ function GameView:update()
 
     end
 
-    self.focus = imgui.IsWindowFocused()
-    self.hover = imgui.IsWindowHovered()
     ffi.C.set_game_focus(self.focus and self.hover)
   end
 
-  local texture = tdengine.gpu.find_render_pass('post_process').render_target.color_buffer
   imgui.Image(
-    texture,
+    self.render_target.color_buffer,
     imgui.ImVec2(self.size.x, self.size.y),
     imgui.ImVec2(0, 1), imgui.ImVec2(1, 0))
 
@@ -60,9 +61,6 @@ local GameViewManager = tdengine.editor.define('GameViewManager')
 
 function GameViewManager:init()
   self.game_views = tdengine.data_types.Array:new()
-
-  local default_view = GameView:new('Game', tdengine.enums.GameViewSize.ExactSize, tdengine.app.native_resolution, tdengine.enums.GameViewPriority.Main)
-  self:add_view(default_view)
 end
 
 function GameViewManager:find_main_view()

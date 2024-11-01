@@ -2,7 +2,8 @@ local App = tdengine.define_app()
 
 function App:init()
 	self.upscaled_view = 'Game (2x)'
-	self.native_resolution = tdengine.vec2(426, 240)
+	self.native_resolution = tdengine.vec2(320, 180)
+	self.output_resolution = tdengine.vec2(1280, 720)
 
 	self.window_flags = tdengine.enum.bitwise_or(
 		tdengine.enums.WindowFlags.Windowed,
@@ -24,6 +25,7 @@ function App:on_init_game()
 		post_process = tdengine.gpu.add_render_target('post_process', self.native_resolution.x, self.native_resolution.y),
 		bloom_a = tdengine.gpu.add_render_target('bloom_a', self.native_resolution.x, self.native_resolution.y),
 		bloom_b = tdengine.gpu.add_render_target('bloom_b', self.native_resolution.x, self.native_resolution.y),
+		output = tdengine.gpu.add_render_target('output', self.output_resolution.x, self.output_resolution.y),
 	}
 
 	-- Command buffers
@@ -48,12 +50,13 @@ function App:on_init_game()
 	command_buffers.fluid = tdengine.gpu.add_command_buffer('fluid', buffer_descriptor)
 
 	-- Render passes
-	tdengine.gpu.add_render_pass('scene', command_buffers.scene, render_targets.scene, render_targets.ping_pong, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('fluid', command_buffers.scene, render_targets.scene, render_targets.ping_pong, tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('post_process', command_buffers.post_process, render_targets.post_process, nil, tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('bloom_filter', command_buffers.post_process, render_targets.bloom_a, nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('bloom_blur', command_buffers.post_process, render_targets.bloom_b, render_targets.bloom_a, tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('bloom_combine', command_buffers.post_process, render_targets.post_process, nil, tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('scene',         command_buffers.scene,        render_targets.scene,        render_targets.ping_pong, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('fluid',         command_buffers.scene,        render_targets.scene,        render_targets.ping_pong, tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('post_process',  command_buffers.post_process, render_targets.post_process, nil,                      tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('bloom_filter',  command_buffers.post_process, render_targets.bloom_a,      nil,                      tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('bloom_blur',    command_buffers.post_process, render_targets.bloom_b,      render_targets.bloom_a,   tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('bloom_combine', command_buffers.post_process, render_targets.post_process, nil,                      tdengine.enums.GpuLoadOp.None)
+	tdengine.gpu.add_render_pass('output',        command_buffers.post_process, render_targets.output,       nil,                      tdengine.enums.GpuLoadOp.Clear)
 
 end
 
@@ -62,8 +65,18 @@ function App:on_start_game()
 
 	tdengine.editor.find('DialogueEditor').hidden = true
 
-  local upscaled_view = GameView:new(self.upscaled_view, tdengine.enums.GameViewSize.ExactSize, tdengine.app.native_resolution:scale(3), tdengine.enums.GameViewPriority.Main)
-  tdengine.editor.find('GameViewManager'):add_view(upscaled_view)
+	local game_views = tdengine.editor.find('GameViewManager')
+  game_views:add_view(GameView:new(
+		'Game',
+		tdengine.gpu.find_render_target('post_process'),
+		tdengine.enums.GameViewSize.ExactSize, self.native_resolution,
+		tdengine.enums.GameViewPriority.Standard))
+
+  game_views:add_view(GameView:new(
+		'Game (2x)',
+		tdengine.gpu.find_render_target('output'),
+		tdengine.enums.GameViewSize.ExactSize, self.output_resolution,
+		tdengine.enums.GameViewPriority.Main))
 
 	tdengine.ffi.use_editor_layout('skeletal-240')
 end

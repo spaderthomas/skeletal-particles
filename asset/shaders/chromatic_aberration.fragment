@@ -10,10 +10,12 @@ uniform sampler2D unprocessed_frame;
 const float edge_threshold = 0.1;
 
 void main() {
+	float aberration_step = 1.0;
+
 	vec2 uv = f_uv + camera / render_target;
 	vec4 sample_center = sample_neighbor_h(unprocessed_frame, f_uv,  0);
-	vec4 sample_left   = sample_neighbor_h(unprocessed_frame, f_uv, -1);
-	vec4 sample_right  = sample_neighbor_h(unprocessed_frame, f_uv,  1);
+	vec4 sample_left   = sample_neighbor_h(unprocessed_frame, f_uv, -aberration_step);
+	vec4 sample_right  = sample_neighbor_h(unprocessed_frame, f_uv,  aberration_step);
 	
 	float brightness = calc_brightness(sample_center);
 	float brightness_right = calc_brightness(sample_right);
@@ -22,14 +24,22 @@ void main() {
 	float brightness_delta = max(abs(brightness - brightness_left), abs(brightness - brightness_right));
 	bool is_edge = brightness_delta > edge_threshold;
 
+	vec4 sample_hsv = rgb_to_hsv_4(sample_center);
+	bool is_gray = HSV_SATURATION(sample_hsv) < 0.1 && HSV_VALUE(sample_hsv) > 0.4;
+
 	color = sample_center;
-	if (is_edge) {
+	if (is_edge && !is_gray) {
 		const float red_adjust = 1.0;
 		const float blue_adjust = 1.0;
 		const float green_adjust = (red_adjust + blue_adjust) / 2.5;
 
-		color.r = sample_left.r * red_adjust;
-		color.b = sample_right.b * blue_adjust;
-		color.g *= green_adjust;
+		// color.r = sample_left.r * red_adjust;
+		// color.b = sample_right.b * blue_adjust;
+		// color.g *= .95;
+
+		float aberration_intensity = 0.5;
+		color.r = mix(color.r, sample_left.r, aberration_intensity);
+		color.b = mix(color.b, sample_right.b, aberration_intensity);
+
 	} 
 }

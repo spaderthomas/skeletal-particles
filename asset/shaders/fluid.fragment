@@ -9,7 +9,6 @@ void main() {
 	vec2 world = gl_FragCoord.xy + camera;
 
 	CapsuleHitResult result = is_within_system(world);
-	return;
 	if (!result.hit) {
 		discard;
 	}

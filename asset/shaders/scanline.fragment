@@ -112,15 +112,18 @@ void main() {
 	vec4 sample_color = texture(unprocessed_frame, f_uv);
 	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
 
-	const float scanline_height_px = 7;
+	const float scanline_height_px = 2;
 	const float scanline_height = scanline_height_px / render_target.y;
 
 	const float num_scanlines = render_target.y / scanline_height_px;
 	float scan_position = fract(uv.y * num_scanlines);
-	float scanline_power = triangle_wave(scan_position - .5);
-	scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
-	scanline_power = 1.0 - scanline_power;
-	scanline_power = ease_in_out_cubic(scanline_power);
+	// float scanline_power = triangle_wave(scan_position - .5);
+	// scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
+	// scanline_power = 1.0 - scanline_power;
+	// scanline_power = ease_in_out_cubic(scanline_power);
+	float scanline_power = scan_position;
+	// scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
+	// color = make_red(scanline_power); return;
 
 	vec4 scanline_color = rgb_to_hsv_4(sample_color);
 

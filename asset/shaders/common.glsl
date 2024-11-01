@@ -3,7 +3,8 @@
 // UNIFORMS
 uniform float master_time;
 uniform vec2 camera;
-const vec2 render_target = vec2(426.0, 240.0);  
+uniform vec2 render_target;
+
 //const vec2 render_target = vec2(1920.0, 1080.0) * vec2(.0375, .125);  
 
 // COLORS
@@ -170,7 +171,7 @@ float low_pass(float x, float threshold) {
 }
 
 
-vec4 sample_neighbor_h(sampler2D source_texture, vec2 uv, int pixel_offset) {
+vec4 sample_neighbor_h(sampler2D source_texture, vec2 uv, float pixel_offset) {
 	const vec2 uv_per_px = 1.0 / render_target;
 
 	uv.x += pixel_offset * uv_per_px.x;

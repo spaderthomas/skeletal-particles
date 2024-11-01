@@ -485,7 +485,7 @@ GpuRenderTarget* gpu_create_target(float x, float y) {
 	glBindTexture(GL_TEXTURE_2D, target->color_buffer);
 	
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target->color_buffer, 0);
@@ -526,7 +526,7 @@ void gpu_clear_target(GpuRenderTarget* target) {
 void gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination) {
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, source->handle);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destination->handle);
-	glBlitFramebuffer(0, 0, source->size.x, source->size.y, 0, 0, destination->size.x, destination->size.y,  GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	glBlitFramebuffer(0, 0, source->size.x, source->size.y, 0, 0, destination->size.x, destination->size.y,  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT);
 }
 
@@ -770,6 +770,7 @@ void GlStateDiff::apply(GlState* state) {
 	if (!current || current->render_target != state->render_target) {
 		gpu_bind_target(state->render_target);
 	}
+	set_uniform_immediate_vec2("render_target", state->render_target->size);
 
 
 	this->current = state;

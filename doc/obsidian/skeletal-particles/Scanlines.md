@@ -8,3 +8,4 @@
 | 37  | 66  | 100 | 92  | Pink       |
 |     |     |     |     |            |
 
+Try to upscale the texture to the output resolution, and then apply these effects. You end up with artifacts at the lowest resolution (and scanlines are in fact turned off in the game when the resolution is low).

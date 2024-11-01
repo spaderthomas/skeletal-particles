@@ -23,6 +23,10 @@ function PostProcess:on_render_scene()
 	local processed_target = tdengine.gpu.find_write_target('post_process')
 	tdengine.ffi.gpu_blit_target(tdengine.gpu.find_command_buffer('post_process'), unprocessed_target, processed_target)
 
+  local native_frame = tdengine.gpu.find_render_target('post_process')
+	local output_frame = tdengine.gpu.find_write_target('output')
+	tdengine.ffi.gpu_blit_target(tdengine.gpu.find_command_buffer('post_process'), native_frame, output_frame)
+
 end
 
 
@@ -63,7 +67,7 @@ function PostProcess:render_bloom()
   blur_pass.render_target = tdengine.gpu.find_render_target('bloom_b')
   blur_pass.ping_pong = tdengine.gpu.find_render_target('bloom_a')
 
-  local num_bloom_passes = 6;
+  local num_bloom_passes = 4;
   for i = 1, num_bloom_passes do
     tdengine.gpu.bind_render_pass('bloom_blur')
     tdengine.ffi.set_active_shader('bloom')

@@ -38,7 +38,7 @@ function SampleEntity:draw()
 
   tdengine.ffi.draw_quad(100, 0, 100, 52, tdengine.colors.white:to_vec4())
 
-  tdengine.ffi.draw_image('animal-well.png', 500, 3)
+  tdengine.ffi.draw_image_ex('animal-well-320-180.png', 0, 0, 320, 180, 1)
 
   for i = 1, 20 do
     tdengine.ffi.set_layer(i)
