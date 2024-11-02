@@ -31,8 +31,8 @@ void init_base(uint i) {
 	vec2 box_min = vec2(system.pa.x + system.radius * spawn_min, system.pa.y + system.radius * spawn_min); 
 	vec2 box_max = vec2(box_min.x + spawn_area * system.radius, box_min.y + spawn_area * system.radius); 
 	
-	//particles[i].position.y = mix(render_target.y * spawn_min, render_target.y * spawn_max, row / particles_per_row);
-	//particles[i].position.x = mix(render_target.x * spawn_min, render_target.x * spawn_max, col / particles_per_row);
+	//particles[i].position.y = mix(output_resolution.y * spawn_min, output_resolution.y * spawn_max, row / particles_per_row);
+	//particles[i].position.x = mix(output_resolution.x * spawn_min, output_resolution.x * spawn_max, col / particles_per_row);
 	//particles[i].position.x = RANDOM_FLOAT(seed, system.pa.x, system.pa.x + system.radius);
 	//particles[i].position.y = RANDOM_FLOAT(seed, system.pa.y, system.pa.y + system.radius);
 

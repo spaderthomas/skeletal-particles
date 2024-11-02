@@ -6,40 +6,123 @@ in vec4 f_color;
 in vec2 f_uv;
 
 uniform sampler2D unprocessed_frame;
+uniform sampler2D blur_map;
 
-const float edge_threshold = 0.1;
+const float edge_threshold = 0.05;
 
 void main() {
-	float aberration_step = 1.0;
 
-	vec2 uv = f_uv + camera / render_target;
+
+
+	float aberration_step = scaled_pixels(1).x;
+	// int num_taps = 4;
+	
+	// vec4 sample_color = texture(unprocessed_frame, f_uv);
+	// vec4 sample_blur = texture(blur_map, f_uv) * 1;
+	// float aberration_strength = map_range(sample_blur.r, 0.0, 0.75, 0.0, 1.0);
+	// // DBG_MIX(samp0le_color, sample_blur * 4, .5);
+
+	// float max_brightness_delta = 0.0;
+	// int max_delta_index = 0;
+	// vec4 edge_sample = vec4(0.0);
+	// for (int i = 1; i <= num_taps; i++) {
+	// 	int il = -i - 1;
+	// 	int ir = -i;
+	// 	vec4 sample_left = sample_neighbor_h(unprocessed_frame, f_uv, il * aberration_step);
+	// 	vec4 sample_right = sample_neighbor_h(unprocessed_frame, f_uv, ir * aberration_step);
+		
+	// 	float brightness_delta = calc_brightness(sample_right) - calc_brightness(sample_left);
+	// 	if (brightness_delta > max_brightness_delta) {
+	// 		max_brightness_delta = brightness_delta;
+	// 		max_delta_index = i;
+	// 		edge_sample = sample_left;
+	// 	}
+	// }
+
+	// color = sample_color;
+	// if (max_brightness_delta > 0.0) {
+	// 	vec4 aberration_weights = vec4(
+	// 		ease_out_cubic(ease_out_cubic(aberration_strength)),
+	// 		ease_out_quadratic(ease_out_cubic(aberration_strength)),
+	// 		ease_out_quadratic(ease_out_quadratic(aberration_strength)),
+	// 		1.0
+	// 	);
+	// 	color = edge_sample * aberration_weights;
+	// 	// color = aberration_weights;
+	// 	// color = edge_sample;
+	// 	// color = red;
+	// } 
+	// color = sample_color;
+
+	// color = vec4(sample_blur.r, 0.0, 0.0, 1.0);
+	// color = make_green(sample_blur.r);
+
+
+
+
+
+	// float max_brightness_delta = 0.0;
+	// int max_delta_index = 0;
+	// vec4 edge_sample = vec4(0.0);
+	// for (int i = 1; i <= num_taps; i++) {
+	// 	int il = -(i - 1);
+	// 	int ir = -i;
+	// 	vec4 sample_left = sample_neighbor_h(unprocessed_frame, f_uv, il * aberration_step);
+	// 	vec4 sample_right = sample_neighbor_h(unprocessed_frame, f_uv, ir * aberration_step);
+		
+	// 	float brightness_delta = calc_brightness(sample_right) - calc_brightness(sample_left);
+	// 	if (brightness_delta > max_brightness_delta) {
+	// 		max_brightness_delta = brightness_delta;
+	// 		max_delta_index = i;
+	// 		edge_sample = sample_left;
+	// 	}
+	// }
+
+	// color = sample_neighbor_h(unprocessed_frame, f_uv, 0);
+	
+	// bool has_edge = max_brightness_delta > edge_threshold;
+	// if (has_edge) {
+	// 	float edge_distance = float(max_delta_index) / float(num_taps);
+	// 	float inv_edge_distance = 1.0 - edge_distance;
+	// 	vec4 aberration_color = vec4(
+	// 		1.0 * ease_out_quadratic(inv_edge_distance + .1),
+	// 		1.0 * ease_in_quadratic(inv_edge_distance),
+	// 		1.0 * ease_in_cubic(inv_edge_distance),
+	// 		1.0
+	// 	);
+
+	// 	color = mix(color, aberration_color, .75);
+	// }
+	// else {
+
+	// }
+
+
+
+
+
+	color = red;
+
 	vec4 sample_center = sample_neighbor_h(unprocessed_frame, f_uv,  0);
 	vec4 sample_left   = sample_neighbor_h(unprocessed_frame, f_uv, -aberration_step);
 	vec4 sample_right  = sample_neighbor_h(unprocessed_frame, f_uv,  aberration_step);
 	
+	color = sample_center;
+
 	float brightness = calc_brightness(sample_center);
 	float brightness_right = calc_brightness(sample_right);
 	float brightness_left = calc_brightness(sample_left);
-
 	float brightness_delta = max(abs(brightness - brightness_left), abs(brightness - brightness_right));
+
 	bool is_edge = brightness_delta > edge_threshold;
-
-	vec4 sample_hsv = rgb_to_hsv_4(sample_center);
-	bool is_gray = HSV_SATURATION(sample_hsv) < 0.1 && HSV_VALUE(sample_hsv) > 0.4;
-
-	color = sample_center;
-	if (is_edge && !is_gray) {
+	if (is_edge) {
 		const float red_adjust = 1.0;
 		const float blue_adjust = 1.0;
 		const float green_adjust = (red_adjust + blue_adjust) / 2.5;
 
-		// color.r = sample_left.r * red_adjust;
-		// color.b = sample_right.b * blue_adjust;
-		// color.g *= .95;
+		color.r = sample_left.r * red_adjust;
+		color.b = sample_right.b * blue_adjust;
+		color.g *= green_adjust;
 
-		float aberration_intensity = 0.5;
-		color.r = mix(color.r, sample_left.r, aberration_intensity);
-		color.b = mix(color.b, sample_right.b, aberration_intensity);
-
-	} 
+ 	}
 }

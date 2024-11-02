@@ -87,15 +87,18 @@ end
 
 function tdengine.gpu.add_render_target(name, x, y)
   local render_target = tdengine.ffi.gpu_create_target(x, y)
+  tdengine.ffi.set_gl_name(tdengine.enums.GlId.Framebuffer:to_number(), render_target.handle, #name, name)
+
   self.render_targets[name] = RenderTarget:new({
     name = name,
     handle = render_target
   })
-
   return self.render_targets[name].handle
 end
 
 function tdengine.gpu.add_render_pass(name, command_buffer, target, ping_pong, load_op)
+  load_op = load_op or tdengine.enums.GpuLoadOp.None
+
   local pass_descriptor = ffi.new('GpuRenderPassDescriptor')
   pass_descriptor.target = target
   pass_descriptor.ping_pong = ping_pong
@@ -115,6 +118,7 @@ function tdengine.gpu.find_render_target(name)
 end
 
 function tdengine.gpu.find_render_pass(name)
+  if not self.render_passes[name] then dbg() end
   return self.render_passes[name].handle
 end
 
@@ -129,7 +133,7 @@ end
 function tdengine.gpu.apply_ping_pong(name)
   local render_pass = self.render_passes[name]
   
-  if render_pass and render_pass.handle.ping_pong then
+  if render_pass and not tdengine.ffi.is_nil(render_pass.handle.ping_pong) then
     local temp = render_pass.handle.render_target
     render_pass.handle.render_target = render_pass.handle.ping_pong
     render_pass.handle.ping_pong = temp
@@ -192,3 +196,5 @@ function tdengine.gpu.find_write_target(pass_name)
   return render_pass.handle.render_target
 end
 
+local t = 0.05
+print(tdengine.interpolation.EaseOut(0, 1, t, 2), tdengine.interpolation.EaseOut(0, 1, t, 3))

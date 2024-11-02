@@ -303,7 +303,13 @@ function EngineStats:engine_viewer()
 		imgui.TreePop()
 	end
 
-	if imgui.TreeNode('Gui') then
+	if imgui.TreeNode('GPU') then
+		imgui.extensions.Table(tdengine.gpu)
+		imgui.TreePop()
+	end
+
+
+	if imgui.TreeNode('GUI') then
 		if imgui.TreeNode('Animations') then
 			self.gui_animations:draw()
 			imgui.TreePop()

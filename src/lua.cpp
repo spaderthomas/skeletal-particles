@@ -100,7 +100,9 @@ LuaState::LuaState() {
 		if (!path_util::is_lua(event->file_path)) return;
 		
 		auto manager = (LuaState*)userdata;
-		tdns_log.write("reload script: %s", event->file_path);
+
+		auto stripped_path = strip_named_path("install", event->file_path);
+		tdns_log.write("Hotloading script: %s", stripped_path);
 		manager->script_file(event->file_path);
 	};
 

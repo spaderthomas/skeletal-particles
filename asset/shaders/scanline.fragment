@@ -6,6 +6,7 @@ in vec4 f_color;
 in vec2 f_uv;
 
 uniform sampler2D unprocessed_frame;
+uniform sampler2D bloom_map;
 
 // #define hardScan -8.0
 // #define shape 2.0
@@ -14,12 +15,12 @@ uniform sampler2D unprocessed_frame;
 // #define warpX 0.031
 // #define warpY 0.041
 
-// #define input_size render_target
-// #define output_size (render_target * 4)
+// #define input_size output_resolution
+// #define output_size (output_resolution * 4)
 
 // vec2 Dist(vec2 pos)
 // {
-//     pos = pos*render_target.xy;
+//     pos = pos*output_resolution.xy;
     
 //     return -((pos - floor(pos)) - vec2(0.5));
 // }
@@ -37,7 +38,7 @@ uniform sampler2D unprocessed_frame;
 // }
 
 // vec3 Fetch(vec2 pos,vec2 off){
-//   pos = (floor(pos * render_target.xy + off) + vec2(0.5,0.5)) / render_target.xy;
+//   pos = (floor(pos * output_resolution.xy + off) + vec2(0.5,0.5)) / output_resolution.xy;
 // 	return texture(new_frame, pos.xy).xyz;
 // }
 
@@ -102,54 +103,57 @@ uniform sampler2D unprocessed_frame;
 //     return pos*0.5 + 0.5;
 // }
 // vec4 lotte() {
-// 	vec2 pos = Warp(f_uv * (render_target.xy / input_size.xy)) * (input_size.xy / render_target.xy);
+// 	vec2 pos = Warp(f_uv * (output_resolution.xy / input_size.xy)) * (input_size.xy / output_resolution.xy);
 // 	return vec4(Tri(f_uv), 1.0); 
 
 // }
 
 void main() {
-	vec2 uv = f_uv + camera / render_target;
+	vec2 uv = f_uv + camera / output_resolution;
 	vec4 sample_color = texture(unprocessed_frame, f_uv);
 	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
 
-	const float scanline_height_px = 2;
-	const float scanline_height = scanline_height_px / render_target.y;
+	const float scanline_height_px = 7;
+	const float scanline_height = scanline_height_px / output_resolution.y;
 
-	const float num_scanlines = render_target.y / scanline_height_px;
+	const float num_scanlines = output_resolution.y / scanline_height_px;
 	float scan_position = fract(uv.y * num_scanlines);
-	// float scanline_power = triangle_wave(scan_position - .5);
-	// scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
-	// scanline_power = 1.0 - scanline_power;
-	// scanline_power = ease_in_out_cubic(scanline_power);
-	float scanline_power = scan_position;
+	float scanline_power = triangle_wave(scan_position - .5);
+	scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
+	scanline_power = 1.0 - scanline_power;
+	scanline_power = ease_in_out_cubic(scanline_power); 
+	// float scanline_power = scan_position;
 	// scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
 	// color = make_red(scanline_power); return;
 
-	vec4 scanline_color = rgb_to_hsv_4(sample_color);
+	vec4 bloom = texture(bloom_map, f_uv);
+	// vec4 scanline_light = color_255(191.0, 217.0, 237.0, 255.0);
+	vec4 scanline_light = color_255(100.0, 130.0, 200.0, 255.0) * 1.15;
+	vec4 scanline_dark = color_255(12.0, 8.0, 100.0, 255.0);
+	vec4 scanline_color = mix(scanline_dark, scanline_light, bloom.r);
+	// color = mix(sample_color, scanline_light, scanline_power * bloom.r);
 
-	float hue_min = 210.0 / 360.0;
-	float white_cutoff = 0.1;
-	if (HSV_SATURATION(scanline_color) < white_cutoff) {
-		HSV_HUE(scanline_color) = hue_min;
-	}
+	// float strength_dark = double_pass(bloom.r, 0.4, 1.0);
+	// float strength_dark = high_pass(bloom.r, 0.0);
 
-	// The actual color of the scanline is blue; move colors towards blue, with colors farther from blue moving more
-	float scanline_hue = 240.0 / 360.0;
-	float hue_power = HSV_HUE(scanline_color) - scanline_hue;
-	hue_power = map_range(hue_power, -1.0, 1.0, 0.0, 1.0);
-	hue_power = ease_out_cubic(hue_power);
-	
-	// Pretty much just double the saturation; for white, we need at least a little to work with
-	float saturation_target = clamp(HSV_SATURATION(scanline_color) * 1.0, 0.2, 1.0);
+	color = sample_color;
 
-	// Dark things should become a good bit darker, while light things should become just a bit darker
-	float value_target = clamp(ease_in_quadratic(HSV_VALUE(scanline_color)), 0.0, 0.9);
+	float strength_dark = (bloom.r - bloom.b) * scanline_power;
+	color = mix(color, scanline_dark, strength_dark);
 
-	// HSV_HUE(scanline_color) = mix(HSV_HUE(scanline_color), scanline_hue, 1.0 - hue_power);
-	HSV_SATURATION(scanline_color) = mix(HSV_SATURATION(scanline_color), saturation_target, scanline_power);
-	HSV_VALUE(scanline_color) = mix(HSV_VALUE(scanline_color), value_target, scanline_power);
-	scanline_color = hsv_to_rgb_4(scanline_color);
+	float strength_light = bloom.b * (1.0 - scanline_power);
+	color = mix(color, scanline_light, strength_light);
 
-	color = scanline_color;
+
+	// color = mix(sample_color, scanline_dark, strength);
+	// color = mix(color, scanline_light, strength);
+	// color = mix(sample_color, blue, bloom.r);
+	// color = sample_color;
+	// color = make_red(bloom.r);
+	// color = make_red(bloom.r + bloom.g / 8);
+	// color = scanline_color;
+	// color = make_red(strength_dark);
+	// color = make_red(strength_light);
+	// color = mix(sample_color, make_red(strength_dark), 0.5);
 	return;
 }

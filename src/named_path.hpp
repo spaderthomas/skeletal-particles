@@ -18,5 +18,6 @@ void add_named_subpath(const_string name, const_string base_path, const_string r
 void add_named_path_ex(const_string name, const_string absolute_path);
 string resolve_named_path_ex(const_string name, MemoryAllocator* allocator);
 string resolve_format_path_ex(const_string name, const_string file_name, MemoryAllocator* allocator);
+tstring strip_named_path(const_string name, const_string absolute_path);
 
 std::unordered_map<std::string, std::string> named_paths;

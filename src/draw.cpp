@@ -431,6 +431,9 @@ void set_world_space(bool world_space) {
 	draw_call->state.world_space = world_space;
 }
 
+void set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name) {
+	glObjectLabel(convert_gl_id(static_cast<GlId>(kind)), handle, name_len, name);
+}
 
 ///////////////////
 // OPENGL ERRORS //
@@ -738,7 +741,6 @@ void GlStateDiff::apply(GlState* state) {
 
 	// Shader
 	set_shader_immediate(state->shader);
-	set_uniform_immediate_mat4("projection", render.projection);
 
 	if (state->world_space) {
 		set_uniform_immediate_mat4("view", this->camera);
@@ -770,7 +772,9 @@ void GlStateDiff::apply(GlState* state) {
 	if (!current || current->render_target != state->render_target) {
 		gpu_bind_target(state->render_target);
 	}
-	set_uniform_immediate_vec2("render_target", state->render_target->size);
+	set_uniform_immediate_mat4("projection", render.projection);
+	set_uniform_immediate_vec2("output_resolution", state->render_target->size);
+	set_uniform_immediate_vec2("native_resolution", window.native_resolution);
 
 
 	this->current = state;
@@ -954,4 +958,19 @@ u32 convert_draw_mode(DrawMode mode) {
 	}
 
 	return GL_TRIANGLES;
+}
+
+u32 convert_gl_id(GlId id) {
+	if (id == GlId::Framebuffer) {
+		return GL_FRAMEBUFFER;
+	}
+	else if (id == GlId::Shader) {
+		return GL_SHADER;
+	}
+	else if (id == GlId::Program) {
+		return GL_PROGRAM;
+	}
+
+
+	return GL_BUFFER;
 }

@@ -89,6 +89,8 @@ void Shader::init_graphics(const char* name) {
 	// the new GL handles
 	program = shader_program;
 	glGetProgramiv(shader_program, GL_ACTIVE_UNIFORMS, (int*)&num_uniforms);
+
+	set_gl_name(static_cast<u32>(GlId::Program), program, strlen(name), name);
 }
 
 void Shader::init_compute(const char* name) {

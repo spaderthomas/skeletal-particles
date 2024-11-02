@@ -33,6 +33,8 @@ typedef struct {
 } ArenaHandle;
 
 
+void set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name);
+
 void IGE_PushGameFont(const char* font_name);
 void IGE_GameImage(const char* image, float sx, float sy);
 void IGE_OpenFileBrowser();
@@ -217,6 +219,12 @@ typedef enum {
 
 typedef enum {
     DrawMode_Triangles,
+};
+
+typedef enum {
+    GlId_Framebuffer,
+    GlId_Shader,
+    GlId_Program,
 };
 
 typedef struct {
@@ -770,7 +778,7 @@ function tdengine.init_phase_2()
   tdengine.editor.init()
   tdengine.persistent.init()
 
-  tdengine.app:on_start_game()
+  tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_start_game)
 
   local scene_editor = tdengine.find_entity_editor('SceneEditor')
   scene_editor:load('default')

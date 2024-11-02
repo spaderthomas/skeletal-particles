@@ -3,9 +3,10 @@
 // UNIFORMS
 uniform float master_time;
 uniform vec2 camera;
-uniform vec2 render_target;
+uniform vec2 output_resolution;
+uniform vec2 native_resolution;
 
-//const vec2 render_target = vec2(1920.0, 1080.0) * vec2(.0375, .125);  
+//const vec2 output_resolution = vec2(1920.0, 1080.0) * vec2(.0375, .125);  
 
 // COLORS
 const vec4 red   = vec4(1.0, 0.0, 0.0, 1.0);
@@ -24,6 +25,10 @@ const vec4 mindaro      = vec4(188.0 / 255.0, 231.0 / 255.0, 132.0 / 255.0, 255.
 const vec4 light_green  = vec4(161.0 / 255.0, 239.0 / 255.0, 139.0 / 255.0, 255.0);
 const vec4 indian_red   = vec4(180.0 / 255.0, 101.0 / 255.0, 111.0 / 255.0, 255.0);
 
+#define DBG(debug_color) color = (debug_color); return;
+#define DBG_FLOAT(value) color = make_red(value); return;
+#define DBG_MIX(sample_color, debug_color, t) color = mix((sample_color), (debug_color), (t)); return;
+
 vec4 gray(float v) {
 	return vec4(vec3(v), 1.0);
 }
@@ -34,6 +39,10 @@ vec4 make_red(float r) {
 
 vec4 make_green(float g) {
 	return vec4(0.0, g, 0.0, 1.0);
+}
+
+vec4 make_blue(float b) {
+	return vec4(0.0, 0.0, b, 1.0);
 }
 
 vec4 sign_color(float value, vec4 positive, vec4 negative) {
@@ -52,6 +61,28 @@ vec4 color_255(float r, float g, float b, float a) {
 float calc_brightness(vec4 color) {
 	const vec3 weights = vec3(0.2126, 0.7152, 0.0722);
 	return dot(color.rgb, weights);
+}
+
+float calc_perceived_lightness(vec4 color) {
+	const vec3 srgb_weights = vec3(0.2126, 0.7152, 0.0722);
+	float luminance = calc_brightness(color);
+
+	const float lightness_threshold = 216.0 / 24389.0;
+	const float k1 = 24389.0 / 27.0;
+
+	float lightness = 0.0;
+	if (luminance <= lightness_threshold) {
+		lightness = luminance * k1;
+	}
+	else {
+		lightness = pow(luminance, .333) * 116 - 16;
+	}
+
+	return lightness / 100.0;
+}
+
+vec2 scaled_pixels(float pixels) {
+	return pixels * native_resolution / output_resolution;
 }
 
 // All components are in the range [0…1], including hue.
@@ -123,7 +154,7 @@ float triangle_wave(float x) {
 float map_range(float x, float min_a, float max_a, float min_b, float max_b) {
     float coefficient = (max_b - min_b) / (max_a - min_a);
     float offset = min_b - coefficient * min_a;
-    return coefficient * x + offset;
+    return clamp(coefficient * x + offset, min_b, max_b);
 }
 
 float plot(vec2 uv, float pct){
@@ -142,6 +173,10 @@ float interp_in_out_cubic(float x, float y, float t) {
 	return mix(x, y, ease_in_out_cubic(t));
 }
 
+float ease_out_sine(float t) {
+	return sin(t * pi / 2);
+}
+
 float ease_out_quadratic(float t) {
 	return 1.0 - pow(1.0 - t, 2);
 }
@@ -149,6 +184,11 @@ float ease_out_quadratic(float t) {
 float ease_out_cubic(float t) {
 	return 1.0 - pow(1.0 - t, 3);
 }
+
+float ease_out_quartic(float t) {
+	return 1.0 - pow(1.0 - t, 4);
+}
+
 
 float ease_in_quadratic(float t) {
 	return pow(t, 2);
@@ -166,29 +206,34 @@ float high_pass(float x, float threshold) {
 	return x * is_higher_than(x, threshold);
 }
 
+float is_lower_than(float x, float threshold) {
+	return step(x, threshold);
+}
+
 float low_pass(float x, float threshold) {
-	return x * step(x, threshold);
+	return x * is_lower_than(x, threshold);
+}
+
+float double_pass(float x, float low, float high) {
+	return high_pass(low_pass(x, high), low);
 }
 
 
+// BLUR HELPERS
 vec4 sample_neighbor_h(sampler2D source_texture, vec2 uv, float pixel_offset) {
-	const vec2 uv_per_px = 1.0 / render_target;
+	const vec2 uv_per_px = 1.0 / native_resolution;
 
 	uv.x += pixel_offset * uv_per_px.x;
 	uv = clamp(uv, 0.0, 0.999);
 	return texture(source_texture, uv);
 }
 
-vec4 box_blur_n_h(sampler2D source_texture, vec2 uv, int num_taps) {
-	vec4 blurred_color = vec4(0.0);
+vec4 sample_neighbor_v(sampler2D source_texture, vec2 uv, float pixel_offset) {
+	const vec2 uv_per_px = 1.0 / native_resolution;
 
-	for (int i = 1; i <= num_taps / 2; i++) {
-		blurred_color += sample_neighbor_h(source_texture, uv, i);
-		blurred_color += sample_neighbor_h(source_texture, uv, -i);
-	}
-	blurred_color += sample_neighbor_h(source_texture, uv, 0);
-
-	return blurred_color / num_taps;
+	uv.y += pixel_offset * uv_per_px.y;
+	uv = clamp(uv, 0.0, 0.999);
+	return texture(source_texture, uv);
 }
 
 float gauss(float x, float sigma) {
@@ -196,33 +241,47 @@ float gauss(float x, float sigma) {
 	return exp(power);
 }
 
-void add_gaussian_blur_h(sampler2D source_texture, vec2 uv, float sigma, int offset, inout float total_weights, inout vec4 blurred_color) {
-	float weight = gauss(offset, sigma);
-	blurred_color += weight * sample_neighbor_h(source_texture, uv, offset);
+void add_gaussian_blur_h(sampler2D source_texture, vec2 uv, float sigma, float pixel_offset, inout float total_weights, inout vec4 blurred_color) {
+	float weight = gauss(pixel_offset, sigma);
+	blurred_color += weight * sample_neighbor_h(source_texture, uv, pixel_offset);
 	total_weights += weight;
 }
 
-vec4 gaussian_blur_5_h(sampler2D source_texture, vec2 uv, float sigma) {
-	float total_weights = 0.0;
-	vec4 blurred_color = vec4(0.0);
-
-	for (int i = 1; i <= 2; i++) {
-		add_gaussian_blur_h(source_texture, uv, sigma, i, total_weights, blurred_color);
-		add_gaussian_blur_h(source_texture, uv, sigma, -i, total_weights, blurred_color);
-	}
-
-	add_gaussian_blur_h(source_texture, uv, sigma, 0, total_weights, blurred_color);
-
-	return blurred_color / total_weights;
+void add_gaussian_blur_v(sampler2D source_texture, vec2 uv, float sigma, float pixel_offset, inout float total_weights, inout vec4 blurred_color) {
+	float weight = gauss(pixel_offset, sigma);
+	blurred_color += weight * sample_neighbor_v(source_texture, uv, pixel_offset);
+	total_weights += weight;
 }
 
-vec4 gaussian_blur_n_h(sampler2D source_texture, vec2 uv, float sigma, uint num_taps) {
+void add_nonlinear_blur_h(sampler2D source_texture, vec2 uv, float pixel_offset, inout float total_weights, inout vec4 blurred_color) {
+	vec4 sampled_color = sample_neighbor_h(source_texture, uv, pixel_offset);
+	float brightness = calc_brightness(sampled_color);
+	float weight = max(pow(brightness, .5), .05);
+	// weight *= (1.0 / pixel_offset);
+	blurred_color += weight * sampled_color;
+	total_weights += weight;
+}
+
+// BLUR KERNELS
+vec4 box_blur_n_h(sampler2D source_texture, vec2 uv, int num_taps, float pixel_offset) {
+	vec4 blurred_color = vec4(0.0);
+
+	for (int i = 1; i <= num_taps / 2; i++) {
+		blurred_color += sample_neighbor_h(source_texture, uv, i * pixel_offset);
+		blurred_color += sample_neighbor_h(source_texture, uv, -i * pixel_offset);
+	}
+	blurred_color += sample_neighbor_h(source_texture, uv, 0);
+
+	return blurred_color / num_taps;
+}
+
+vec4 gaussian_blur_n_h(sampler2D source_texture, vec2 uv, float sigma, uint num_taps, float pixel_offset) {
 	float total_weights = 0.0;
 	vec4 blurred_color = vec4(0.0);
 
 	for (int i = 1; i <= num_taps / 2; i++) {
-		add_gaussian_blur_h(source_texture, uv, sigma, i, total_weights, blurred_color);
-		add_gaussian_blur_h(source_texture, uv, sigma, -i, total_weights, blurred_color);
+		add_gaussian_blur_h(source_texture, uv, sigma, i * pixel_offset, total_weights, blurred_color);
+		add_gaussian_blur_h(source_texture, uv, sigma, -i * pixel_offset, total_weights, blurred_color);
 	}
 
 	add_gaussian_blur_h(source_texture, uv, sigma, 0, total_weights, blurred_color);
@@ -230,30 +289,65 @@ vec4 gaussian_blur_n_h(sampler2D source_texture, vec2 uv, float sigma, uint num_
 	return blurred_color / total_weights;
 }
 
+vec4 gaussian_blur_n_v(sampler2D source_texture, vec2 uv, float sigma, uint num_taps, float pixel_offset) {
+	float total_weights = 0.0;
+	vec4 blurred_color = vec4(0.0);
 
-// vec4 gaussian_blur_5_h(sampler2D source_texture, vec2 uv, float sigma) {
-// 	float total_weights = 0.0;
-// 	vec4 blurred_color = vec4(0.0);
+	for (int i = 1; i <= num_taps / 2; i++) {
+		add_gaussian_blur_v(source_texture, uv, sigma, i * pixel_offset, total_weights, blurred_color);
+		add_gaussian_blur_v(source_texture, uv, sigma, -i * pixel_offset, total_weights, blurred_color);
+	}
 
-// 	for (int i = 1; i <= 2; i++) {
-// 		float wr = gauss(i, sigma);
-// 		blurred_color += wr * sample_neighbor_h(source_texture, uv, i);
+	add_gaussian_blur_v(source_texture, uv, sigma, 0, total_weights, blurred_color);
 
-// 		float wl = gauss(-i, sigma);
-// 		blurred_color += wl * sample_neighbor_h(source_texture, uv, -i);
-	
-// 		total_weights += wl + wr;
-// 	}
+	return blurred_color / total_weights;
+}
 
-// 	float wc = gauss(0, sigma);
-// 	blurred_color += wc * sample_neighbor_h(source_texture, uv, 0);
-// 	total_weights += wc;
 
-// 	return blurred_color / total_weights;
-// }
+vec4 nonlinear_blur_n_h(sampler2D source_texture, vec2 uv, uint num_taps, float pixel_offset) {
+	float total_weights = 0.0;
+	vec4 blurred_color = vec4(0.0);
 
+	for (int i = 1; i <= num_taps / 2; i++) {
+		add_nonlinear_blur_h(source_texture, uv, i * pixel_offset, total_weights, blurred_color);
+		add_nonlinear_blur_h(source_texture, uv, -i * pixel_offset, total_weights, blurred_color);
+	}
+
+	add_nonlinear_blur_h(source_texture, uv, 0, total_weights, blurred_color);
+
+	return blurred_color / total_weights;
+}
 
 
 // SDF
 #define SDF_CIRCLE 0
 #define SDF_RING 1
+
+const float gamma = 2.2;
+
+float linear_to_srgb(float linear) {
+    if (linear <= 0.0031308) {
+        return linear * 12.92;
+    } else {
+        return 1.055 * pow(linear, 1.0 / gamma) - 0.055;
+    }
+}
+
+vec4 linear_to_srgb(vec4 linear) {
+	return vec4(
+		linear_to_srgb(linear.r),
+		linear_to_srgb(linear.g),
+		linear_to_srgb(linear.b),
+		linear.a
+	);
+}
+
+bool is_edge_3(vec4 sample_center, vec4 sample_left, vec4 sample_right, float edge_threshold) {
+	float brightness = calc_brightness(sample_center);
+	float brightness_right = calc_brightness(sample_right);
+	float brightness_left = calc_brightness(sample_left);
+	float brightness_delta = max(abs(brightness - brightness_left), abs(brightness - brightness_right));
+
+	bool is_edge = brightness_delta > edge_threshold;
+	return is_edge;
+}

@@ -28,6 +28,23 @@ void add_write_path(const_string name, const_string relative_path) {
 	add_named_subpath(name, write, relative_path);
 }
 
+tstring strip_named_path(const_string name, const_string absolute_path) {
+	auto named_path = resolve_named_path_ex(name, &bump_allocator);
+	auto named_path_len = strlen(named_path);
+	auto absolute_path_len = strlen(absolute_path);
+	
+	auto stripped_path = copy_string(absolute_path, absolute_path_len, &bump_allocator);
+	
+	u32 num_strip_chars = std::min(named_path_len, absolute_path_len);
+	u32 num_stripped = 0;
+	for (u32 i = 0; i < num_strip_chars; i++) {
+		if (stripped_path[i] != named_path[i]) break;
+		num_stripped++;
+	}
+
+	return stripped_path + num_stripped;
+}
+
 tstring resolve_named_path(const_string name) {
 	return resolve_named_path_ex(name, &bump_allocator);
 }

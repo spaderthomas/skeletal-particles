@@ -102,6 +102,16 @@ function tdengine.ffi.init()
 	)
 
 	tdengine.enum.define(
+		'GlId',
+		{
+			Framebuffer = tdengine.ffi.GlId_Framebuffer,
+			Shader = tdengine.ffi.GlId_Shader,
+			Program = tdengine.ffi.GlId_Program,
+		}
+	)
+
+
+	tdengine.enum.define(
 		'DisplayMode',
 		{
 			p480 = 0,
@@ -221,4 +231,8 @@ end
 
 function tdengine.ffi.set_uniform_enum(name, value)
 	tdengine.ffi.set_uniform_i32(name, value:to_number())
+end
+
+function tdengine.ffi.is_nil(cdata)
+	return cdata == nil
 end

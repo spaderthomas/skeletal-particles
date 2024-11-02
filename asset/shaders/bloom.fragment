@@ -8,6 +8,8 @@ out vec4 color;
 #define BLOOM_MODE_FILTER 0
 #define BLOOM_MODE_BLUR 1
 #define BLOOM_MODE_COMBINE 2
+#define BLOOM_MODE_MAP 3
+#define BLOOM_MODE_MAP_BLUR 4
 
 uniform int mode;
 
@@ -22,29 +24,86 @@ vec4 screen_blend(vec4 sample_color, vec4 bloom_color) {
   return 1.0 - (1.0 - sample_color) * (1.0 - bloom_color);
 }
 
-void main () {
-  const float brightness_threshold = 0.1;
+// #define USE_SCREEN_BLEND 1
+#define USE_ADDITIVE_BLEND 1
+// #define USE_NONLINEAR_BLEND 1
 
-  if (mode == BLOOM_MODE_FILTER) {
+const float blur_step = scaled_pixels(1).x;
+const float brightness_threshold = 0.05 ;
+const float edge_threshold = 0.05 ;
+
+
+void main () {
+
+  if (mode == BLOOM_MODE_MAP) {
+    vec4 sample_color = texture(unfiltered_frame, f_uv);
+    
+    vec4 sample_hsv = rgb_to_hsv_4(sample_color);
+    float saturation = HSV_SATURATION(sample_hsv);
+
+    vec4 sample_center = sample_neighbor_h(unfiltered_frame, f_uv,  0);
+  	vec4 sample_left   = sample_neighbor_h(unfiltered_frame, f_uv, -blur_step);
+	  vec4 sample_right  = sample_neighbor_h(unfiltered_frame, f_uv,  blur_step);
+	
+	  // color = sample_center;
+    float brightness = calc_brightness(sample_center);
+    float brightness_right = calc_brightness(sample_right);
+    float brightness_left = calc_brightness(sample_left);
+    float brightness_delta = max(abs(brightness - brightness_left), abs(brightness - brightness_right));
+
+    bool is_right_edge = brightness_right - brightness > edge_threshold;
+    bool is_left_edge = brightness_left - brightness > edge_threshold;
+    
+    color = vec4(
+      is_left_edge ? 1.0 : 0.0,
+      // 1.0 * is_higher_than(brightness, brightness_threshold),
+      // brightness,
+      // 1.0 * is_higher_than(calc_perceived_lightness(sample_color), brightness_threshold),
+      // 0.0,
+      0.0,
+      is_right_edge ? 1.0 : 0.0,
+      // brightness,
+      1.0
+    );
+  }
+  else if (mode == BLOOM_MODE_MAP_BLUR) {
+    vec4 blur_sample = texture(bloomed_frame, f_uv);
+    
+    vec4 blurred_color = blur_sample;
+    // blurred_color = gaussian_blur_n_h(bloomed_frame, f_uv, 0.0, 5, blur_step);
+    blurred_color = box_blur_n_h(bloomed_frame, f_uv, 3, blur_step) * 1.1;
+    color = vec4(blurred_color.rgb, 1.0);
+    // color = texture(bloomed_frame, f_uv);
+  }
+
+  else if (mode == BLOOM_MODE_FILTER) {
     vec4 sample_color = texture(unfiltered_frame, f_uv);
     float brightness = calc_brightness(sample_color);
     
     color = vec4(sample_color.rgb * is_higher_than(brightness, brightness_threshold), 1.0);
-    // color = sample_color;
   }
   else if (mode == BLOOM_MODE_BLUR) {
-    // vec4 blurred_color = box_blur_n_h(bloomed_frame, f_uv, 3);
-    vec4 blurred_color = gaussian_blur_n_h(bloomed_frame, f_uv, 1.3, 5);
-    color = vec4(blurred_color.rgb, 1.0);
+    vec4 blurred_color = nonlinear_blur_n_h(bloomed_frame, f_uv, 3, blur_step);
+    // vec4 blurred_color = gaussian_blur_n_h(bloomed_frame, f_uv, 0.5, 5, blur_step);
+    color = blurred_color;
+    // color = texture(bloomed_frame, f_uv);
   }
   else if (mode == BLOOM_MODE_COMBINE) {
     vec4 sample_color = texture(unfiltered_frame, f_uv);
     vec4 bloom_color = texture(bloomed_frame, f_uv);
     
-    vec4 final_color = screen_blend(sample_color, bloom_color);
-    // vec4 final_color = additive_blend(sample_color, bloom_color);
+    vec4 final_color = sample_color;
+    #if USE_SCREEN_BLEND
+      final_color = screen_blend(sample_color, bloom_color);
+    #elif USE_ADDITIVE_BLEND
+      final_color = additive_blend(sample_color, bloom_color);
+    #elif USE_NONLINEAR_BLEND
+    #endif
 
-    color = vec4(final_color.rgb, 1.0);
+    color = final_color;
+    // color = vec4(final_color.rgb, 1.0);
+    // color = bloom_color;
+    // color = linear_to_srgb(final_color);
+    // color = vec4(final_color.rgb, 1.0);
   }
-
 }

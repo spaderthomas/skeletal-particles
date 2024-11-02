@@ -34,6 +34,13 @@ enum class DrawMode : u32 {
 };
 u32 convert_draw_mode(DrawMode mode);
 
+enum class GlId : u32 {
+	Framebuffer = 0,
+	Shader = 1,
+	Program = 2,
+};
+u32 convert_gl_id(GlId id);
+
 enum class VertexAttributeKind : u32 {
 	Float,
 };
@@ -275,6 +282,7 @@ FM_LUA_EXPORT void set_world_space(bool world_space);
 FM_LUA_EXPORT void set_layer(int32 layer);
 FM_LUA_EXPORT void set_camera(float px, float py);
 FM_LUA_EXPORT void set_zoom(float zoom);
+FM_LUA_EXPORT void set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name);
 
 
 ////////////////////////

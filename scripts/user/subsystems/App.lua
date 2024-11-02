@@ -13,22 +13,19 @@ end
 
 function App:on_init_game()
 	tdengine.ffi.create_window('Skeletal Particles', self.native_resolution.x, self.native_resolution.y, self.window_flags)
-
-	local icon_path = tdengine.ffi.resolve_format_path('image', 'logo/icon.png'):to_interned()
-	tdengine.ffi.set_window_icon(icon_path)
-
+	tdengine.ffi.set_window_icon(tdengine.ffi.resolve_format_path('image', 'logo/icon.png'):to_interned())
 	tdengine.ffi.set_target_fps(144)
 
 	local render_targets = {
-		scene = tdengine.gpu.add_render_target('scene', self.native_resolution.x, self.native_resolution.y),
-		ping_pong = tdengine.gpu.add_render_target('ping_pong', self.native_resolution.x, self.native_resolution.y),
-		post_process = tdengine.gpu.add_render_target('post_process', self.native_resolution.x, self.native_resolution.y),
-		bloom_a = tdengine.gpu.add_render_target('bloom_a', self.native_resolution.x, self.native_resolution.y),
-		bloom_b = tdengine.gpu.add_render_target('bloom_b', self.native_resolution.x, self.native_resolution.y),
-		output = tdengine.gpu.add_render_target('output', self.output_resolution.x, self.output_resolution.y),
+		scene          = tdengine.gpu.add_render_target('scene',          self.native_resolution.x, self.native_resolution.y),
+		ping_pong      = tdengine.gpu.add_render_target('ping_pong',      self.native_resolution.x, self.native_resolution.y),
+		post_process_a = tdengine.gpu.add_render_target('post_process_a', self.output_resolution.x, self.output_resolution.y),
+		post_process_b = tdengine.gpu.add_render_target('post_process_b', self.output_resolution.x, self.output_resolution.y),
+		bloom_a        = tdengine.gpu.add_render_target('bloom_a',        self.output_resolution.x, self.output_resolution.y),
+		bloom_b        = tdengine.gpu.add_render_target('bloom_b',        self.output_resolution.x, self.output_resolution.y),
+		output         = tdengine.gpu.add_render_target('output',         self.output_resolution.x, self.output_resolution.y),
 	}
 
-	-- Command buffers
 	local command_buffers = {}
 
 	local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
@@ -49,26 +46,25 @@ function App:on_init_game()
 	command_buffers.post_process = tdengine.gpu.add_command_buffer('post_process', buffer_descriptor)
 	command_buffers.fluid = tdengine.gpu.add_command_buffer('fluid', buffer_descriptor)
 
-	-- Render passes
-	tdengine.gpu.add_render_pass('scene',         command_buffers.scene,        render_targets.scene,        render_targets.ping_pong, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('fluid',         command_buffers.scene,        render_targets.scene,        render_targets.ping_pong, tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('post_process',  command_buffers.post_process, render_targets.post_process, nil,                      tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('bloom_filter',  command_buffers.post_process, render_targets.bloom_a,      nil,                      tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('bloom_blur',    command_buffers.post_process, render_targets.bloom_b,      render_targets.bloom_a,   tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('bloom_combine', command_buffers.post_process, render_targets.post_process, nil,                      tdengine.enums.GpuLoadOp.None)
-	tdengine.gpu.add_render_pass('output',        command_buffers.post_process, render_targets.output,       nil,                      tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('scene',         command_buffers.scene,        render_targets.scene,          render_targets.ping_pong, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('output',        command_buffers.post_process, render_targets.output,         nil,                      tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('fluid',         command_buffers.scene,        render_targets.scene,          render_targets.ping_pong)
+	tdengine.gpu.add_render_pass('post_process',  command_buffers.post_process, render_targets.post_process_a, render_targets.post_process_b)
+	tdengine.gpu.add_render_pass('bloom_filter',  command_buffers.post_process, render_targets.bloom_a,        nil,                      tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('bloom_blur',    command_buffers.post_process, render_targets.bloom_b,        render_targets.bloom_a)
 
 end
 
 function App:on_start_game()
 	tdengine.find_entity_editor('EditorUtility').style.grid.size = 12
+	tdengine.find_entity_editor('EditorUtility').enabled.grid = false
 
 	tdengine.editor.find('DialogueEditor').hidden = true
 
 	local game_views = tdengine.editor.find('GameViewManager')
   game_views:add_view(GameView:new(
 		'Game',
-		tdengine.gpu.find_render_target('post_process'),
+		tdengine.gpu.find_render_target('scene'),
 		tdengine.enums.GameViewSize.ExactSize, self.native_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
@@ -82,17 +78,17 @@ function App:on_start_game()
 end
 
 function App:on_end_frame()
-	local skeleton_viewer = tdengine.entity.find('SkeletonViewer')
+	local skeleton_viewer = tdengine.entity.find('SkeletonViewer') 
 	if skeleton_viewer then
 		for system in tdengine.iterator.values(skeleton_viewer.animation.particle_systems) do
 			tdengine.gpu.bind_render_pass('fluid')
 			tdengine.ffi.lf_draw(system.handle)
 			tdengine.gpu.submit_render_pass('fluid')
-		end
-	end
+		end 
+	end  
 end
-
-function App:on_render_scene()
+  
+function App:on_render_scene()  
 	tdengine.gpu.bind_render_pass('scene')
 	tdengine.gpu.submit_render_pass('scene')
   tdengine.gpu.apply_ping_pong('scene')
@@ -100,10 +96,10 @@ function App:on_render_scene()
 	-- local unprocessed_target = tdengine.gpu.find_read_target('scene')
 	-- local processed_target = tdengine.gpu.find_write_target('post_process')
 	-- tdengine.ffi.gpu_blit_target(tdengine.gpu.find_command_buffer('post_process'), unprocessed_target, processed_target)
-end
-
+end 
+ 
 function App:on_swapchain_ready()
-	if tdengine.is_packaged_build then
+	if tdengine.is_packaged_build then 
 		--local swapchain = tdengine.ffi.gpu_acquire_swapchain()
 		--tdengine.ffi.blit_render_target(self.renderer.command_buffers.post_processing, self.renderer.targets.scene, swapchain)
 	end

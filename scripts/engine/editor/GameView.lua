@@ -57,6 +57,8 @@ function GameView:update()
 end
 
 
+
+
 local GameViewManager = tdengine.editor.define('GameViewManager')
 
 function GameViewManager:init()

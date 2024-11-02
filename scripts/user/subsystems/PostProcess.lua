@@ -6,101 +6,162 @@ tdengine.enum.define(
     Filter = 0,
     Blur = 1,
     Combine = 2,
+    Map = 3,
+    MapBlur = 4,
   }
 )
 
-function PostProcess:init()
-  
+function PostProcess:on_start_game()
+  self.blit = SimplePostProcess:new()
+  self.blit:set_render_pass('post_process')
+  self.blit:set_shader('blit')
+  self.blit:add_uniform('source', 'scene', tdengine.enums.UniformKind.RenderPassTexture)
+
+  self.chromatic_aberration = SimplePostProcess:new()
+  self.chromatic_aberration:set_render_pass('post_process')
+  self.chromatic_aberration:set_shader('chromatic_aberration')
+  self.chromatic_aberration:add_uniform('unprocessed_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+  self.chromatic_aberration:add_uniform('blur_map', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+
+  self.scanlines = SimplePostProcess:new()
+  self.scanlines:set_render_pass('post_process')
+  self.scanlines:set_shader('scanline')
+  self.scanlines:add_uniform('unprocessed_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+  self.scanlines:add_uniform('bloom_map', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+
+  self.bloom_map_filter = SimplePostProcess:new()
+  self.bloom_map_filter:set_render_pass('bloom_blur')
+  self.bloom_map_filter:set_shader('bloom')
+  self.bloom_map_filter:add_uniform('unfiltered_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_map_filter:add_uniform('mode', tdengine.enums.BloomMode.Map, tdengine.enums.UniformKind.Enum)
+
+  self.bloom_map_blur = SimplePostProcess:new()
+  self.bloom_map_blur:set_render_pass('bloom_blur')
+  self.bloom_map_blur:set_shader('bloom')
+  self.bloom_map_blur:add_uniform('bloomed_frame', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_map_blur:add_uniform('mode', tdengine.enums.BloomMode.MapBlur, tdengine.enums.UniformKind.Enum)
+
+  self.bloom_filter = SimplePostProcess:new()
+  self.bloom_filter:set_render_pass('bloom_blur')
+  self.bloom_filter:set_shader('bloom')
+  self.bloom_filter:add_uniform('unfiltered_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_filter:add_uniform('mode', tdengine.enums.BloomMode.Filter, tdengine.enums.UniformKind.Enum)
+
+  self.bloom_blur = SimplePostProcess:new()
+  self.bloom_blur:set_render_pass('bloom_blur')
+  self.bloom_blur:set_shader('bloom')
+  self.bloom_blur:add_uniform('bloomed_frame', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_blur:add_uniform('mode', tdengine.enums.BloomMode.Blur, tdengine.enums.UniformKind.Enum)
+
+  self.bloom_combine = SimplePostProcess:new()
+  self.bloom_combine:set_render_pass('post_process')
+  self.bloom_combine:set_shader('bloom')
+  self.bloom_combine:add_uniform('unfiltered_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_combine:add_uniform('bloomed_frame', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_combine:add_uniform('mode', tdengine.enums.BloomMode.Combine, tdengine.enums.UniformKind.Enum)
+
+  self.copy_output = SimplePostProcess:new()
+  self.copy_output:set_render_pass('output')
+  self.copy_output:set_shader('blit')
+  self.copy_output:add_uniform('source', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+
+  self.visualize_bloom_map = SimplePostProcess:new()
+  self.visualize_bloom_map:set_render_pass('post_process')
+  self.visualize_bloom_map:set_shader('blit')
+  self.visualize_bloom_map:add_uniform('source', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+
 end
 
-function PostProcess:on_render_scene()
-  self:render_chromatic_aberration()
-  self:render_bloom()
-  self:render_scanlines()
+function PostProcess:on_scene_rendered()
+  self.blit:render()
 
-   
-  local unprocessed_target = tdengine.gpu.find_read_target('scene')
-	local processed_target = tdengine.gpu.find_write_target('post_process')
-	tdengine.ffi.gpu_blit_target(tdengine.gpu.find_command_buffer('post_process'), unprocessed_target, processed_target)
 
-  local native_frame = tdengine.gpu.find_render_target('post_process')
-	local output_frame = tdengine.gpu.find_write_target('output')
-	tdengine.ffi.gpu_blit_target(tdengine.gpu.find_command_buffer('post_process'), native_frame, output_frame)
+  -- self.bloom_map_filter:render()
+  -- for blur_index = 1, 8 do
+  --   self.bloom_map_blur:render()
+  -- end
 
+  -- self.visualize_bloom_map:render()
+
+  self.chromatic_aberration:render()
+  tdengine.ffi.gpu_clear_target(tdengine.gpu.find_read_target('bloom_blur'))
+  self.bloom_filter:render()
+  for bloom_index = 1, 16 do
+    self.bloom_blur:render()
+  end
+  self.bloom_combine:render()
+
+  -- self.visualize_bloom_map:render()
+  -- self.scanlines:render()
+
+  self.copy_output:render()
 end
 
 
-function PostProcess:render_chromatic_aberration()
-  tdengine.gpu.bind_render_pass('scene')
-  tdengine.ffi.set_active_shader('chromatic_aberration')
-  tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
-  tdengine.ffi.set_uniform_texture('unprocessed_frame', tdengine.gpu.find_read_texture('scene'))
-  tdengine.ffi.push_fullscreen_quad()
-  tdengine.gpu.submit_render_pass('scene')
 
-  tdengine.gpu.apply_ping_pong('scene')
-end 
 
-function PostProcess:render_scanlines()
-  tdengine.gpu.bind_render_pass('scene')
-  tdengine.ffi.set_active_shader('scanline')
-  tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
-  tdengine.ffi.set_uniform_texture('unprocessed_frame', tdengine.gpu.find_read_texture('scene'))
-  tdengine.ffi.push_fullscreen_quad()
-  tdengine.gpu.submit_render_pass('scene')
 
-  tdengine.gpu.apply_ping_pong('scene')
+tdengine.enum.define(
+  'UniformKind',
+  {
+    Texture = 0,
+    Enum = 1,
+    RenderPassTexture = 2,
+  }
+)
+
+Uniform = tdengine.class.define('Uniform')
+function Uniform:init(name, value, kind)
+  self.name = name
+  self.value = value
+  self.kind = kind
 end
 
-function PostProcess:render_bloom()
-  tdengine.gpu.bind_render_pass('bloom_filter')
-  tdengine.ffi.set_active_shader('bloom')
+function Uniform:bind()
+  if self.kind == tdengine.enums.UniformKind.Texture then
+    tdengine.ffi.set_uniform_texture(self.name, self.value)
+  elseif self.kind == tdengine.enums.UniformKind.RenderPassTexture then
+    tdengine.ffi.set_uniform_texture(self.name, tdengine.gpu.find_read_texture(self.value))
+  elseif self.kind == tdengine.enums.UniformKind.Enum then
+    tdengine.ffi.set_uniform_enum(self.name, self.value)
+  end
+end
+
+SimplePostProcess = tdengine.class.define('SimplePostProcess')
+function SimplePostProcess:init()
+  self.render_pass = ''
+  self.shader = ''
+  self.uniforms = tdengine.data_types.Array:new()
+end
+
+function SimplePostProcess:add_uniform(name, value, kind)
+  self.uniforms:add(Uniform:new(name, value, kind))
+end
+
+function SimplePostProcess:set_render_pass(render_pass)
+  self.render_pass = render_pass
+end
+
+function SimplePostProcess:set_shader(shader)
+  self.shader = shader
+end
+
+function SimplePostProcess:render()
+  tdengine.gpu.bind_render_pass(self.render_pass)
+  tdengine.ffi.set_active_shader(self.shader)
   tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
 
-  tdengine.ffi.set_uniform_enum('mode', tdengine.enums.BloomMode.Filter)
-  tdengine.ffi.set_uniform_texture('unfiltered_frame', tdengine.gpu.find_read_texture('scene'))
-  tdengine.ffi.push_fullscreen_quad()
-  tdengine.gpu.submit_render_pass('bloom_filter')
-
-
-  local blur_pass = tdengine.gpu.find_render_pass('bloom_blur')
-  blur_pass.render_target = tdengine.gpu.find_render_target('bloom_b')
-  blur_pass.ping_pong = tdengine.gpu.find_render_target('bloom_a')
-
-  local num_bloom_passes = 4;
-  for i = 1, num_bloom_passes do
-    tdengine.gpu.bind_render_pass('bloom_blur')
-    tdengine.ffi.set_active_shader('bloom')
-    tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
-
-    tdengine.ffi.set_uniform_enum('mode', tdengine.enums.BloomMode.Blur)
-    tdengine.ffi.set_uniform_texture('bloomed_frame', blur_pass.ping_pong.color_buffer)
-    tdengine.ffi.push_fullscreen_quad()
-    tdengine.gpu.submit_render_pass('bloom_blur')
-
-    tdengine.gpu.apply_ping_pong('bloom_blur')
+  for uniform in self.uniforms:iterate_values() do
+    uniform:bind()
   end
 
-  tdengine.gpu.bind_render_pass('scene')
-  tdengine.ffi.set_active_shader('bloom')
-  tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
-  tdengine.ffi.set_uniform_enum('mode', tdengine.enums.BloomMode.Combine)
-  tdengine.ffi.set_uniform_texture('unfiltered_frame', tdengine.gpu.find_read_texture('scene'))
-  tdengine.ffi.set_uniform_texture('bloomed_frame', tdengine.gpu.find_read_texture('bloom_blur'))
-  tdengine.ffi.push_fullscreen_quad()
-  tdengine.gpu.submit_render_pass('scene')
+  ffi.C.push_quad(
+    0, tdengine.app.output_resolution.y, 
+    tdengine.app.output_resolution.x, tdengine.app.output_resolution.y, 
+    nil, 
+    1.0)
 
-  tdengine.gpu.apply_ping_pong('scene')
+  tdengine.gpu.submit_render_pass(self.render_pass)
 
-
-  -- tdengine.gpu.bind_render_pass('bloom_combine')
-  -- tdengine.ffi.set_active_shader('bloom')
-  -- tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
-
-  -- tdengine.ffi.set_uniform_enum('mode', tdengine.enums.BloomMode.Combine)
-  -- tdengine.ffi.set_uniform_texture('unfiltered_frame', tdengine.gpu.find_read_texture('scene'))
-  -- tdengine.ffi.set_uniform_texture('bloomed_frame', tdengine.gpu.find_read_texture('bloom_blur'))
-  -- tdengine.ffi.push_fullscreen_quad()
-  -- tdengine.gpu.submit_render_pass('bloom_combine')
+  tdengine.gpu.apply_ping_pong(self.render_pass)
 end
-
