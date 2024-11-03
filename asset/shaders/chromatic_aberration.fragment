@@ -120,8 +120,7 @@ void main() {
 		const float blue_adjust = 1.0;
 		const float green_adjust = (red_adjust + blue_adjust) / 2.5;
 
-		color.r = pow()
-		// color.r = sample_left.r * red_adjust;
+		color.r = sample_left.r * red_adjust;
 		color.b = sample_right.b * blue_adjust;
 
  	}
