@@ -14,7 +14,7 @@ void main() {
 
 
 
-	float aberration_step = scaled_pixels(1).x;
+	float aberration_step = scaled_pixels(2).x;
 	// int num_taps = 4;
 	
 	// vec4 sample_color = texture(unprocessed_frame, f_uv);
@@ -120,9 +120,9 @@ void main() {
 		const float blue_adjust = 1.0;
 		const float green_adjust = (red_adjust + blue_adjust) / 2.5;
 
-		color.r = sample_left.r * red_adjust;
+		color.r = pow()
+		// color.r = sample_left.r * red_adjust;
 		color.b = sample_right.b * blue_adjust;
-		color.g *= green_adjust;
 
  	}
 }

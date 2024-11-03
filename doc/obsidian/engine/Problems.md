@@ -15,3 +15,4 @@
 - There's no tests. I just use the program and fix it when it breaks. This is bad, but it's not a platform, and I don't care.
 - Still a fair amount of bullshit Lua code floating around (using fake classes, globally namespaced stuff)
 - The build scripts are still specific to Deep Copy, and I know for a fact that packaged builds are broken right now.
+- I think fonts should be scaled twice; you specify a "font size" in the config (like 32), but then we scale this by the native resolution somehow so that a size 32 font is the same relative size on different native resolutions.

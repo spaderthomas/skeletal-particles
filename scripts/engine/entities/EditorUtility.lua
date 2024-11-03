@@ -94,7 +94,7 @@ function EditorUtility:draw_grid()
   tdengine.ffi.set_layer(tdengine.editor.layers.grid)
 
   local grid_size = self.style.grid.size
-  local line_thickness = 1.5
+  local line_thickness = 1
 
   local nx, ny = tdengine.window.get_native_resolution():unpack()
   local camera = tdengine.editor.find('EditorCamera')
@@ -204,8 +204,21 @@ function EditorUtility:plot_function(f, xmin, xmax, step, scale, color)
   tdengine.ffi.set_layer(self.layers.plot)
 
   for x = xmin, xmax, step do
-    tdengine.ffi.draw_circle(x * scale, f(x) * scale, self.style.plot.point_size, color:to_vec4())
+    -- tdengine.ffi.draw_circle(x * scale, f(x) * scale, self.style.plot.point_size, color:to_vec4())
+    tdengine.ffi.draw_circle_sdf(x * scale, f(x) * scale, self.style.plot.point_size, color:to_vec4(), 2)
   end
+
+  tdengine.ffi.set_layer(self.layers.plot + 1)
+
+  local x = tdengine.math.clamp(self.input:mouse().x / scale, xmin, xmax)
+  tdengine.ffi.draw_text_ex(
+    string.format('%.3f -> %.3f', x, f(x)), 
+    x * scale, f(x) * scale, 
+    tdengine.colors.white:to_vec4(), 
+    'editor-16', 
+    0)
+  tdengine.ffi.draw_circle_sdf(x * scale, f(x) * scale, self.style.plot.point_size * 1.5, tdengine.colors.cardinal:to_vec4(), 2)
+
 end
 
 function EditorUtility:plot_derivative(f, df, xmin, xmax, scale, color)

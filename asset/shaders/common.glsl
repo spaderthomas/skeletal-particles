@@ -64,7 +64,6 @@ float calc_brightness(vec4 color) {
 }
 
 float calc_perceived_lightness(vec4 color) {
-	const vec3 srgb_weights = vec3(0.2126, 0.7152, 0.0722);
 	float luminance = calc_brightness(color);
 
 	const float lightness_threshold = 216.0 / 24389.0;
@@ -79,6 +78,10 @@ float calc_perceived_lightness(vec4 color) {
 	}
 
 	return lightness / 100.0;
+}
+
+float nonlinear_weight(float x, float exp, float low) {
+	return max(pow(x, exp), low);
 }
 
 vec2 scaled_pixels(float pixels) {
@@ -253,11 +256,13 @@ void add_gaussian_blur_v(sampler2D source_texture, vec2 uv, float sigma, float p
 	total_weights += weight;
 }
 
-void add_nonlinear_blur_h(sampler2D source_texture, vec2 uv, float pixel_offset, inout float total_weights, inout vec4 blurred_color) {
+void add_nonlinear_blur_h(sampler2D source_texture, vec2 uv, float pixel_offset, float power, inout float total_weights, inout vec4 blurred_color) {
 	vec4 sampled_color = sample_neighbor_h(source_texture, uv, pixel_offset);
-	float brightness = calc_brightness(sampled_color);
-	float weight = max(pow(brightness, .5), .05);
-	// weight *= (1.0 / pixel_offset);
+
+	const vec3 weights = vec3(0.4, 0.2, 0.4);
+	float weight = dot(sampled_color.rgb, weights);
+	weight = max(pow(weight, power), .2);
+
 	blurred_color += weight * sampled_color;
 	total_weights += weight;
 }
@@ -304,16 +309,16 @@ vec4 gaussian_blur_n_v(sampler2D source_texture, vec2 uv, float sigma, uint num_
 }
 
 
-vec4 nonlinear_blur_n_h(sampler2D source_texture, vec2 uv, uint num_taps, float pixel_offset) {
+vec4 nonlinear_blur_n_h(sampler2D source_texture, vec2 uv, uint num_taps, float pixel_offset, float power) {
 	float total_weights = 0.0;
 	vec4 blurred_color = vec4(0.0);
 
 	for (int i = 1; i <= num_taps / 2; i++) {
-		add_nonlinear_blur_h(source_texture, uv, i * pixel_offset, total_weights, blurred_color);
-		add_nonlinear_blur_h(source_texture, uv, -i * pixel_offset, total_weights, blurred_color);
+		add_nonlinear_blur_h(source_texture, uv, i * pixel_offset, power, total_weights, blurred_color);
+		add_nonlinear_blur_h(source_texture, uv, -i * pixel_offset, power, total_weights, blurred_color);
 	}
 
-	add_nonlinear_blur_h(source_texture, uv, 0, total_weights, blurred_color);
+	add_nonlinear_blur_h(source_texture, uv, 0, power, total_weights, blurred_color);
 
 	return blurred_color / total_weights;
 }

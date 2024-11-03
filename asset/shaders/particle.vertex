@@ -16,7 +16,7 @@ const vec2 vertices [6] = vec2[](
 );
 
 
-const float size = 1;
+const float size = 2.0;
 const float alpha_max = 1.0;
 const float alpha_min = 0.00;
 

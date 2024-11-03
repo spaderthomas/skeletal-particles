@@ -29,18 +29,6 @@ function PostProcess:on_start_game()
   self.scanlines:add_uniform('unprocessed_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
   self.scanlines:add_uniform('bloom_map', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
 
-  self.bloom_map_filter = SimplePostProcess:new()
-  self.bloom_map_filter:set_render_pass('bloom_blur')
-  self.bloom_map_filter:set_shader('bloom')
-  self.bloom_map_filter:add_uniform('unfiltered_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
-  self.bloom_map_filter:add_uniform('mode', tdengine.enums.BloomMode.Map, tdengine.enums.UniformKind.Enum)
-
-  self.bloom_map_blur = SimplePostProcess:new()
-  self.bloom_map_blur:set_render_pass('bloom_blur')
-  self.bloom_map_blur:set_shader('bloom')
-  self.bloom_map_blur:add_uniform('bloomed_frame', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
-  self.bloom_map_blur:add_uniform('mode', tdengine.enums.BloomMode.MapBlur, tdengine.enums.UniformKind.Enum)
-
   self.bloom_filter = SimplePostProcess:new()
   self.bloom_filter:set_render_pass('bloom_blur')
   self.bloom_filter:set_shader('bloom')
@@ -72,27 +60,25 @@ function PostProcess:on_start_game()
 
 end
 
-function PostProcess:on_scene_rendered()
-  self.blit:render()
-
-
-  -- self.bloom_map_filter:render()
-  -- for blur_index = 1, 8 do
-  --   self.bloom_map_blur:render()
-  -- end
-
-  -- self.visualize_bloom_map:render()
-
+function PostProcess:post_process()
   self.chromatic_aberration:render()
+
   tdengine.ffi.gpu_clear_target(tdengine.gpu.find_read_target('bloom_blur'))
   self.bloom_filter:render()
-  for bloom_index = 1, 16 do
+  for bloom_index = 1, 4 do
     self.bloom_blur:render()
   end
   self.bloom_combine:render()
 
-  -- self.visualize_bloom_map:render()
-  -- self.scanlines:render()
+
+  self.scanlines:render()
+end
+
+function PostProcess:on_scene_rendered()
+  self.blit:render()
+
+  self:post_process()
+
 
   self.copy_output:render()
 end

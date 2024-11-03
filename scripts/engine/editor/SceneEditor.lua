@@ -110,7 +110,7 @@ function EntityList:draw_entity(id)
   end
   imgui.PushStyleColor(ffi.C.ImGuiCol_Text, header_color:to_u32())
 
-  local tree_expanded = imgui.extensions.TreeNodeFont(self:build_label(entity), 'editor-bold-16')
+  local tree_expanded = imgui.TreeNode(self:build_label(entity))
   self:check_context_menu(entity)
   self:draw_metadata(entity)
 

@@ -33,22 +33,28 @@ end
 function SampleEntity:draw()
   self:draw_shapes()
 
-  local prepared_text = tdengine.ffi.prepare_text('best', 0, 0, 'tiny5')
-  tdengine.ffi.draw_prepared_text(prepared_text)
 
-  tdengine.ffi.draw_quad(100, 0, 100, 52, tdengine.colors.white:to_vec4())
-
-  tdengine.ffi.draw_image_ex('animal-well-320-180.png', 0, 0, 320, 180, 1)
+  tdengine.ffi.draw_image_ex('animal-well-320-180.png', 0, -100, 320, 180, 1)
 
   for i = 1, 20 do
     tdengine.ffi.set_layer(i)
     local yoff = tdengine.math.ranged_sin(tdengine.elapsed_time * self.jitters[i], 0.0, 20.0)
-    tdengine.ffi.draw_circle_sdf(self.positions[i], 50 + yoff, 8, tdengine.colors.zomp:to_vec4(), 2)
+    tdengine.ffi.draw_circle_sdf(self.positions[i], 200 + yoff, 8, tdengine.colors.zomp:to_vec4(), 2)
   end
 
+  local tone_map = function(x)
+    -- return math.pow(x, tdengine.math.ranged_sin(tdengine.elapsed_time, 0, 1))
+    return math.pow(x, 1.8)
+  end
+
+  local step = .025
+  local scale = 100
+  tdengine.editor.find('EditorUtility'):plot_function(tone_map, 0, 1, step, scale, tdengine.colors.spring_green)
 
 end
- 
+
+-- .75, .82, .92
+
 function SampleEntity:on_load_game()
   -- This is called directly after your fields have been deserialized and assigned.
 end

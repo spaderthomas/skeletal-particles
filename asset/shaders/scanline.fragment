@@ -113,47 +113,22 @@ void main() {
 	vec4 sample_color = texture(unprocessed_frame, f_uv);
 	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
 
-	const float scanline_height_px = 7;
+	const float scanline_height_px = 3;
 	const float scanline_height = scanline_height_px / output_resolution.y;
 
 	const float num_scanlines = output_resolution.y / scanline_height_px;
 	float scan_position = fract(uv.y * num_scanlines);
 	float scanline_power = triangle_wave(scan_position - .5);
-	scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
-	scanline_power = 1.0 - scanline_power;
-	scanline_power = ease_in_out_cubic(scanline_power); 
-	// float scanline_power = scan_position;
-	// scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0, 1.0); 
-	// color = make_red(scanline_power); return;
+	scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0 , 1.0); 
 
-	vec4 bloom = texture(bloom_map, f_uv);
-	// vec4 scanline_light = color_255(191.0, 217.0, 237.0, 255.0);
-	vec4 scanline_light = color_255(100.0, 130.0, 200.0, 255.0) * 1.15;
-	vec4 scanline_dark = color_255(12.0, 8.0, 100.0, 255.0);
-	vec4 scanline_color = mix(scanline_dark, scanline_light, bloom.r);
-	// color = mix(sample_color, scanline_light, scanline_power * bloom.r);
+	vec4 target_color = vec4(
+		pow(clamp(sample_color.r * .75, 0.0, 1.00), 2.4),
+		pow(clamp(sample_color.g * .75, 0.0, 1.00), 1.6),
+		pow(clamp(sample_color.b * .75, 0.0, 1.00), 1.3),
+		1.0
+	);
+	color = mix(sample_color, target_color, scanline_power);
 
-	// float strength_dark = double_pass(bloom.r, 0.4, 1.0);
-	// float strength_dark = high_pass(bloom.r, 0.0);
-
-	color = sample_color;
-
-	float strength_dark = (bloom.r - bloom.b) * scanline_power;
-	color = mix(color, scanline_dark, strength_dark);
-
-	float strength_light = bloom.b * (1.0 - scanline_power);
-	color = mix(color, scanline_light, strength_light);
-
-
-	// color = mix(sample_color, scanline_dark, strength);
-	// color = mix(color, scanline_light, strength);
-	// color = mix(sample_color, blue, bloom.r);
-	// color = sample_color;
-	// color = make_red(bloom.r);
-	// color = make_red(bloom.r + bloom.g / 8);
-	// color = scanline_color;
-	// color = make_red(strength_dark);
-	// color = make_red(strength_light);
-	// color = mix(sample_color, make_red(strength_dark), 0.5);
+	
 	return;
 }
