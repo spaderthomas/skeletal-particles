@@ -12,31 +12,33 @@ local function find_sorted_keys(t)
 		table.insert(sorted_keys, key)
 	end
 
-	local compare_keys = function(k1, k2)
-		local v1 = t[k1]
-		local v2 = t[k2]
-		if type(k1) == 'number' and type(k2) == 'number' then
-			return k1 < k2
-		elseif type(v1) == 'table' and type(v2) == 'table' then
-			if v1.__enum and not v2.__enum then
-				return false
-			elseif not v1.__enum and v2.__enum then
-				return true
+	local compare_keys = function(ka, kb)
+		local va = t[ka]
+		local vb = t[kb]
+
+		local ma = tdengine.editor.get_field_metadata(tdengine.class.get(t), ka)
+		local mb = tdengine.editor.get_field_metadata(tdengine.class.get(t), kb)
+
+		local A_FIRST = true
+		local B_FIRST = false
+		
+		-- 1. Tables always come before non-tables
+		local is_va_table = type(va) == 'table' and not tdengine.enum.is_enum(va)
+		local is_vb_table = type(vb) == 'table' and not tdengine.enum.is_enum(vb)
+		if is_va_table and not is_vb_table then
+			return A_FIRST
+		elseif not is_va_table and is_vb_table then
+			return B_FIRST
+		else
+			if ma.read_only and not mb.read_only then
+				return A_FIRST
+			elseif not ma.read_only and mb.read_only then
+				return B_FIRST
 			end
-			return tostring(k1) < tostring(k2)
-		elseif type(v1) == 'table' and type(v2) ~= 'table' then
-			if v1.__enum then
-				return tostring(k1) < tostring(k2)
-			end
-			return true
-		elseif type(v1) ~= 'table' and type(v2) == 'table' then
-			if v2.__enum then
-				return tostring(k1) < tostring(k2)
-			end
-			return false
-		elseif type(v1) ~= 'table' and type(v2) ~= 'table' then
-			return tostring(k1) < tostring(k2)
+			
+			return tostring(ka) < tostring(kb)
 		end
+
 	end
 
 	table.sort(sorted_keys, compare_keys)
@@ -46,21 +48,27 @@ end
 --
 -- TABLE
 --
-imgui.extensions.TableField = function(key, value)
+imgui.extensions.TableField = function(key, value, padding)
+
+	local cursor = imgui.GetCursorPosX()
+
 	local value_type = type(value)
 	if value_type == 'string' then
 		imgui.extensions.VariableName(key)
 		imgui.SameLine()
 		imgui.PushTextWrapPos(0)
+		if padding then imgui.SetCursorPosX(cursor + padding) end
 		imgui.Text(value)
 		imgui.PopTextWrapPos()
 	elseif value_type == 'number' then
 		imgui.extensions.VariableName(key)
 		imgui.SameLine()
+		if padding then imgui.SetCursorPosX(cursor + padding) end
 		imgui.Text(tostring(value))
 	elseif value_type == 'boolean' then
 		imgui.extensions.VariableName(key)
 		imgui.SameLine()
+		if padding then imgui.SetCursorPosX(cursor + padding) end
 		imgui.Text(tostring(value))
 	elseif value_type == 'table' then
 		imgui.extensions.TableMenuItem(key, value)
@@ -191,6 +199,7 @@ imgui.internal.draw_table_editor = function(editor)
 	-- Display each KVP
 	for _, key in ipairs(sorted_keys) do
 		local value = editor.editing[key]
+		local metadata = tdengine.editor.get_field_metadata(tdengine.class.get(editor.editing), key)
 
 		-- Skip the variable if it's in the imgui_ignore for either the editor, or the table being edited
 		local display = true
@@ -221,7 +230,9 @@ imgui.internal.draw_table_editor = function(editor)
 		-- means we copy every string in all tables we're editing into C every frame. I can't think of a better way to do it, because
 		-- there is no mechanism for triggering a callback whenever a string in Lua changes (nor would we want one) short of
 		-- metatable insanity.
-		if display then
+		if display and metadata.read_only then
+			imgui.extensions.TableField(key, value, padding)
+		elseif display and not metadata.read_only then
 			local variable_name_color = imgui.internal.table_editor_depth_color(editor.depth)
 
 			-- Strings
@@ -251,8 +262,19 @@ imgui.internal.draw_table_editor = function(editor)
 				end
 				imgui.SameLine()
 				imgui.SetCursorPosX(cursor + padding)
+
+				local input_label = string.format('%s:input', label)
+				local slider_label = string.format('%s:slider', label)
+
+				imgui.PushItemWidth(100)
+				if imgui.SliderFloat(slider_label, editor.editing, key, metadata.slider_min, metadata.slider_max) then
+					mark_field_changed(key)
+				end
+				imgui.PopItemWidth()
+				imgui.SameLine()
+
 				imgui.PushItemWidth(-1)
-				if imgui.InputFloat(label, editor.editing, key) then
+				if imgui.InputFloat(input_label, editor.editing, key) then
 					mark_field_changed(key)
 				end
 				imgui.PopItemWidth()
@@ -497,23 +519,18 @@ imgui.internal.table_editor_padding = function(editor)
 	-- Very hacky way to line up the inputs: Figure out the largest key, then when drawing a key,
 	-- use the difference in length between current key and largest key as a padding. Does not work
 	-- that well, but kind of works
-	local padding_threshold = 12
-	local padding_target = 0
+	local max_key_size = 0
 	for key, value in pairs(editor.editing) do
-		local key_len = 0
-		if type(key) == 'string' then key_len = #key end
-		if type(key) == 'number' then key_len = #tostring(key) end -- whatever
-		if type(key) == 'boolean' then key_len = #tostring(key) end
-		padding_target = math.max(padding_target, key_len)
+		local key_size = imgui.CalcTextSize(tostring(key))
+		max_key_size = math.max(max_key_size, key_size.x)
 	end
 
-	local min_padding = 80
-	local padding = math.max(padding_target * 10, min_padding)
-	return padding
+	local padding = 10
+	return max_key_size + padding
 end
 
 imgui.internal.table_editor_depth_color = function(depth)
-	colors = {
+	local colors = {
 		tdengine.colors.celadon:copy(),
 		tdengine.colors.cool_gray:copy(),
 	}

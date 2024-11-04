@@ -23,7 +23,7 @@ void main() {
 	
 	}
 
-	const float num_uv_bands = 12;
+	const float num_uv_bands = 256;
 
 #ifdef USE_GRID_UVS
 	vec2 banded_uv = floor(f_uv * num_uv_bands) / num_uv_bands;
@@ -43,12 +43,15 @@ void main() {
 	// theta = banded_theta * 2.0 * 3.14159265;
 
 
-	vec2 local_position = gl_FragCoord.xy - point;
+	vec2 local_position = world - point;
 	vec2 unit_position = local_position / radius;
+	float direction = sign(dot(world, point));
 	float is_inside_circle = step(0, -dist);
 
+	float normalized_distance = -dist / radius;
+	banded_uv = f_uv;
 	// banded_uv = normalize(banded_uv);
-	color = vec4(banded_uv.x, banded_uv.y,0.0, 1.0) * is_inside_circle;
+	color = vec4(banded_uv.x, banded_uv.y, 1.0, 1.0) * is_inside_circle;
 	// DBG_FLOAT(camera.x);
 	// color.a = alpha;
 	// DBG_FLOAT(abs(alpha));

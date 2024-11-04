@@ -106,6 +106,15 @@ function table.address(t)
 	return table_address(t)
 end
 
+function table.get_or_nil(t, ...)
+	local args = table.pack(...)
+	for i = 1, args.n do
+		if not t then return end
+		t = t[args[i]]
+	end
+
+	return t
+end
 
 function table_address(t)
 	if not t then return '0x00000000' end

@@ -54,6 +54,8 @@ function tdengine.entity.define(name)
     iterate_components = function(self) return tdengine.iterator.values(self.components) end      
   })
   class:include_update()
+  class:set_field_metadata('id', FieldMetadata.Presets.ReadOnly)
+  class:set_field_metadata('uuid', FieldMetadata.Presets.ReadOnly)
 
   tdengine.entity.types[name] = class
 

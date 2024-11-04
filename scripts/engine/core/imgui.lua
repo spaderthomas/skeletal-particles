@@ -157,6 +157,7 @@ function imgui.internal.init_lua_api_overwrites()
 		return changed
 	end
 
+
 	-- ImGui expects that we're using a static buffer here, so when we add more characters than there is room for and it
 	-- resizes its internal buffer, it expects that we need to reuse ours too. However, this is all implemented with 
 	-- temporary storage; every frame, I copy the interned Lua string into a temporary storage string. 
@@ -210,6 +211,19 @@ function imgui.internal.init_lua_api_overwrites()
 	
 		t[k] = tdengine.color(value)
 	
+		return changed
+	end
+
+	
+	function imgui.SliderFloat(label, t, k, vmin, vmax, format, flags)
+		local value = ffi.new('float [1]', t[k])
+
+		flags = flags or 0
+		format = format or "%.3f"
+		local changed = ffi.C.igSliderFloat(label, value, vmin, vmax, format, flags)
+
+		t[k] = value[0]
+
 		return changed
 	end
 end

@@ -30,7 +30,7 @@ function App:build_renderer()
 		post_process_b = tdengine.gpu.add_render_target('post_process_b', self.output_resolution.x, self.output_resolution.y),
 		bloom_a        = tdengine.gpu.add_render_target('bloom_a',        self.output_resolution.x, self.output_resolution.y),
 		bloom_b        = tdengine.gpu.add_render_target('bloom_b',        self.output_resolution.x, self.output_resolution.y),
-		output         = tdengine.gpu.add_render_target('output',         self.output_resolution.x, self.output_resolution.y),
+		output         = tdengine.gpu.add_render_target('output',         self.gbuffer_resolution.x, self.gbuffer_resolution.y),
 	}
 
 	local command_buffers = {}
@@ -66,9 +66,11 @@ function App:build_deferred_renderer()
 		color   = tdengine.gpu.add_render_target('color',       self.native_resolution.x, self.native_resolution.y),
 		normals = tdengine.gpu.add_render_target('normals',     self.native_resolution.x, self.native_resolution.y),
 		light_map = tdengine.gpu.add_render_target('light_map', self.native_resolution.x, self.native_resolution.y),
+		lit_scene = tdengine.gpu.add_render_target('lit_scene', self.native_resolution.x, self.native_resolution.y),
 		upscaled = {
 			color   = tdengine.gpu.add_render_target('upscaled_color',   self.gbuffer_resolution.x, self.gbuffer_resolution.y),
 			normals = tdengine.gpu.add_render_target('upscaled_normals', self.gbuffer_resolution.x, self.gbuffer_resolution.y),
+			lit_scene = tdengine.gpu.add_render_target('upscaled_lit_scene', self.gbuffer_resolution.x, self.gbuffer_resolution.y),
 		}
 }
 
@@ -99,9 +101,11 @@ function App:build_deferred_renderer()
 
 	tdengine.gpu.add_render_pass('color',           command_buffers.color,   render_targets.color,            nil, tdengine.enums.GpuLoadOp.Clear)
 	tdengine.gpu.add_render_pass('normals',         command_buffers.normals, render_targets.normals,          nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('light_map',       command_buffers.light_map, render_targets.light_map,          nil, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('light_map',       command_buffers.light_map, render_targets.light_map,      nil, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('light_scene',     command_buffers.light_map, render_targets.lit_scene,      nil, tdengine.enums.GpuLoadOp.Clear)
 	tdengine.gpu.add_render_pass('upscale_color',   command_buffers.upscale, render_targets.upscaled.color,   nil, tdengine.enums.GpuLoadOp.Clear)
 	tdengine.gpu.add_render_pass('upscale_normals', command_buffers.upscale, render_targets.upscaled.normals, nil, tdengine.enums.GpuLoadOp.Clear)
+	tdengine.gpu.add_render_pass('upscale_lit_scene', command_buffers.upscale, render_targets.upscaled.lit_scene, nil, tdengine.enums.GpuLoadOp.Clear)
 end
 
 function App:on_start_game()
@@ -122,9 +126,9 @@ function App:on_start_game()
 		tdengine.enums.GameViewPriority.Standard))
 
   game_views:add_view(GameView:new(
-		'Game (2x)',
-		tdengine.gpu.find_render_target('output'),
-		tdengine.enums.GameViewSize.ExactSize, self.output_resolution,
+		'Scene',
+		tdengine.gpu.find_render_target('upscaled_lit_scene'),
+		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Main))
 
 	game_views:add_view(GameView:new(

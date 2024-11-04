@@ -1,0 +1,48 @@
+#include "common.glsl"
+#include "light.glsl"
+
+uniform sampler2D light_map;
+uniform sampler2D color_buffer;
+uniform sampler2D normal_buffer;
+uniform sampler2D editor;
+
+in vec4 f_color;
+in vec2 f_uv;
+
+out vec4 color;
+
+
+void main () {
+    vec2 position = gl_FragCoord.xy + camera;
+    float alpha = texture(color_buffer, f_uv).a;
+    vec3 base_color = texture(color_buffer, f_uv).rgb * alpha;
+    vec3 normal = texture(normal_buffer, f_uv).rgb;
+    normal.xy = normal.xy * 2.0 - 1.0;
+
+    Light global_light;
+    global_light.intensity = 0.25;
+    global_light.color = white;
+    vec3 lit_color = vec3(0.0);
+
+    lit_color += base_color.rgb * global_light.color.rgb * global_light.intensity;
+    for (int i = 0; i < num_lights; i++) {
+        Light light = lights[i];
+        vec2 light_direction = normalize(light.position - position);
+
+        float radial_falloff = calc_radial_falloff(light, position);
+        float normal_falloff = clamp(dot(light_direction, normal.xy), 0.0, 1.0) * (normal.z);
+        float angular_falloff = calc_angular_falloff(light, position);
+
+        float light_strength = normal_falloff * light.intensity * radial_falloff * angular_falloff;
+
+        vec3 light_color = light.color.rgb * light_strength;
+        lit_color += light_color * base_color;
+
+        lit_color += light.color.rgb * light.intensity * radial_falloff * light.volumetric_intensity * angular_falloff;
+    }
+
+    color = vec4(lit_color, 1.0);
+    // color = mix(color, texture(editor, f_uv), 0.25);
+    // color.a = 1.0;
+}
+ 

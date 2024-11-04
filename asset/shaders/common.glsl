@@ -8,6 +8,10 @@ uniform vec2 native_resolution;
 
 //const vec2 output_resolution = vec2(1920.0, 1080.0) * vec2(.0375, .125);  
 
+// CONSTANTS
+const float pi = 3.14159265359;
+#define THREADS_PER_WORKGROUP 32
+
 // COLORS
 const vec4 red   = vec4(1.0, 0.0, 0.0, 1.0);
 const vec4 green = vec4(0.0, 1.0, 0.0, 1.0);
@@ -25,8 +29,10 @@ const vec4 mindaro      = vec4(188.0 / 255.0, 231.0 / 255.0, 132.0 / 255.0, 255.
 const vec4 light_green  = vec4(161.0 / 255.0, 239.0 / 255.0, 139.0 / 255.0, 255.0);
 const vec4 indian_red   = vec4(180.0 / 255.0, 101.0 / 255.0, 111.0 / 255.0, 255.0);
 
-#define DBG(debug_color) color = (debug_color); return;
+#define DBG(debug_color) color = (vec4((debug_color).rgb, 1.0)); return;
+#define DBG_TEX(debug_texture) color = texture(debug_texture, f_uv); return;
 #define DBG_FLOAT(value) color = make_red(value); return;
+#define DBG_VEC3(value) color = (vec4((value).rgb, 1.0)); return;
 #define DBG_MIX(sample_color, debug_color, t) color = mix((sample_color), (debug_color), (t)); return;
 
 vec4 gray(float v) {
@@ -80,14 +86,6 @@ float calc_perceived_lightness(vec4 color) {
 	return lightness / 100.0;
 }
 
-float nonlinear_weight(float x, float exp, float low) {
-	return max(pow(x, exp), low);
-}
-
-vec2 scaled_pixels(float pixels) {
-	return pixels * native_resolution / output_resolution;
-}
-
 // All components are in the range [0…1], including hue.
 vec3 rgb_to_hsv(vec3 c)
 {
@@ -121,10 +119,40 @@ vec4 hsv_to_rgb_4(vec4 c) {
 #define HSV_SATURATION(color) ((color).y)
 #define HSV_HUE(color) ((color).x)
 
-// CONSTANTS
-const float pi = 3.14159265359;
-#define THREADS_PER_WORKGROUP 32
 
+// RANDOM SHIT
+float nonlinear_weight(float x, float exp, float low) {
+	return max(pow(x, exp), low);
+}
+
+vec2 scaled_pixels(float pixels) {
+	return pixels * native_resolution / output_resolution;
+}
+
+float quantize(float x, float bands) {
+	return floor(x * bands) / bands;
+}
+
+float radians_to_turns(float theta) {
+	return theta / (2 * pi);
+}
+
+float turns_to_radians(float theta) {
+	return theta * (2 * pi);
+}
+
+float atan_turns(float y, float x) {
+	return atan(y, x) / (2 * pi);
+}
+
+float atan_cyclic(float y, float x) {
+	return abs(atan(y, x));
+}
+
+float atan_cyclic_turns(float y, float x) {
+	float theta = abs(atan(y, x));
+	return radians_to_turns(theta);
+}
 // RNG
 float random_float(vec2 seed, float min, float max) {
 	const vec2 hash_vector = vec2(12.9898, 78.233);

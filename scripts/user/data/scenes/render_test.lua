@@ -1,5 +1,13 @@
 return {
   ["a013c829-c079-461d-86d6-ee2bd25854f3"] = {
+    angle = 0.56000000238418579,
+    angular_falloff = 0.82200002670288086,
+    color = {
+      a = 1,
+      b = 0.40468227863311768,
+      g = 0.08391406387090683,
+      r = 0
+    },
     components = {
       Collider = {
         attach_offset = {
@@ -9,10 +17,10 @@ return {
         attached = "",
         impl = {
           position = {
-            x = 8.2500267028808594,
-            y = -2.7500031888484955
+            x = 221.68755531311035,
+            y = 61.937488436698914
           },
-          radius = 13.941340446472168
+          radius = 12
         },
         kind = {
           __enum = "ColliderKind",
@@ -27,8 +35,11 @@ return {
         world_space = true
       }
     },
+    intensity = 10,
     name = "PointLight",
-    uuid = "a013c829-c079-461d-86d6-ee2bd25854f3"
+    radial_falloff = 1,
+    uuid = "a013c829-c079-461d-86d6-ee2bd25854f3",
+    volumetric_intensity = 1
   },
   ["a214ac5a-96ff-4e31-bb6d-8af23fe6d9b6"] = {
     name = "RenderTest",

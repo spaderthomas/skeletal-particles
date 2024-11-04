@@ -10,7 +10,6 @@ end
 function tdengine.class.define(name)
   tdengine.types[name] = {
     name = name,
-    __ctype = nil,
     -- Static methods manipulate the class itself, like SomeClass:new()
     __static = {
       include = function(__class, mixin)
@@ -39,9 +38,15 @@ function tdengine.class.define(name)
         end
       end,
 
-      include_ctype = function(__class, ctype)
-        tdengine.types[name].__ctype = ctype
+      set_field_metadata = function(__class, field, metadata)
+        tdengine.editor.set_field_metadata(tdengine.types[name], field, metadata)
       end,
+
+      set_field_metadatas = function(__class, metadatas)
+        tdengine.editor.set_field_metadatas(tdengine.types[name], metadatas)
+      end,
+
+
 
 
       allocate = function(__class, ...)
@@ -49,33 +54,13 @@ function tdengine.class.define(name)
         for field_name, field in pairs(tdengine.types[name].__fields) do
           instance[field_name] = field
         end
-
-        if tdengine.types[name].__ctype then
-          instance.__ctype_handle = ffi.new(tdengine.types[name].__ctype)
-        end
-
+    
         setmetatable(instance, {
-          __index = function(self, key)
-            -- If some key isn't found on the instance, check the class' instance methods or the ctype (if
-            -- it is so defined)
-            local type = tdengine.types[name]
-            local instance_method = type.__instance[key]
-            if instance_method then return instance_method end
-
-            if not type.__ctype then return end;
-            local _, value = pcall(function() return self.__ctype_handle[key] end)
-            return value
+          __index = function(__instance, key)
+            -- If some key isn't found on the instance, check the class' instance methods
+            -- Look up the class in the global type table, so that it's not stale when hotloaded
+            return tdengine.types[name].__instance[key]
           end,
-          __newindex = function(self, key, value)
-            local type = tdengine.types[name]
-            if type.__ctype and pcall(function() return self.__ctype_handle[key] end) then
-              self.__ctype_handle[key] = value
-            else
-              rawset(self, key, value)
-            end
-
-          end,
-
           __type = name
         })
     
@@ -109,10 +94,6 @@ function tdengine.class.define(name)
 
       class = function(self)
         return getmetatable(self).__type
-      end,
-
-      as_ctype = function(self)
-        return self.__ctype_handle
       end
     },
 
@@ -149,6 +130,11 @@ end
 function tdengine.class.find(name)
   return tdengine.types[name]
 end
+
+function tdengine.class.get(t)
+  if t.class then return tdengine.class.find(t:class()) end
+end
+
 
 function tdengine.add_class_metamethod(class, name, fn)
   local metatable = getmetatable(class)

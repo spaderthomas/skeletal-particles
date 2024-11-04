@@ -47,21 +47,61 @@ function tdengine.editor.center_next_window(size)
   imgui.SetNextWindowSize(size:unpack())
 end
 
+-- EDITOR METADATA
+tdengine.editor.MetadataKind = tdengine.enum.define(
+  'EditorMetadata',
+  {
+    Ignore = 0,
+    Field = 1,
+    Callback = 2
+  }
+)
+
+FieldMetadata = tdengine.class.define('FieldMetadata')
+
+function FieldMetadata:init(field, metadata)
+  metadata = metadata or {}
+
+  self.field = field
+  self.slider_min = metadata.slider_min or -100
+  self.slider_max = metadata.slider_max or 100
+  self.read_only = ternary(metadata.read_only, true, false) 
+end
+
+FieldMetadata.Presets = {
+  Float_01 = {
+    slider_min = 0,
+    slider_max = 1
+  },
+  ReadOnly = {
+    read_only = true
+  }
+}
+
+tdengine.editor.FieldMetadata = FieldMetadata
+tdengine.editor.default_metadata = FieldMetadata:new()
+
+
 local function ensure_editor_sentinel(t)
   if not t[tdengine.editor.sentinel] then
     t[tdengine.editor.sentinel] = {}
   end
 end
 
-local function ensure_editor_ignore(t)
+local function ensure_editor_metadata(t, metadata_kind)
   ensure_editor_sentinel(t)
-  if not t[tdengine.editor.sentinel].ignore then
-    t[tdengine.editor.sentinel].ignore = {}
+  if not t[tdengine.editor.sentinel][metadata_kind:to_string()] then
+    t[tdengine.editor.sentinel][metadata_kind:to_string()] = {}
   end
 end
 
+local function find_metadata(t, metadata_kind) 
+  ensure_editor_metadata(t, metadata_kind)
+  return t[tdengine.editor.sentinel][metadata_kind:to_string()]
+end
+
 function tdengine.editor.ignore_field(t, field)
-  ensure_editor_ignore(t)
+  ensure_editor_metadata(t, tdengine.editor.MetadataKind.Ignore)
   t[tdengine.editor.sentinel].ignore[field] = true
 end
 
@@ -74,6 +114,30 @@ function tdengine.editor.is_ignoring_field(t, field)
 
   return t[tdengine.editor.sentinel].ignore[field]
 end
+
+
+
+function tdengine.editor.set_field_metadata(t, field, metadata)
+  local table_metadata = find_metadata(t, tdengine.editor.MetadataKind.Field)
+  table_metadata[field] = FieldMetadata:new(field, metadata)
+end
+
+function tdengine.editor.set_field_metadatas(t, metadatas)
+  for field, metadata in pairs(metadatas) do
+    tdengine.editor.set_field_metadata(t, field, metadata)
+  end
+end
+
+
+function tdengine.editor.get_field_metadata(t, field)
+  local metadata = table.get_or_nil(t, tdengine.editor.sentinel, tdengine.editor.MetadataKind.Field:to_string(), field)
+  if metadata then 
+    return metadata, true
+  end
+ 
+  return tdengine.editor.default_metadata, false
+end
+
 
 function tdengine.editor.set_editor_callbacks(t, callbacks)
   ensure_editor_sentinel(t)

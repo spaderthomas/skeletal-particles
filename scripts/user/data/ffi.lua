@@ -5,5 +5,6 @@ typedef struct {
   f32 radial_falloff;
   f32 angular_falloff;
   f32 intensity;
+  f32 padding [3];
 } Light;
 ]]

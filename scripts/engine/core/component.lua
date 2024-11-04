@@ -1,6 +1,8 @@
 function tdengine.component.define(name)
   local class = tdengine.class.define(name)
   class:include_update()
+  class:set_field_metadata('id', FieldMetadata.Presets.ReadOnly)
+  class:set_field_metadata('uuid', FieldMetadata.Presets.ReadOnly)
 
   tdengine.component.types[name] = class
 

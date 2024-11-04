@@ -459,6 +459,23 @@ ColliderEditor.states = tdengine.enum.define(
 )
 
 function ColliderEditor:init()
+	self.__editor_controls = {
+		use_light_mode = false
+	}
+
+	self.style = {
+		dark = {
+			selected = tdengine.colors.paynes_gray:alpha(0.5),
+			hovered = tdengine.colors.paynes_gray:alpha(0.5),
+			idle = tdengine.colors.cadet_gray:alpha(0.5),
+		},
+		light = {
+			selected = tdengine.colors.spring_green:alpha(0.5),
+			hovered = tdengine.colors.spring_green:alpha(0.5),
+			idle = tdengine.colors.white:alpha(0.5),
+		}
+	}
+
 	self.metadata = {}
 	self.input = ContextualInput:new(tdengine.enums.InputContext.Game, tdengine.enums.CoordinateSystem.World)
 	self.drag_state = {}
@@ -555,12 +572,17 @@ end
 function ColliderEditor:on_color(collider)
 	local metadata = self.metadata[collider.id]
 
+	local colors = self.style.dark
+	if self.__editor_controls.use_light_mode then
+		colors = self.style.light
+	end
+
 	if tdengine.find_entity_editor('EntitySelection'):is_collider_selected(collider) then
-		return tdengine.colors.paynes_gray:alpha(.5)
+		return colors.selected
 	elseif metadata.hovered then
-		return tdengine.colors.paynes_gray:alpha(.5)
+		return colors.hovered
 	else
-		return tdengine.colors.cadet_gray:alpha(.5)
+		return colors.idle
 	end
 end
 

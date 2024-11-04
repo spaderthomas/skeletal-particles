@@ -6,7 +6,9 @@ tdengine.enum.define(
 )
 
 function tdengine.color(r, g, b, a)
-	if ffi.istype('float [4]', r) then
+	if not r then
+		return tdengine.colors.white:copy()
+	elseif ffi.istype('float [4]', r) then
 		local float_array = r
 		return tdengine.color(float_array[0], float_array[1], float_array[2], float_array[3])
 	elseif type(r) == 'table' then
@@ -37,6 +39,9 @@ function tdengine.color(r, g, b, a)
 		__index = {
 			copy = function(self)
 				return tdengine.color(self)
+			end,
+			to_ctype = function(self)
+				return self:to_vec4()
 			end,
 			to_vec4 = function(self)
 				return ffi.new('Vector4', self.r, self.g, self.b, self.a)
