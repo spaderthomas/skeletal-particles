@@ -110,6 +110,13 @@ function tdengine.ffi.init()
 		}
 	)
 
+	tdengine.enum.define(
+		'GpuMemoryBarrier',
+		{
+			ShaderStorage = tdengine.ffi.GpuMemoryBarrier_ShaderStorage,
+		}
+	)
+
 
 	tdengine.enum.define(
 		'DisplayMode',
@@ -132,12 +139,23 @@ function tdengine.ffi.init()
 		}
 	)
 
-
+	tdengine.enum.define(
+		'Sdf',
+		{
+			Circle = 0,
+			Ring = 1,
+			}
+	)
+	
 	imgui.internal.init_c_api()
 	imgui.internal.init_lua_api()
 	imgui.internal.init_lua_api_overwrites()
 
+	local header = tdengine.module.read_from_named_path('ffi_info')
+	ffi.cdef(header)
 end
+
+
 
 
 

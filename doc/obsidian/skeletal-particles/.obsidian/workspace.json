@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Main.md",
+                "file": "Renderer.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Main"
+              "title": "Renderer"
             }
           },
           {
@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Meshes.md",
+                "file": "Renderer.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Meshes"
+              "title": "Renderer"
             }
           },
           {
@@ -49,8 +49,7 @@
               "title": "Scanlines"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -191,10 +190,10 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "dc7c14ff5802aa84",
+  "active": "e660d1e5d8c08fb3",
   "lastOpenFiles": [
+    "Scanlines.md",
     "Main.md",
-    "Meshes.md",
-    "Scanlines.md"
+    "Renderer.md"
   ]
 }

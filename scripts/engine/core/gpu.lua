@@ -5,14 +5,15 @@ local self = tdengine.gpu
 ---------------------
 local RenderPass = tdengine.class.define('RenderPass')
 function RenderPass:init(params)
+  self.name = params.name
   self.handle = params.handle
   self.command_buffer = params.command_buffer
-  self.name = params.name
 end
 
 local RenderTarget = tdengine.class.define('RenderTarget')
 function RenderTarget:init(params)
   self.name = params.name
+  self.size = params.size
   self.handle = params.handle
 end
 
@@ -91,6 +92,7 @@ function tdengine.gpu.add_render_target(name, x, y)
 
   self.render_targets[name] = RenderTarget:new({
     name = name,
+    size = tdengine.vec2(x, y),
     handle = render_target
   })
   return self.render_targets[name].handle
@@ -195,6 +197,3 @@ function tdengine.gpu.find_write_target(pass_name)
 
   return render_pass.handle.render_target
 end
-
-local t = 0.05
-print(tdengine.interpolation.EaseOut(0, 1, t, 2), tdengine.interpolation.EaseOut(0, 1, t, 3))

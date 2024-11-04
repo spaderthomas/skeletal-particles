@@ -27,6 +27,7 @@ return {
 					path = 'user',
 					children = {
 						components = 'components',
+						core = 'core',
 						data = {
 							path = 'data',
 							children = {
@@ -50,6 +51,7 @@ return {
 								background_info = 'backgrounds.lua',
 								character_info = 'characters.lua',
 								font_info = 'fonts.lua',
+								ffi_info = 'ffi.lua',
 								texture_info = 'textures.lua',
 
 								skeletal_animations = {

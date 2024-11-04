@@ -441,32 +441,55 @@ function SkeletonViewer:draw_joint(px, py)
 end
 
 function SkeletonViewer:draw_particle_systems()
+  tdengine.ffi.draw_circle_sdf(0, 0,
+  20, tdengine.colors.white:to_vec4(), 2)
+
   if not self.__editor_controls.draw_bounding_volumes then return end
 
-  tdengine.set_blend_enabled(true)
-  tdengine.set_blend_mode(tdengine.enums.BlendMode.ONE, tdengine.enums.BlendMode.ONE_MINUS_SRC_ALPHA)
-  tdengine.ffi.begin_world_space()
+  -- tdengine.set_blend_enabled(true)
+  -- tdengine.set_blend_mode(tdengine.enums.BlendMode.ONE, tdengine.enums.BlendMode.ONE_MINUS_SRC_ALPHA)
+  tdengine.ffi.set_world_space(true)
   tdengine.ffi.set_layer(self.layers.bounding_volume)
 
-  local color = tdengine.colors.indian_red:alpha(.5):premultiply()
+  local color = tdengine.colors.animal_well.magenta:copy()
+  local colors = {
+    tdengine.colors.animal_well.celestial_blue,
+    tdengine.colors.animal_well.magenta,
+    tdengine.colors.animal_well.dark_cyan,
+    tdengine.colors.animal_well.mantis,
+    tdengine.colors.animal_well.mauve,
+    tdengine.colors.indian_red,
+    tdengine.colors.spring_green,
+    tdengine.colors.cadet_gray,
+  }
 
   for index, particle_system in pairs(self.animation.particle_systems) do
     if particle_system.num_particles == 0 then goto continue end
 
-    tdengine.ffi.draw_circle(particle_system.bounding_volume.a.x, particle_system.bounding_volume.a.y,
-      particle_system.bounding_volume.radius, color:to_vec4())
-    tdengine.ffi.draw_circle(particle_system.bounding_volume.b.x, particle_system.bounding_volume.b.y,
-      particle_system.bounding_volume.radius, color:to_vec4())
+  tdengine.ffi.set_layer(self.layers.bounding_volume + index)
 
-    local distance = particle_system.bounding_volume.b:subtract(particle_system.pa)
-    tdengine.ffi.draw_line(
-      particle_system.bounding_volume.a.x, particle_system.bounding_volume.a.y,
-      particle_system.bounding_volume.b.x, particle_system.bounding_volume.b.y,
-      particle_system.bounding_volume.radius * 2,
-      color:to_vec4())
+    local color = colors[tdengine.math.mod1(index, #colors)]
+
+    tdengine.ffi.draw_circle_sdf(particle_system.bounding_volume.a.x, particle_system.bounding_volume.a.y,
+      particle_system.bounding_volume.radius, color:to_vec4(), 2)
+    tdengine.ffi.draw_circle_sdf(particle_system.bounding_volume.b.x, particle_system.bounding_volume.b.y,
+      particle_system.bounding_volume.radius, color:to_vec4(), 2)
+
+    local distance = particle_system.bounding_volume.b:subtract(particle_system.bounding_volume.a)
+    for i = 0, distance:length(), 2 do
+      local p = tdengine.interpolation.Lerp2(particle_system.bounding_volume.a, particle_system.bounding_volume.b, i / distance:length())
+      tdengine.ffi.draw_circle_sdf(p.x, p.y,
+      particle_system.bounding_volume.radius, color:to_vec4(), 2)
+
+    end
+    -- tdengine.ffi.draw_line(
+    --   particle_system.bounding_volume.a.x, particle_system.bounding_volume.a.y,
+    --   particle_system.bounding_volume.b.x, particle_system.bounding_volume.b.y,
+    --   particle_system.bounding_volume.radius * 2,
+    --   color:to_vec4())
 
     ::continue::
   end
 
-  tdengine.set_blend_mode(tdengine.enums.BlendMode.SRC_ALPHA, tdengine.enums.BlendMode.ONE_MINUS_SRC_ALPHA)
+  -- tdengine.set_blend_mode(tdengine.enums.BlendMode.SRC_ALPHA, tdengine.enums.BlendMode.ONE_MINUS_SRC_ALPHA)
 end

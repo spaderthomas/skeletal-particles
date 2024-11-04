@@ -227,6 +227,11 @@ typedef enum {
     GlId_Program,
 };
 
+typedef enum {
+	GpuMemoryBarrier_ShaderStorage,
+};
+
+
 typedef struct {
 	u32 handle;
 	u32 color_buffer;
@@ -246,6 +251,7 @@ typedef struct {
 } GpuCommandBufferDescriptor;
 
 typedef void* GpuCommandBuffer;
+typedef void* GpuBuffer;
 
 
 typedef struct {
@@ -265,6 +271,8 @@ typedef struct {
 
 
 
+
+
 GpuRenderTarget*  gpu_create_target(float x, float y);
 GpuRenderTarget*  gpu_acquire_swapchain();
 void              gpu_bind_target(GpuRenderTarget* target);
@@ -276,6 +284,13 @@ GpuRenderPass*    gpu_create_pass(GpuRenderPassDescriptor descriptor);
 void              gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
 void              gpu_end_pass();
 void              gpu_submit_commands(GpuCommandBuffer* command_buffer);
+GpuBuffer*        gpu_create_buffer();
+void              gpu_memory_barrier(u32 barrier);
+void              gpu_bind_buffer(GpuBuffer* buffer);
+void              gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
+void              gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
+void              gpu_zero_buffer(GpuBuffer* buffer, u32 size);
+void              gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 
 void set_active_shader(const char* name);
 void set_draw_mode(u32 mode);
@@ -780,6 +795,4 @@ function tdengine.init_phase_2()
 
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_start_game)
 
-  local scene_editor = tdengine.find_entity_editor('SceneEditor')
-  scene_editor:load('default')
 end

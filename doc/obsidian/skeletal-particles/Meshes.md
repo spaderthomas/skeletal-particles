@@ -1,1 +1,0 @@
-Write a geometry shader that takes in the points of the particle system capsules and generates the capsule vertices.

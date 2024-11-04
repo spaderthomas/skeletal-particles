@@ -140,15 +140,23 @@ void jitter_rng_seed(inout vec2 seed) {
 	seed += random_float(seed, 12.8594, 23.9576);
 }
 
-#define RANDOM_FLOAT(seed, min, max) random_float((seed), (min), (max)); jitter_rng_seed(seed);
+#define RANDOM_FLOAT(seed, vmin, vmax) random_float((seed), (vmin), (vmax)); jitter_rng_seed(seed);
 
-
-float ranged_sin(float x, float min, float max) {
-	float coefficient = (max - min) / 2.0;
-	float offset = (max + min) / 2.0;
+float ranged_sin(float x, float vmin, float vmax) {
+	float coefficient = (vmax - vmin) / 2.0;
+	float offset = (vmax + vmin) / 2.0;
 	float sinx = sin(x);
 	return coefficient * sinx + offset;
 }
+
+float timed_sin_ex(float speed, float vmin, float vmax, float jitter) {
+	return ranged_sin(master_time * speed + jitter, vmin, vmax);
+}
+
+float timed_sin(float speed, float vmin, float vmax) {
+	return timed_sin_ex(speed, vmin, vmax, 0.0);
+}
+
 
 float triangle_wave(float x) {
     return clamp(1.0 - abs(x), 0.0, 1.0);
@@ -259,9 +267,14 @@ void add_gaussian_blur_v(sampler2D source_texture, vec2 uv, float sigma, float p
 void add_nonlinear_blur_h(sampler2D source_texture, vec2 uv, float pixel_offset, float power, inout float total_weights, inout vec4 blurred_color) {
 	vec4 sampled_color = sample_neighbor_h(source_texture, uv, pixel_offset);
 
+	// Pixels contribute to the final color based on how much color they already have.
 	const vec3 weights = vec3(0.4, 0.2, 0.4);
 	float weight = dot(sampled_color.rgb, weights);
-	weight = max(pow(weight, power), .2);
+
+	// Since we're weighting based on the color components, black will always have a weight of zero. We can just clamp
+	// the weight to some small value to allow black to actually propagate. The lower this value, the more saturated
+	// the result, since we're only allowing pixels with lots of color to contribute.
+	weight = max(pow(weight, power), 0.25);
 
 	blurred_color += weight * sampled_color;
 	total_weights += weight;

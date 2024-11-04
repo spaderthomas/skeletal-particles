@@ -348,6 +348,7 @@ void LuaState::init_phase_2() {
 	arr_push(&script_dirs, resolve_named_path_ex("engine_components", &standard_allocator));
 	arr_push(&script_dirs, resolve_named_path_ex("engine_editor", &standard_allocator));
 	arr_push(&script_dirs, resolve_named_path_ex("engine_entities", &standard_allocator));
+	arr_push(&script_dirs, resolve_named_path_ex("core", &standard_allocator));
 	arr_push(&script_dirs, resolve_named_path_ex("components", &standard_allocator));
 	arr_push(&script_dirs, resolve_named_path_ex("dialogue", &standard_allocator));
 	arr_push(&script_dirs, resolve_named_path_ex("editor", &standard_allocator));

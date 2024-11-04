@@ -8,127 +8,40 @@ in vec2 f_uv;
 uniform sampler2D unprocessed_frame;
 uniform sampler2D bloom_map;
 
-// #define hardScan -8.0
-// #define shape 2.0
-// #define brightBoost 1.0
-// #define hardPix -3.0
-// #define warpX 0.031
-// #define warpY 0.041
-
-// #define input_size output_resolution
-// #define output_size (output_resolution * 4)
-
-// vec2 Dist(vec2 pos)
-// {
-//     pos = pos*output_resolution.xy;
-    
-//     return -((pos - floor(pos)) - vec2(0.5));
-// }
-
-// float Gaus(float pos, float scale)
-// {
-//     return exp2(scale*pow(abs(pos), shape));
-// }
-
-// float Scan(vec2 pos, float off)
-// {
-//     float dst = Dist(pos).y;
-
-//     return Gaus(dst + off, hardScan);
-// }
-
-// vec3 Fetch(vec2 pos,vec2 off){
-//   pos = (floor(pos * output_resolution.xy + off) + vec2(0.5,0.5)) / output_resolution.xy;
-// 	return texture(new_frame, pos.xy).xyz;
-// }
-
-// // 3-tap Gaussian filter along horz line.
-// vec3 Horz3(vec2 pos, float off)
-// {
-//     vec3 b    = Fetch(pos, vec2(-1.0, off));
-//     vec3 c    = Fetch(pos, vec2( 0.0, off));
-//     vec3 d    = Fetch(pos, vec2( 1.0, off));
-//     float dst = Dist(pos).x;
-
-//     // Convert distance to weight.
-//     float scale = hardPix;
-//     float wb = Gaus(dst-1.0,scale);
-//     float wc = Gaus(dst+0.0,scale);
-//     float wd = Gaus(dst+1.0,scale);
-
-//     // Return filtered sample.
-//     return (b*wb+c*wc+d*wd)/(wb+wc+wd);
-// }
-
-// // 5-tap Gaussian filter along horz line.
-// vec3 Horz5(vec2 pos,float off){
-//     vec3 a = Fetch(pos,vec2(-2.0, off));
-//     vec3 b = Fetch(pos,vec2(-1.0, off));
-//     vec3 c = Fetch(pos,vec2( 0.0, off));
-//     vec3 d = Fetch(pos,vec2( 1.0, off));
-//     vec3 e = Fetch(pos,vec2( 2.0, off));
-    
-//     float dst = Dist(pos).x;
-//     // Convert distance to weight.
-//     float scale = hardPix;
-//     float wa = Gaus(dst - 2.0, scale);
-//     float wb = Gaus(dst - 1.0, scale);
-//     float wc = Gaus(dst + 0.0, scale);
-//     float wd = Gaus(dst + 1.0, scale);
-//     float we = Gaus(dst + 2.0, scale);
-    
-//     // Return filtered sample.
-//     return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
-// }
-
-// // Allow nearest three lines to effect pixel.
-// vec3 Tri(vec2 pos)
-// {
-//     vec3 a = Horz3(pos,-1.0);
-//     vec3 b = Horz5(pos, 0.0);
-//     vec3 c = Horz3(pos, 1.0);
-    
-//     float wa = Scan(pos,-1.0); 
-//     float wb = Scan(pos, 0.0);
-//     float wc = Scan(pos, 1.0);
-    
-//     return a*wa + b*wb + c*wc;
-// }
-
-// vec2 Warp(vec2 pos)
-// {
-//     pos  = pos*2.0-1.0;    
-//     pos *= vec2(1.0 + (pos.y*pos.y)*warpX, 1.0 + (pos.x*pos.x)*warpY);
-    
-//     return pos*0.5 + 0.5;
-// }
-// vec4 lotte() {
-// 	vec2 pos = Warp(f_uv * (output_resolution.xy / input_size.xy)) * (input_size.xy / output_resolution.xy);
-// 	return vec4(Tri(f_uv), 1.0); 
-
-// }
+uniform float oscillation_speed;
+uniform float oscillation_intensity;
+uniform float red_adjust;
+uniform float blue_adjust;
+uniform float green_adjust;
+uniform float bright_adjust;
+uniform float scanline_darkness;
+uniform float scanline_min;
+uniform float scanline_max;
+uniform int scanline_height_px;
 
 void main() {
 	vec2 uv = f_uv + camera / output_resolution;
-	vec4 sample_color = texture(unprocessed_frame, f_uv);
-	vec4 sample_color_hsv = rgb_to_hsv_4(sample_color);
 
-	const float scanline_height_px = 3;
 	const float scanline_height = scanline_height_px / output_resolution.y;
 
 	const float num_scanlines = output_resolution.y / scanline_height_px;
 	float scan_position = fract(uv.y * num_scanlines);
 	float scanline_power = triangle_wave(scan_position - .5);
-	scanline_power = map_range(scanline_power, 0.5, 1.0, 0.0 , 1.0); 
+	scanline_power = map_range(scanline_power, 0.5, 1.0, scanline_min, scanline_max);
+	scanline_power *= timed_sin_ex(oscillation_speed, 1.0 - oscillation_intensity, 1.0, pi / 2);
 
+	// White things appear too dark when darkened the same as everything else, so add a tweakable
+	// parameter which lets you make bright colors appear brighter when scanlined. 
+	vec4 sample_color = texture(unprocessed_frame, f_uv);
+	float pixel_brightness = calc_brightness(sample_color);
+	float darken_factor = scanline_darkness + (bright_adjust * pixel_brightness);
 	vec4 target_color = vec4(
-		pow(clamp(sample_color.r * .75, 0.0, 1.00), 2.4),
-		pow(clamp(sample_color.g * .75, 0.0, 1.00), 1.6),
-		pow(clamp(sample_color.b * .75, 0.0, 1.00), 1.3),
+		pow(sample_color.r * darken_factor, red_adjust),
+		pow(sample_color.g * darken_factor, green_adjust),
+		pow(sample_color.b * darken_factor, blue_adjust),
 		1.0
 	);
 	color = mix(sample_color, target_color, scanline_power);
 
-	
 	return;
 }

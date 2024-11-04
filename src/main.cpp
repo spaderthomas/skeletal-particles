@@ -24,6 +24,13 @@
 #include "utils/filesystem.hpp"
 #include "utils/time_function.hpp"
 #include "utils/noise.hpp"
+
+// Ripped verbatim from the excellent https://github.com/MrFrenik/gunslinger, since I never got around
+// to making quite a few pure C data structures. Thank you kindly for your excellent code!
+#include "utils/dyn_array.hpp"
+#include "utils/hash.hpp"
+#include "utils/hash_table.hpp"
+#include "utils/slot_array.hpp"
 #include "imgui/imgui_extensions.hpp"
 #include "lua.hpp"
 #include "engine.hpp"

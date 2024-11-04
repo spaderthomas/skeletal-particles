@@ -67,8 +67,14 @@ function tdengine.entity.define(name)
 end
 
 
-function tdengine.entity.iterate()
-  return tdengine.iterator.values(tdengine.entity.entities)
+function tdengine.entity.iterate(name)
+  if name then
+    return tdengine.iterator.values(tdengine.entity.entities, function (_, entity)
+      return entity.name == name
+    end)
+  else
+    return tdengine.iterator.values(tdengine.entity.entities)
+  end
 end
 
 function tdengine.entity.iterate_persistent()
@@ -79,7 +85,6 @@ end
 function tdengine.entity.iterate_staged()
   return tdengine.iterator.values(tdengine.entity.created_entities)
 end
-
 
 function tdengine.entity.run_update_callback(entity, callback)
   local fn = entity[callback:to_string()]

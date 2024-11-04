@@ -645,6 +645,42 @@ void gpu_submit_commands(GpuCommandBuffer* command_buffer) {
 }
 
 
+// BUFFERS
+GpuBuffer* gpu_create_buffer() {
+	auto buffer = arr_push(&render.gpu_buffers);
+	glGenBuffers(1, &buffer->handle);
+
+	return buffer;
+}
+
+void gpu_memory_barrier(GpuMemoryBarrier barrier) {
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+void gpu_bind_buffer(GpuBuffer* buffer) {
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer->handle);
+}
+
+void gpu_bind_buffer_base(GpuBuffer* buffer, u32 base) {
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, base, buffer->handle);
+}
+
+void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size) {
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer->handle);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, size, data, GL_STATIC_DRAW);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+void gpu_zero_buffer(GpuBuffer* buffer, u32 size) {
+	auto data = bump_allocator.alloc<u8>(size);
+	gpu_sync_buffer(buffer, data, size);
+}
+
+void gpu_dispatch_compute(GpuBuffer* buffer, u32 size) {
+
+}
+
+
 ////////////////////////
 // RENDERER INTERNALS //
 ////////////////////////
@@ -654,6 +690,7 @@ void init_render() {
 	arr_init(&render.command_buffers, RenderEngine::max_command_buffers);
 	arr_init(&render.render_passes, RenderEngine::max_render_passes);
 	arr_init(&render.targets, RenderEngine::max_targets);
+	arr_init(&render.gpu_buffers, RenderEngine::max_gpu_buffers);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;

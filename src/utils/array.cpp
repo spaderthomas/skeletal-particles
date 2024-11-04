@@ -272,7 +272,6 @@ i32 arr_bytes_used(Array<T>* array) {
 #define arr_rfor(array, it) for (auto (it) = (array).data + array.size - 1; (it) >= ((array).data); (it)--)
 
 
-
 ////////////////
 // ARRAY VIEW //
 ////////////////

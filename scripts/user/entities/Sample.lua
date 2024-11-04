@@ -36,6 +36,7 @@ function SampleEntity:draw()
 
   tdengine.ffi.draw_image_ex('animal-well-320-180.png', 0, -100, 320, 180, 1)
 
+
   for i = 1, 20 do
     tdengine.ffi.set_layer(i)
     local yoff = tdengine.math.ranged_sin(tdengine.elapsed_time * self.jitters[i], 0.0, 20.0)

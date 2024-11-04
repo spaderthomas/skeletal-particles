@@ -2,8 +2,8 @@ void memfill(void* dst, i32 size, void* pattern, i32 pattern_size);
 
 template<typename T>
 struct Array {
-	uint64 size      = 0;
-	uint64 capacity  = 0;
+	u64 size      = 0;
+	u64 capacity  = 0;
 	T* data         = nullptr;
 
 	T* operator[](u64 index) { fm_assert(index < size); return data + index; }
@@ -25,7 +25,6 @@ void arr_clear(Array<T>* array);
 template<typename T>
 void arr_fastclear(Array<T>* array);
 
-// F
 template<typename T>
 void arr_clear_n(Array<T>* array, i32 n);
 

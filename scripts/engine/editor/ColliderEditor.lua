@@ -26,7 +26,7 @@ function CircleEditor:init(params)
 		click_position = tdengine.vec2(),
 		min_hover_time = 0.075,
 		hover_time = 0,
-		select_epsilon = 20,
+		select_epsilon = 8,
 		old_radius = 0,
 		new_radius = 0,
 		collider = nil,

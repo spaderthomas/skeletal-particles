@@ -12,22 +12,33 @@ tdengine.enum.define(
 )
 
 function PostProcess:on_start_game()
-  self.blit = SimplePostProcess:new()
-  self.blit:set_render_pass('post_process')
-  self.blit:set_shader('blit')
-  self.blit:add_uniform('source', 'scene', tdengine.enums.UniformKind.RenderPassTexture)
 
   self.chromatic_aberration = SimplePostProcess:new()
   self.chromatic_aberration:set_render_pass('post_process')
   self.chromatic_aberration:set_shader('chromatic_aberration')
   self.chromatic_aberration:add_uniform('unprocessed_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
   self.chromatic_aberration:add_uniform('blur_map', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+  self.chromatic_aberration:add_uniform('red_adjust', 0.9, tdengine.enums.UniformKind.F32)
+  self.chromatic_aberration:add_uniform('blue_adjust', 0.9, tdengine.enums.UniformKind.F32)
+  self.chromatic_aberration:add_uniform('green_adjust', 0.9, tdengine.enums.UniformKind.F32)
+  self.chromatic_aberration:add_uniform('pixel_step', 2, tdengine.enums.UniformKind.I32)
+  self.chromatic_aberration:add_uniform('edge_threshold', 0.05, tdengine.enums.UniformKind.F32)
 
   self.scanlines = SimplePostProcess:new()
   self.scanlines:set_render_pass('post_process')
   self.scanlines:set_shader('scanline')
   self.scanlines:add_uniform('unprocessed_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
   self.scanlines:add_uniform('bloom_map', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+  self.scanlines:add_uniform('red_adjust', 2.4, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('green_adjust', 1.7, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('blue_adjust', 1.3, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('bright_adjust', 0.1, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('oscillation_speed', 2, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('oscillation_intensity', 0.75, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('scanline_darkness', 1.0, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('scanline_min', 0.0, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('scanline_max', 0.75, tdengine.enums.UniformKind.F32)
+  self.scanlines:add_uniform('scanline_height_px', 7, tdengine.enums.UniformKind.I32)
 
   self.bloom_filter = SimplePostProcess:new()
   self.bloom_filter:set_render_pass('bloom_blur')
@@ -53,11 +64,18 @@ function PostProcess:on_start_game()
   self.copy_output:set_shader('blit')
   self.copy_output:add_uniform('source', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
 
-  self.visualize_bloom_map = SimplePostProcess:new()
-  self.visualize_bloom_map:set_render_pass('post_process')
-  self.visualize_bloom_map:set_shader('blit')
-  self.visualize_bloom_map:add_uniform('source', 'bloom_blur', tdengine.enums.UniformKind.RenderPassTexture)
+  self.upscale_scene = SimplePostProcess.blit('post_process', 'scene')
+  self.upscale_color = SimplePostProcess.blit('upscale_color', 'color')
+  self.upscale_normals = SimplePostProcess.blit('upscale_normals', 'normals')
+end
 
+function PostProcess:on_scene_rendered()
+  self.upscale_color:render()
+  self.upscale_normals:render()
+
+  self.upscale_scene:render()
+  self:post_process()
+  self.copy_output:render()
 end
 
 function PostProcess:post_process()
@@ -65,7 +83,7 @@ function PostProcess:post_process()
 
   tdengine.ffi.gpu_clear_target(tdengine.gpu.find_read_target('bloom_blur'))
   self.bloom_filter:render()
-  for bloom_index = 1, 4 do
+  for bloom_index = 1, 2 do
     self.bloom_blur:render()
   end
   self.bloom_combine:render()
@@ -74,14 +92,6 @@ function PostProcess:post_process()
   self.scanlines:render()
 end
 
-function PostProcess:on_scene_rendered()
-  self.blit:render()
-
-  self:post_process()
-
-
-  self.copy_output:render()
-end
 
 
 
@@ -93,6 +103,8 @@ tdengine.enum.define(
     Texture = 0,
     Enum = 1,
     RenderPassTexture = 2,
+    F32 = 3,
+    I32 = 4,
   }
 )
 
@@ -105,15 +117,29 @@ end
 
 function Uniform:bind()
   if self.kind == tdengine.enums.UniformKind.Texture then
-    tdengine.ffi.set_uniform_texture(self.name, self.value)
+    tdengine.ffi.set_uniform_texture(self.name, tdengine.gpu.find_render_target(self.value).color_buffer)
   elseif self.kind == tdengine.enums.UniformKind.RenderPassTexture then
     tdengine.ffi.set_uniform_texture(self.name, tdengine.gpu.find_read_texture(self.value))
   elseif self.kind == tdengine.enums.UniformKind.Enum then
     tdengine.ffi.set_uniform_enum(self.name, self.value)
+  elseif self.kind == tdengine.enums.UniformKind.F32 then
+    tdengine.ffi.set_uniform_f32(self.name, self.value)
+  elseif self.kind == tdengine.enums.UniformKind.I32 then
+    tdengine.ffi.set_uniform_i32(self.name, self.value)
   end
 end
 
 SimplePostProcess = tdengine.class.define('SimplePostProcess')
+
+function SimplePostProcess.blit(render_pass, source_texture)
+  local post_process = SimplePostProcess:new()
+  post_process:set_render_pass(render_pass)
+  post_process:set_shader('blit')
+  post_process:add_uniform('source', source_texture, tdengine.enums.UniformKind.Texture)
+  return post_process
+end
+
+
 function SimplePostProcess:init()
   self.render_pass = ''
   self.shader = ''

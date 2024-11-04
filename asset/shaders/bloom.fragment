@@ -32,7 +32,7 @@ vec4 dodge_blend(vec4 base, vec4 blend) {
     return base / (1.0 - clamp(blend, 0.0, 0.99));
 }
 
-#define USE_SCREEN_BLEND 1
+// #define USE_SCREEN_BLEND 1
 // #define USE_ADDITIVE_BLEND 1
 // #define USE_BURN_BLEND 1
 // #define USE_DODGE_BLEND 1
@@ -73,7 +73,9 @@ void main () {
   }
   else if (mode == BLOOM_MODE_BLUR) {
     // DBG(texture(bloomed_frame, f_uv));
-    vec4 blurred_color = nonlinear_blur_n_h(bloomed_frame, f_uv, 3, blur_step, .75);
+    // vec4 blurred_color = nonlinear_blur_n_h(bloomed_frame, f_uv, 3, blur_step, .75);
+    vec4 blurred_color = gaussian_blur_n_h(bloomed_frame, f_uv, 1.0, 3, blur_step);
+
     color = blurred_color;
   }
   else if (mode == BLOOM_MODE_COMBINE) {

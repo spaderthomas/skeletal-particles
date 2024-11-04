@@ -165,24 +165,14 @@ struct GpuRenderPass {
 	bool dirty = false;
 };
 
-/*
 enum class GpuMemoryBarrier : u32 {
-	ShaderStorage,
+	ShaderStorage = 0,
 };
 
 struct GpuBuffer {
 	u32 handle;
-	u32 kind;
 };
 
-GpuBuffer* gpu_create_buffer();
-GpuBuffer* gpu_memory_barrier(GpuMemoryBarrier barrier);
-void gpu_bind_buffer(GpuBuffer* buffer);
-void gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
-void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
-void gpu_zero_buffer(GpuBuffer* buffer, u32 size);
-void gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
-*/
 
 struct RenderEngine {
 	HMM_Mat4 projection;
@@ -200,6 +190,10 @@ struct RenderEngine {
 
 	static constexpr u32 max_targets = 32;
 	Array<GpuRenderTarget> targets;
+
+	static constexpr u32 max_gpu_buffers = 128;
+	Array<GpuBuffer> gpu_buffers;
+
 
 	DrawCall* find_draw_call();
 	DrawCall* add_draw_call();
@@ -228,6 +222,13 @@ FM_LUA_EXPORT void gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* 
 FM_LUA_EXPORT void gpu_end_pass();
 FM_LUA_EXPORT void gpu_submit_commands(GpuCommandBuffer* command_buffer);
 
+FM_LUA_EXPORT GpuBuffer* gpu_create_buffer();
+FM_LUA_EXPORT void gpu_memory_barrier(GpuMemoryBarrier barrier);
+FM_LUA_EXPORT void gpu_bind_buffer(GpuBuffer* buffer);
+FM_LUA_EXPORT void gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
+FM_LUA_EXPORT void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
+FM_LUA_EXPORT void gpu_zero_buffer(GpuBuffer* buffer, u32 size);
+FM_LUA_EXPORT void gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 
 ////////////////////////
 // DRAWING PRIMITIVES //

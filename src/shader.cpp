@@ -231,6 +231,8 @@ void init_shaders() {
 	};
 
 	add_graphics_shader("sdf");
+	add_graphics_shader("sdf_normal");
+	add_graphics_shader("light_map");
 	add_graphics_shader("solid");
 	add_graphics_shader("sprite");
 	add_graphics_shader("text");
