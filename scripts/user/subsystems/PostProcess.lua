@@ -177,6 +177,13 @@ function SimplePostProcess:add_ssbo(binding, ssbo)
 end
 
 function SimplePostProcess:add_uniform(name, value, kind)
+  for uniform in self.uniforms:iterate_values() do
+    if uniform.name == name then
+      uniform.value = value
+      return
+    end
+  end
+
   self.uniforms:add(UniformBinding:new(name, value, kind))
 end
 

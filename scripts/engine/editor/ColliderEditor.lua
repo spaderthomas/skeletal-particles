@@ -366,7 +366,6 @@ end
 function BoxEditor:iterate_colliders()
 	local iterator = function()
 		for collider in tdengine.component.iterate('Collider') do
-			-- coroutine.yield(collider)
 			if collider.shape == tdengine.enums.ColliderShape.Box then
 				coroutine.yield(collider)
 			end
@@ -441,6 +440,34 @@ function BoxEditor:is_consuming_input()
 	if self.state == self.states.ResizeInterpolate then return true end
 
 	return false
+end
+
+
+
+CapsuleEditor = tdengine.class.define('CapsuleEditor')
+
+CapsuleEditor.States = tdengine.enum.define(
+	'CapsuleEditorState',
+	{
+		Idle = 0
+	}
+)
+
+function CapsuleEditor:init()
+	self.state = self.states.Idle
+	self.input = ContextualInput:new(tdengine.enums.InputContext.Game, tdengine.enums.CoordinateSystem.World)
+end
+
+function CapsuleEditor:iterate_colliders()
+	local iterator = function()
+		for collider in tdengine.component.iterate('Collider') do
+			if collider.shape == tdengine.enums.ColliderShape.Capsule then
+				coroutine.yield(collider)
+			end
+		end
+	end
+
+	return coroutine.wrap(iterator)
 end
 
 

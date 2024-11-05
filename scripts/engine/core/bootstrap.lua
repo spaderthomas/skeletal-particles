@@ -23,9 +23,27 @@ typedef struct {
 typedef struct {
 	float x;
 	float y;
+} Vector3;
+
+typedef struct {
+	float x;
+	float y;
 	float z;
 	float w;
 } Vector4;
+
+typedef struct {
+  float data [2] [2];
+} Matrix2;
+
+typedef struct {
+  float data [3] [3];
+} Matrix3;
+
+typedef struct {
+  float data [4] [4];
+} Matrix4;
+
 
 typedef struct {
 	u32 index;
@@ -289,6 +307,7 @@ void              gpu_memory_barrier(u32 barrier);
 void              gpu_bind_buffer(GpuBuffer* buffer);
 void              gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
 void              gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
+void              gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
 void              gpu_zero_buffer(GpuBuffer* buffer, u32 size);
 void              gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 
@@ -332,6 +351,19 @@ typedef enum {
 	SRC1_ALPHA,
 	ONE_MINUS_SRC1_ALPHA
 } BlendMode;
+
+typedef struct {
+  Vector2 position;
+  Vector2 uv;
+  Vector3 color;
+  u32 shape_index;
+} SdfVertex;
+
+typedef struct {
+  Vector2 position;
+  float radius;
+  float edge_thickness;
+} SdfCircle;
 
 void begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
 void end_scissor();

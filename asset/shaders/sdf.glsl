@@ -17,6 +17,18 @@ uniform vec2 size;
 uniform vec2 center_a;
 uniform vec2 center_b;
 uniform float thickness;
+
+#define SDF_BUFFER_LENGTH 1024
+
+struct SdfCircle {
+    vec2 position;
+    float radius;
+};
+
+layout (std430, binding = 0) buffer SdfBuffer {
+	SdfCircle sdf_circles [SDF_BUFFER_LENGTH];
+};
+
 float sdf_circle(vec2 point, vec2 center, float radius) {
 	return length(point - center) - radius;	
 }

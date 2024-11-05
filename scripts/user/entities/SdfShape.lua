@@ -74,6 +74,9 @@ function SdfShape:draw_to(render_pass, shader)
       2 * radius, 2 * radius,
       nil,
       1.0);
+
+    local renderer = tdengine.subsystem.find('DeferredRenderer')
+    renderer:draw_circle(SdfCircle:new(p.x, p.y, radius, self.edge_thickness))
   end
 
   tdengine.gpu.submit_render_pass(render_pass)

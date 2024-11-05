@@ -4,7 +4,8 @@ tdengine.enum.define(
 	'ColliderShape',
 	{
 		Box = 0,
-		Circle = 1
+		Circle = 1,
+		Capsule = 2,
 	}
 )
 
@@ -104,6 +105,8 @@ function Collider:set_shape(shape, params)
 		self.impl = ColliderBox:new(params)
 	elseif self.shape == tdengine.enums.ColliderShape.Circle then
 		self.impl = ColliderCircle:new(params)
+	elseif self.shape == tdengine.enums.ColliderShape.Capsule then
+		self.impl = ColliderCapsule:new(params)
 	end
 
 	self.impl.base = self

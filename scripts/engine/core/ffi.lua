@@ -160,6 +160,50 @@ end
 
 
 
+Matrix3 = tdengine.class.metatype('Matrix3')
+
+function Matrix3:Identity()
+	local matrix = Matrix3:new()
+	matrix.data[0][0] = 1
+	matrix.data[1][1] = 1
+	matrix.data[2][2] = 1
+	return matrix
+end
+
+function Matrix3:init(data)
+	if data then
+		for i = 0, 2 do
+			for j = 0, 2 do
+				self.data[i][j] = data[i + 1][j + 1]
+			end
+		end
+	end	
+end
+
+function Matrix3:serialize()
+	local serialized = {}
+
+	for i = 0, 2 do
+		serialized[i + 1] = {}
+		for j = 0, 2 do
+			serialized[i + 1][j + 1] = self.data[i][j]
+		end
+	end
+	return serialized
+end
+
+
+SdfCircle = tdengine.class.metatype('SdfCircle')
+
+function SdfCircle:init(px, py, radius, edge_thickness)
+  self.position.x = px
+  self.position.y = py
+  self.radius = radius
+	self.edge_thickness = edge_thickness
+end
+
+
+
 
 function tdengine.ffi.draw_line(ax, ay, bx, by, thickness, color)
 	ffi.C.draw_line(

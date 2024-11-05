@@ -49,10 +49,10 @@ float calc_angular_falloff(Light light, vec2 position) {
 
 
 const bool band_uvs = true;
-const int max_uv_bands = 64;
+const int max_uv_bands = 96;
 
-const bool warp_uv_bands = true;
-const float uv_band_warp = 1.0;
+const bool warp_uv_bands = false;
+const float uv_band_warp = 0.75;
 
 vec2 band_light_uvs_grid(Light light, vec2 uv, float num_bands) {
   return quantize_uv(uv, num_bands);

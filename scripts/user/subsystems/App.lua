@@ -21,7 +21,6 @@ function App:on_init_game()
 	self:build_deferred_renderer()
 end
 
-
 function App:build_renderer()
 	local render_targets = {
 		scene          = tdengine.gpu.add_render_target('scene',          self.native_resolution.x, self.native_resolution.y),
@@ -149,7 +148,6 @@ function App:on_start_game()
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 end
-
 
 function App:on_end_frame()
 	local skeleton_viewer = tdengine.entity.find('SkeletonViewer') 

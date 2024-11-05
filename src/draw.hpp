@@ -119,6 +119,20 @@ struct DrawCall {
 	static int compare(const void* a, const void* b);
 };
 
+struct VertexBuffer {
+	u8* data;
+	u32 size;
+	u32 capacity;
+
+	u32 vertex_size;
+};
+
+void vertex_buffer_init(VertexBuffer* vertex_buffer, u32 max_vertices, u32 vertex_size);
+u8*  vertex_buffer_push(VertexBuffer* vertex_buffer, void* data, u32 count);
+u8*  vertex_buffer_reserve(VertexBuffer* vertex_buffer, u32 count);
+void vertex_buffer_clear(VertexBuffer* vertex_buffer);
+u32 vertex_buffer_byte_size(VertexBuffer* vertex_buffer);
+u8*  vertex_buffer_at(VertexBuffer* vertex_buffer, u32 index);
 
 /////////
 // GPU //
@@ -142,7 +156,7 @@ struct GpuCommandBufferDescriptor {
 };
 
 struct GpuCommandBuffer {
-	Array<Vertex> vertex_buffer; // How to not hardcode this to Vertex
+	VertexBuffer vertex_buffer;
 	Array<DrawCall> draw_calls;
 
 	u32 vao;
@@ -227,6 +241,7 @@ FM_LUA_EXPORT void gpu_memory_barrier(GpuMemoryBarrier barrier);
 FM_LUA_EXPORT void gpu_bind_buffer(GpuBuffer* buffer);
 FM_LUA_EXPORT void gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
 FM_LUA_EXPORT void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
+FM_LUA_EXPORT void gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
 FM_LUA_EXPORT void gpu_zero_buffer(GpuBuffer* buffer, u32 size);
 FM_LUA_EXPORT void gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 

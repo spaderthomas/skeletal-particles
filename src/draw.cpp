@@ -334,6 +334,51 @@ void set_uniform_texture(const char* name, i32 value) {
 	set_uniform(uniform);
 }
 
+///////////////////
+// VERTEX BUFFER //
+///////////////////
+void vertex_buffer_init(VertexBuffer* buffer, u32 max_vertices, u32 vertex_size) {
+	assert(buffer);
+
+	buffer->size = 0;
+	buffer->capacity = max_vertices;
+	buffer->vertex_size = vertex_size;
+	buffer->data = (u8*)ma_alloc(&standard_allocator, max_vertices * vertex_size);
+}
+
+u8* vertex_buffer_at(VertexBuffer* buffer, u32 index) {
+	assert(buffer);
+	return buffer->data + (index * buffer->vertex_size);
+}
+
+u8* vertex_buffer_push(VertexBuffer* buffer, void* data, u32 count) {
+	assert(buffer);
+	assert(buffer->size < buffer->capacity);
+
+	auto vertices = vertex_buffer_reserve(buffer, count);
+	copy_memory(data, vertices, buffer->vertex_size * count);
+	return vertices;
+}
+
+u8* vertex_buffer_reserve(VertexBuffer* buffer, u32 count) {
+	assert(buffer);
+	
+	auto vertex = vertex_buffer_at(buffer, buffer->size);
+	buffer->size += count;
+	return vertex;
+}
+
+void vertex_buffer_clear(VertexBuffer* buffer) {
+	assert(buffer);
+
+	buffer->size = 0;
+}
+
+u32 vertex_buffer_byte_size(VertexBuffer* buffer) {
+	assert(buffer);
+
+	return buffer->size * buffer->vertex_size;
+}
 
 ///////////////////////
 // IMMEDIATE DRAWING //
@@ -544,7 +589,14 @@ void gpu_swap_buffers() {
 GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor) {
 	auto buffer = arr_push(&render.command_buffers);
 	
-	arr_init(&buffer->vertex_buffer, descriptor.max_vertices);
+	u32 vertex_size = 0;
+	for (u32 i = 0; i < descriptor.num_vertex_attributes; i++) {
+		auto attribute = descriptor.vertex_attributes[i];
+		auto type_info = GlTypeInfo::from_attribute(attribute.kind);
+		vertex_size += attribute.count * type_info.size;
+	}
+
+	vertex_buffer_init(&buffer->vertex_buffer, descriptor.max_vertices, vertex_size);
 	arr_init(&buffer->draw_calls, descriptor.max_draw_calls);
 	//render.command_buffer = buffer;
 	//render.add_draw_call();
@@ -576,22 +628,23 @@ GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descripto
 void gpu_bind_commands(GpuCommandBuffer* command_buffer) {
 	glBindVertexArray(command_buffer->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, command_buffer->vbo);
-	glBufferData(GL_ARRAY_BUFFER, arr_bytes_used(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_byte_size(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW); // @VERTEX
 }
 
 void gpu_preprocess_commands(GpuCommandBuffer* command_buffer) {
-	arr_for(command_buffer->draw_calls, draw_call) {
-		if (!draw_call->count) continue;
+	// @VERTEX
+	// arr_for(command_buffer->draw_calls, draw_call) {
+	// 	if (!draw_call->count) continue;
 		
-		for (int i = 0; i < draw_call->count; i++) {
-			auto vertex =  command_buffer->vertex_buffer[draw_call->offset + i];
-			draw_call->average_y += vertex->position.y;
-		}
+	// 	for (int i = 0; i < draw_call->count; i++) {
+	// 		auto vertex =  command_buffer->vertex_buffer[draw_call->offset + i];
+	// 		draw_call->average_y += vertex->position.y;
+	// 	}
 
-		draw_call->average_y /= draw_call->count;
-	}
+	// 	draw_call->average_y /= draw_call->count;
+	// }
 
-	qsort(command_buffer->draw_calls.data, command_buffer->draw_calls.size, sizeof(DrawCall), &DrawCall::compare);
+	// qsort(command_buffer->draw_calls.data, command_buffer->draw_calls.size, sizeof(DrawCall), &DrawCall::compare);
 }
 
 void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
@@ -605,7 +658,7 @@ void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
 	}
 		
 	arr_clear(&command_buffer->draw_calls);
-	arr_clear(&command_buffer->vertex_buffer);
+	vertex_buffer_clear(&command_buffer->vertex_buffer); // @VERTEX
 }
 
 
@@ -671,6 +724,13 @@ void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size) {
 	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
+void gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset) {
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer->handle);
+	glBufferSubData(GL_SHADER_STORAGE_BUFFER, byte_offset, byte_size, data);
+	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+
 void gpu_zero_buffer(GpuBuffer* buffer, u32 size) {
 	auto data = bump_allocator.alloc<u8>(size);
 	gpu_sync_buffer(buffer, data, size);
@@ -705,7 +765,7 @@ DrawCall* RenderEngine::add_draw_call() {
 	
 	DrawCall draw_call;
 	memset(&draw_call, 0, sizeof(DrawCall));
-	draw_call.offset = command_buffer->vertex_buffer.size;
+	draw_call.offset = command_buffer->vertex_buffer.size; // @VERTEX
 	draw_call.count = 0;
 
 	if (command_buffer->draw_calls.size) {
@@ -863,7 +923,8 @@ Vertex* push_vertex(i32 count) {
 	auto draw_call = render.find_draw_call();
 	draw_call->count += count;
 
-	return arr_reserve(&command_buffer->vertex_buffer, count);
+	// @VERTEX
+	return (Vertex*)vertex_buffer_reserve(&command_buffer->vertex_buffer, count);
 }
 
 void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity) {

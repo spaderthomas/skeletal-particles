@@ -58,5 +58,5 @@ function PointLight:to_ctype()
 end
  
 function PointLight:draw()
-  self.angle = tdengine.ffi.perlin(tdengine.elapsed_time / 2, 0, .4, .7)
+  self.angle = tdengine.ffi.perlin(tdengine.elapsed_time / 2, self.id, .4, .7)
 end  

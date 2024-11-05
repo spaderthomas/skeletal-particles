@@ -113,7 +113,7 @@ function tdengine.class.define(name)
   })
 
   setmetatable(tdengine.types[name], {
-    -- Point missing keys to the static method table (which will in turn point still-missing keys to the instasnce method table)
+    -- Point missing keys to the static method table (which will in turn point still-missing keys to the instance method table)
     __index = function(_, key)
       return tdengine.types[name].__static[key]
     end,
@@ -126,6 +126,35 @@ function tdengine.class.define(name)
 
   return tdengine.types[name]
 end
+
+function tdengine.class.metatype(ctype)
+  -- Because LuaJIT (bafflingly and ostensibly for some optimization) makes metatypes immutable, we create the metatype once
+  -- with a layer of indirection that looks up metamethods rather than calling them directly. Ultimately, we'd like all of the
+  -- LuaJIT metatype's metamethods to point to the Lua class that we make
+  if not tdengine.types[ctype] then
+    local metatype_indirection = {
+      __index = function(t, k)
+        return getmetatable(tdengine.types[ctype]).__index(t, k)
+      end
+    }
+
+    ffi.metatype(ctype, metatype_indirection)
+  end
+  
+  -- Then, we create a plain old class. The only difference is that instead of creating and populating a table, we just need
+  -- to return ffi.new().
+  --
+  -- This does mean that our metatypes can't have extra fields on them. There's no reason this isn't possible; it would just
+  -- take more metatable wrangling than I feel like doing right now (i.e. store everything besides the ctype in a table, look
+  -- up fields in that table if not found on the ctype -- annoying!)
+  local type = tdengine.class.define(ctype)
+  type.__static.allocate = function()
+    return ffi.new(ctype)
+  end
+
+  return type
+end
+
 
 function tdengine.class.find(name)
   return tdengine.types[name]

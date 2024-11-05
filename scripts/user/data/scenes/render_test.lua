@@ -40,13 +40,13 @@ return {
     uuid = "72444549-f5ac-4e72-8807-ba264aab5594"
   },
   ["a013c829-c079-461d-86d6-ee2bd25854f3"] = {
-    angle = 0.54947845380312099,
-    angular_falloff = 0.88099998235702515,
+    angle = 0.53543931245803833,
+    angular_falloff = 0.89300000667572021,
     color = {
       a = 1,
-      b = 0.40468227863311768,
-      g = 0.08391406387090683,
-      r = 0
+      b = 0.59394818544387817,
+      g = 0.79933106899261475,
+      r = 0.1390141099691391
     },
     components = {
       Collider = {
@@ -57,8 +57,8 @@ return {
         attached = "",
         impl = {
           position = {
-            x = 142.00019836425781,
-            y = 44.12499412894249
+            x = 115.43765068054199,
+            y = 37.249983906745911
           },
           radius = 12
         },
@@ -75,11 +75,11 @@ return {
         world_space = true
       }
     },
-    intensity = 11.189999580383301,
+    intensity = 4.0479998588562012,
     name = "PointLight",
-    radial_falloff = 0.5,
+    radial_falloff = 0.3449999988079071,
     uuid = "a013c829-c079-461d-86d6-ee2bd25854f3",
-    volumetric_intensity = 0.53600001335144043
+    volumetric_intensity = 0.56000000238418579
   },
   ["a214ac5a-96ff-4e31-bb6d-8af23fe6d9b6"] = {
     name = "RenderTest",
