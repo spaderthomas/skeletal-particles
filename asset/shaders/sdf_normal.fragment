@@ -5,11 +5,6 @@ out vec4 color;
 in vec4 f_color;
 in vec2 f_uv;
 
-uniform int shape;
-uniform float edge_thickness;
-uniform vec2 point;
-uniform float radius;
-uniform float inner_radius;
 
 // #define USE_RADIAL_UVS 1
 #define USE_GRID_UVS 1
@@ -20,8 +15,12 @@ void main() {
 	float dist = 0.0;
 	if (shape == SDF_CIRCLE) {
 		dist = sdf_circle(world, point, radius);
-	
 	}
+	else if (shape == SDF_ORIENTED_BOX) {
+		dist = sdf_oriented_box(world, center_a, center_b, thickness);           
+		// DBG(green);
+	}
+
 
 	const float num_uv_bands = 256;
 

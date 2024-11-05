@@ -4,8 +4,6 @@ function DeferredRenderer:init()
   self.max_lights = 16;
   self.light_ssbo = nil
   self.lights = ffi.new('Light [16]')
-
-
 end
 
 function DeferredRenderer:on_start_game()

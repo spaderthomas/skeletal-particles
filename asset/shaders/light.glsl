@@ -19,6 +19,7 @@ const float light_resolution = 64;
 const float light_radius = 4;
 
 
+
 float calc_radial_falloff(Light light, vec2 position) {
     float d = distance(position, light.position);
     float normalized_distance = distance(position, light.position) / light_radius;
@@ -44,9 +45,35 @@ float calc_angular_falloff(Light light, vec2 position) {
   angular_delta = abs(angular_delta);
 
   return smoothstep(1.0 - light.angular_falloff, 0, angular_delta);
-
-  float max_angular_delta = light.angular_falloff / 2;
-  float normalized_angular_delta = abs(angular_delta / max_angular_delta);
-
-  return clamp(1.0 - normalized_angular_delta, 0.0, 1.0);
 } 
+
+
+const bool band_uvs = true;
+const int max_uv_bands = 64;
+
+const bool warp_uv_bands = true;
+const float uv_band_warp = 1.0;
+
+vec2 band_light_uvs_grid(Light light, vec2 uv, float num_bands) {
+  return quantize_uv(uv, num_bands);
+}
+
+vec2 band_light_uvs_warp(Light light, vec2 uv, int max_bands, vec2 world_position, float warp) {
+  float normalized_distance = distance(world_position, light.position) / length(output_resolution);
+  float light_resolution = pow(1.0 - normalized_distance, warp);
+  float num_uv_bands = max_bands * light_resolution;
+  return band_light_uvs_grid(light, uv, num_uv_bands);
+}
+
+vec2 band_light_uvs(Light light, vec2 uv, vec2 world_position) {
+  if (band_uvs) {
+    if (warp_uv_bands) {
+        return band_light_uvs_warp(light, uv, max_uv_bands, world_position, uv_band_warp);
+    }
+    else {
+        return band_light_uvs_grid(light, uv, max_uv_bands);
+    }
+  }
+
+  return uv;
+}

@@ -701,6 +701,9 @@ function tdengine.init_phase_0()
   tdengine.subsystem = {}
   tdengine.subsystem.types = {}
 
+  tdengine.math = {}
+
+
   tdengine.dt = 0
   tdengine.elapsed_time = 0
   tdengine.frame = 0

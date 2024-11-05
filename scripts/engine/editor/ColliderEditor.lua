@@ -224,7 +224,7 @@ function BoxEditor:init(params)
 	self.resize = {
 		size_delta = tdengine.vec2(),
 		new_size = tdengine.vec2(),
-		corner_radius = 16,
+		corner_radius = 4,
 		collider = nil,
 		corner = tdengine.vec2(),
 		corners = {},

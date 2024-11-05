@@ -144,6 +144,8 @@ function tdengine.ffi.init()
 		{
 			Circle = 0,
 			Ring = 1,
+			Box = 2,
+			OrientedBox = 3,
 			}
 	)
 	

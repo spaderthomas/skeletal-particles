@@ -1,5 +1,3 @@
-tdengine.really_large_number = 2000000000
-tdengine.really_small_number = -2000000000
 
 function average(a, b)
   return (a + b) / 2
@@ -52,10 +50,11 @@ function subtract(x, y)
   return x - y
 end
 
-tdengine.math = {}
-tdengine.math.pi = 3.14159265359
 
 function tdengine.math.init()
+  tdengine.math.pi = 3.14159265359
+  tdengine.really_large_number = 2000000000
+  tdengine.really_small_number = -2000000000
   tdengine.math.seed_rng()
 end
 

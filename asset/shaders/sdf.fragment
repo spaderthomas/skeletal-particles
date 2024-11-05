@@ -5,11 +5,6 @@ out vec4 color;
 in vec4 f_color;
 in vec2 f_uv;
 
-uniform int shape;
-uniform float edge_thickness;
-uniform vec2 point;
-uniform float radius;
-uniform float inner_radius;
 
 
 void main() {
@@ -22,6 +17,14 @@ void main() {
 	else if (shape == SDF_RING) {
 		dist = sdf_ring(world, point, inner_radius, radius);
 	}
+	else if (shape == SDF_BOX) {
+		dist = sdf_box(world, point, size);           
+	}
+	else if (shape == SDF_ORIENTED_BOX) {
+		dist = sdf_oriented_box(world, center_a, center_b, thickness);           
+		// DBG(green);
+	}
+
 
 	float alpha = smoothstep(0.0, -edge_thickness, dist);
 	color = vec4(f_color.xyz, alpha * f_color.a);

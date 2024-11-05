@@ -32,6 +32,7 @@ const vec4 indian_red   = vec4(180.0 / 255.0, 101.0 / 255.0, 111.0 / 255.0, 255.
 #define DBG(debug_color) color = (vec4((debug_color).rgb, 1.0)); return;
 #define DBG_TEX(debug_texture) color = texture(debug_texture, f_uv); return;
 #define DBG_FLOAT(value) color = make_red(value); return;
+#define DBG_VEC2(value) color = (vec4((value).rg, 0.0, 1.0)); return;
 #define DBG_VEC3(value) color = (vec4((value).rgb, 1.0)); return;
 #define DBG_MIX(sample_color, debug_color, t) color = mix((sample_color), (debug_color), (t)); return;
 
@@ -132,6 +133,19 @@ vec2 scaled_pixels(float pixels) {
 float quantize(float x, float bands) {
 	return floor(x * bands) / bands;
 }
+
+vec2 quantize(vec2 v, float bands) {
+	return vec2(quantize(v.x, bands), quantize(v.y, bands));
+}
+
+vec2 quantize_uv(vec2 uv, float horizontal_bands) {
+	return vec2(
+		quantize(uv.x, horizontal_bands), 
+		quantize(uv.y, horizontal_bands * output_resolution.y / output_resolution.x)
+	);
+}
+
+
 
 float radians_to_turns(float theta) {
 	return theta / (2 * pi);
@@ -365,9 +379,6 @@ vec4 nonlinear_blur_n_h(sampler2D source_texture, vec2 uv, uint num_taps, float 
 }
 
 
-// SDF
-#define SDF_CIRCLE 0
-#define SDF_RING 1
 
 const float gamma = 2.2;
 

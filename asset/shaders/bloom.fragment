@@ -67,8 +67,8 @@ void main () {
   else if (mode == BLOOM_MODE_FILTER) {
     vec4 sample_color = texture(unfiltered_frame, f_uv);
     float brightness = calc_brightness(sample_color);
-    // color = vec4(sample_color.rgb * is_higher_than(brightness, brightness_threshold), 1.0);
-    DBG(texture(unfiltered_frame, f_uv));
+    color = vec4(sample_color.rgb * is_higher_than(brightness, brightness_threshold), 1.0);
+    // DBG(texture(unfiltered_frame, f_uv));
     
   }
   else if (mode == BLOOM_MODE_BLUR) {

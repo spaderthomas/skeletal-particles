@@ -122,14 +122,14 @@ function App:on_start_game()
   game_views:add_view(GameView:new(
 		'Game',
 		tdengine.gpu.find_render_target('scene'),
-		tdengine.enums.GameViewSize.ExactSize, self.native_resolution,
-		tdengine.enums.GameViewPriority.Standard))
+		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
+		tdengine.enums.GameViewPriority.Main))
 
   game_views:add_view(GameView:new(
 		'Scene',
 		tdengine.gpu.find_render_target('upscaled_lit_scene'),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
-		tdengine.enums.GameViewPriority.Main))
+		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Color Buffer',

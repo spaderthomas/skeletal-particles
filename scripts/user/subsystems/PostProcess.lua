@@ -78,8 +78,8 @@ function PostProcess:upscale()
   self.upscale_lit_scene:render()
   self.upscale_scene:render()
 
-  -- self:post_process()
-  -- self.copy_output:render()
+  self:post_process()
+  self.copy_output:render()
 end
 
 function PostProcess:post_process()
