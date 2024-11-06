@@ -25,6 +25,13 @@ PointLight.editor_fields = {
   'angle', 
 } 
 
+local Test = tdengine.enum.define(
+  'Test',
+  {
+    A = 1
+  }
+)
+
 PointLight:set_field_metadatas({ 
   angle = FieldMetadata.Presets.Float_01,
   angular_falloff = FieldMetadata.Presets.Float_01,

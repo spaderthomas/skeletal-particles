@@ -8,6 +8,9 @@ local enum_ignore = {
 
 tdengine.internal.enum_value_metatable = {
 	__eq = function(a, b)
+		local type_of_a = type(a)
+		local type_of_b = type(b)
+
 		local tb = type(b) == 'table'
 		if not tb then return false end
 
@@ -74,6 +77,9 @@ function tdengine.enum.define(enum_name, values)
 			to_number = function() return value end,
 			bitwise_and = function(...) return tdengine.enum.bitwise_and(self, ...) end,
 			bitwise_or = function(...) return tdengine.enum.bitwise_or(self, ...) end,
+			match = function(self, check_value)
+				return check_value == string_id or check_value == value or check_value == self
+			end,
 			__editor = {
 				ignore = enum_ignore
 			},

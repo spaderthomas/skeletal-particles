@@ -21,7 +21,7 @@ local function find_sorted_keys(t)
 
 		local A_FIRST = true
 		local B_FIRST = false
-		
+
 		-- 1. Tables always come before non-tables
 		local is_va_table = type(va) == 'table' and not tdengine.enum.is_enum(va)
 		local is_vb_table = type(vb) == 'table' and not tdengine.enum.is_enum(vb)
@@ -35,10 +35,9 @@ local function find_sorted_keys(t)
 			elseif not ma.read_only and mb.read_only then
 				return B_FIRST
 			end
-			
+
 			return tostring(ka) < tostring(kb)
 		end
-
 	end
 
 	table.sort(sorted_keys, compare_keys)
@@ -49,7 +48,6 @@ end
 -- TABLE
 --
 imgui.extensions.TableField = function(key, value, padding)
-
 	local cursor = imgui.GetCursorPosX()
 
 	local value_type = type(value)
@@ -100,7 +98,36 @@ imgui.extensions.TableMenuItem = function(name, t)
 	end
 end
 
+imgui.extensions.CData = function(key, value, color, padding)
+	local cdata_label = string.format('%s##%s', key, tdengine.ffi.address_of(value))
 
+	if imgui.TreeNode(key) then
+		local ctypes = tdengine.enums.ctype
+
+		local type_info = reflect.typeof(value)
+		for member in type_info:members() do
+			local type_primitive = member.what
+			if ctypes.field:match(type_primitive) then
+				type_primitive = member.type.what
+			end
+
+			local field_ptr = tdengine.ffi.field_ptr(value, member)
+			local label = string.format('##%s:%s', tdengine.ffi.address_of(value), member.name)
+
+			local cursor = imgui.GetCursorPosX()
+			imgui.extensions.VariableName(member.name, color)
+			imgui.SameLine()
+			if padding then imgui.SetCursorPosX(cursor + padding) end
+
+			if ctypes.float:match(type_primitive) then
+				imgui.PushItemWidth(-1)
+				ffi.C.igInputFloat(label, field_ptr, 0, 0, '%.3f', 0)
+				imgui.PopItemWidth()
+			end
+		end
+		imgui.TreePop()
+	end
+end
 
 --
 -- TABLE EDITOR
@@ -124,7 +151,7 @@ imgui.extensions.TableEditor = function(editing, params)
 		draw_field_add = params.draw_field_add or false,
 		child_field_add = params.child_field_add or false,
 		field_add_key = '',
-		field_add_value = '',	
+		field_add_value = '',
 		context_menu_item = nil,
 		seen = params.seen or {},
 		draw = function(self) return imgui.internal.draw_table_editor(self) end,
@@ -180,7 +207,9 @@ imgui.internal.draw_table_editor = function(editor)
 	-- If the user right clicked a sub-table, we show a prompt to add an entry to the sub-table.
 	-- Record whether a field was added in this way to return to the user
 	local field_added = false
-	if editor.draw_field_add then print('small'); field_added = imgui.internal.draw_table_field_add(editor) end
+	if editor.draw_field_add then
+		print('small'); field_added = imgui.internal.draw_table_field_add(editor)
+	end
 
 	local field_changed = false
 	local fields_changed = {}
@@ -293,14 +322,7 @@ imgui.internal.draw_table_editor = function(editor)
 					mark_field_changed(key)
 				end
 			elseif type(value) == 'cdata' then
-				imgui.extensions.VariableName(display_key, variable_name_color)
-				imgui.SameLine()
-				imgui.SetCursorPosX(cursor + padding)
-				imgui.PushItemWidth(-1)
-
-				imgui.Text('<cdata>')
-				imgui.PopItemWidth()
-
+				imgui.extensions.CData(display_key, value, variable_name_color, padding)
 				-- Functions, trivialls
 			elseif type(value) == 'function' then
 				-- @spader 2/20/23: It's useful sometimes to see whether a function member is set,
@@ -315,8 +337,7 @@ imgui.internal.draw_table_editor = function(editor)
 					imgui.PopItemWidth()
 				end
 			elseif type(value) == 'thread' then
-
-			-- Colors (at this point, we know it's a table)
+				-- Colors (at this point, we know it's a table)
 			elseif tdengine.is_color_like(value) then
 				local picker_flags = 0
 
@@ -326,7 +347,6 @@ imgui.internal.draw_table_editor = function(editor)
 					imgui.TreePop()
 				end
 				imgui.PopStyleColor()
-
 			elseif editor:is_self_referential(value) then
 				if false then
 					imgui.extensions.VariableName(display_key, variable_name_color)
@@ -337,11 +357,10 @@ imgui.internal.draw_table_editor = function(editor)
 					imgui.Text('self referential')
 					imgui.PopItemWidth()
 				end
-
 			elseif tdengine.enum.is_enum(value) then
 				imgui.extensions.VariableName(display_key, variable_name_color)
 				if imgui.IsItemClicked(1) then
-					open_item_context_menu = true; 
+					open_item_context_menu = true;
 					editor.context_menu_item = key
 				end
 				imgui.SameLine()

@@ -2,6 +2,8 @@ local ffi_header = [[
 //
 // TYPES
 //
+typedef uint8_t u8;
+typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int32_t  i32;
 typedef float f32;
@@ -794,6 +796,23 @@ function tdengine.init_phase_0()
 	for index, path in pairs(write_paths) do
 		ffi.C.add_write_path(path.name, path.path)
 	end
+
+  -- We need a couple of files to even be able to load other files (since they
+  -- define classes and enums and such). Order matters here. I consider this to be
+  -- the Lua equivalent of the ordered includes in main.cpp
+  --
+  -- We technically load these files twice, but all files are idempotent...
+  local loader = {
+    'reflect.lua',
+    'enum.lua',
+    'class.lua',
+    'math.lua'
+  }
+
+  for _, file_name in pairs(loader) do
+    local file_path = ffi.string(ffi.C.resolve_format_path('engine_script', file_name).data)
+    dofile(file_path)
+  end
 end
 
 function tdengine.init_phase_1()

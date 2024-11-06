@@ -55,36 +55,6 @@ function GpuBuffer:bind_base(base)
   tdengine.ffi.gpu_bind_buffer_base(self.ssbo, base)
 end
 
-ffi.cdef('typedef struct { Vector3 v3; Vector2 v2; } Test;')
-
-local xx = ffi.new('Test')
-print(xx.v3)
-
-T = tdengine.class.metatype('Test')
-T.editor_fields = {
-  'v3',
-  'v2'
-}
-
-V2 = tdengine.class.metatype('Vector2')
-V2.editor_fields = {
-  'x',
-  'y'
-}
-
-V3 = tdengine.class.metatype('Vector3')
-V3.editor_fields = {
-  'x',
-  'y',
-  'z'
-}
-
-local t = T:new()
-print(t.v3)
-local s = {}
-tdengine.serialize_fields(t, t.editor_fields, s)
-p(s)
-
 
 GpuCommandBufferDescriptor = tdengine.class.metatype('GpuCommandBufferDescriptor')
 
@@ -103,6 +73,7 @@ end
 DeferredRenderer = tdengine.subsystem.define('DeferredRenderer')
 
 function DeferredRenderer:init()
+  self.render_enabled = true
   self.max_lights = 16;
   self.lights = nil
   self.sdf_buffer_length = 1024
@@ -158,6 +129,8 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
+  if not self.render_enabled then return end
+
   for light in tdengine.entity.iterate('PointLight') do
     self.lights.cpu_buffer:push(light:to_ctype())
   end

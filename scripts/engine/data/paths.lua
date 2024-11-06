@@ -10,7 +10,12 @@ return {
 					path = 'engine',
 					children = {
 						engine_components = 'components',
-						engine_core = 'core',
+						engine_core = {
+							path = 'core',
+							children = {
+								engine_script = '%s'
+							}
+						},
 						engine_data = {
 							path = 'data',
 							children = {
@@ -20,7 +25,7 @@ return {
 						},
 						engine_editor = 'editor',
 						engine_entities = 'entities',
-						engine_libs = 'libs',
+						engine_libs = 'third_party',
 					}
 				},
 				user_scripts = {

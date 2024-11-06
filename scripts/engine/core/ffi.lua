@@ -157,8 +157,26 @@ function tdengine.ffi.init()
 	ffi.cdef(header)
 end
 
+function tdengine.ffi.member_type(member)
+	local ctypes = tdengine.enums.ctype
 
+	if ctypes.field:match(member.what) then
+		return member.type.what
+	end
 
+	return member.what
+end
+
+function tdengine.ffi.field_ptr(cdata, member)
+	local byte_ptr = ffi.cast('u8*', cdata)
+	local member_type = tdengine.ffi.member_type(member)
+	return ffi.cast(string.format('%s *', member_type), byte_ptr + member.offset)
+end
+
+function tdengine.ffi.address_of(cdata)
+	local as_string = tostring(cdata)
+	return as_string:match("%S+%s+%S+%s+(%S+)")
+end
 
 Matrix3 = tdengine.class.metatype('Matrix3')
 
@@ -203,6 +221,24 @@ function SdfCircle:init(px, py, radius, edge_thickness)
 end
 
 
+tdengine.enum.define(
+	'ctype',
+	{
+		void = 0,
+		int = 1,
+		float = 2,
+		enum = 3,
+		constant = 4,
+		ptr = 5,
+		ref = 6,
+		array = 7,
+		struct = 8,
+		union = 9,
+		func = 10,
+		field = 11,
+		bitfield = 12
+	}
+)
 
 
 function tdengine.ffi.draw_line(ax, ay, bx, by, thickness, color)
