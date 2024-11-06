@@ -173,6 +173,8 @@ function SimplePostProcess:set_shader(shader)
 end
 
 function SimplePostProcess:add_ssbo(binding, ssbo)
+  print(tdengine.frame)
+  dbg()
   self.ssbos:add(SsboBinding:new(binding, ssbo))
 end
 

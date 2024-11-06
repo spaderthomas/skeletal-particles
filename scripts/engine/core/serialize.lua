@@ -39,6 +39,9 @@ function tdengine.serialize_fields(t, fields, data)
 			}
 		elseif type(value) == 'function' then
 			goto continue
+		elseif type(value) == 'cdata' then
+			data[field] = {}
+			tdengine.serialize_fields(value, value.editor_fields, data[field])
 		else
 			data[field] = deep_copy_any(value)
 		end

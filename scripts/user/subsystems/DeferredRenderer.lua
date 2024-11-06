@@ -55,6 +55,49 @@ function GpuBuffer:bind_base(base)
   tdengine.ffi.gpu_bind_buffer_base(self.ssbo, base)
 end
 
+ffi.cdef('typedef struct { Vector3 v3; Vector2 v2; } Test;')
+
+local xx = ffi.new('Test')
+print(xx.v3)
+
+T = tdengine.class.metatype('Test')
+T.editor_fields = {
+  'v3',
+  'v2'
+}
+
+V2 = tdengine.class.metatype('Vector2')
+V2.editor_fields = {
+  'x',
+  'y'
+}
+
+V3 = tdengine.class.metatype('Vector3')
+V3.editor_fields = {
+  'x',
+  'y',
+  'z'
+}
+
+local t = T:new()
+print(t.v3)
+local s = {}
+tdengine.serialize_fields(t, t.editor_fields, s)
+p(s)
+
+
+GpuCommandBufferDescriptor = tdengine.class.metatype('GpuCommandBufferDescriptor')
+
+GpuCommandBufferDescriptor.editor_fields = {
+  'num_vertex_attributes',
+  'max_vertices',
+  'num_vertex_attributes',
+
+}
+
+function GpuCommandBufferDescriptor:init(params)
+  self.num_vertex_attributes = params.num_vertex_attributes
+end
 
 
 DeferredRenderer = tdengine.subsystem.define('DeferredRenderer')
@@ -90,6 +133,20 @@ function DeferredRenderer:on_start_game()
   self.visualize_light_map:set_shader('light_map')
   self.visualize_light_map:add_uniform('num_lights', 0, tdengine.enums.UniformKind.I32)
   self.visualize_light_map:add_ssbo(0, self.lights.gpu_buffer.ssbo)
+
+  self.command_buffers = {}
+  local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
+
+  self.render_passes = {
+
+  }
+
+    -- self.shapes = SimplePostProcess:new()
+  -- self.visualize_light_map:set_render_pass('light_map')
+  -- self.visualize_light_map:set_shader('light_map')
+  -- self.visualize_light_map:add_uniform('num_lights', 0, tdengine.enums.UniformKind.I32)
+  -- self.visualize_light_map:add_ssbo(0, self.lights.gpu_buffer.ssbo)
+
 end
 
 function DeferredRenderer:on_begin_frame()
@@ -106,6 +163,7 @@ function DeferredRenderer:on_scene_rendered()
   end
 
   self.lights:sync()
+ 
 
   self.visualize_light_map:add_uniform('num_lights', self.lights.cpu_buffer.size, tdengine.enums.UniformKind.I32)
   self.visualize_light_map:render()

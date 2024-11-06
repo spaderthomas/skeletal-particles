@@ -131,7 +131,7 @@ void vertex_buffer_init(VertexBuffer* vertex_buffer, u32 max_vertices, u32 verte
 u8*  vertex_buffer_push(VertexBuffer* vertex_buffer, void* data, u32 count);
 u8*  vertex_buffer_reserve(VertexBuffer* vertex_buffer, u32 count);
 void vertex_buffer_clear(VertexBuffer* vertex_buffer);
-u32 vertex_buffer_byte_size(VertexBuffer* vertex_buffer);
+u32  vertex_buffer_byte_size(VertexBuffer* vertex_buffer);
 u8*  vertex_buffer_at(VertexBuffer* vertex_buffer, u32 index);
 
 /////////

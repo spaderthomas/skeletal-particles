@@ -15,9 +15,7 @@ layout (std430, binding = 0) buffer LightBuffer {
 
 uniform int num_lights;
 
-const float light_resolution = 64;
 const float light_radius = 4;
-
 
 
 float calc_radial_falloff(Light light, vec2 position) {
@@ -51,8 +49,8 @@ float calc_angular_falloff(Light light, vec2 position) {
 const bool band_uvs = true;
 const int max_uv_bands = 96;
 
-const bool warp_uv_bands = false;
-const float uv_band_warp = 0.75;
+const bool warp_uv_bands = true;
+const float uv_band_warp = 0.25;
 
 vec2 band_light_uvs_grid(Light light, vec2 uv, float num_bands) {
   return quantize_uv(uv, num_bands);
@@ -76,4 +74,27 @@ vec2 band_light_uvs(Light light, vec2 uv, vec2 world_position) {
   }
 
   return uv;
+}
+
+struct LitFragment {
+  vec3 light_color;
+  vec3 volumetric_color;
+  float light_strength;
+};
+
+LitFragment light_fragment(Light light, vec2 world_position, vec3 normal) {
+  LitFragment result;
+
+  vec2 light_direction = normalize(light.position - world_position);
+
+  float radial_falloff = calc_radial_falloff(light, world_position);
+  float normal_falloff = clamp(dot(light_direction, normal.xy), 0.0, 1.0) * (normal.z);
+  float angular_falloff = calc_angular_falloff(light, world_position);
+  result.light_strength = light.intensity * radial_falloff * angular_falloff * normal_falloff;
+  result.light_color = light.color.rgb * result.light_strength;
+
+  float volumetric_strength = light.intensity * radial_falloff * angular_falloff * light.volumetric_intensity;
+  result.volumetric_color = light.color.rgb * volumetric_strength;
+
+  return result;
 }
