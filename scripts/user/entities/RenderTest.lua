@@ -7,8 +7,51 @@ function RenderTest:update()
 end
 
 function RenderTest:draw()
+  -- self.render_passes = tdengine.gpu.render_passes
+  -- self.cdata = ffi.new('CdataTest10', 69.0, 0, 1, ffi.new('float [1]', 100))
+  -- self.fp = ffi.new('float [1]', 200)
+  -- self.cdata.fp = self.fp
+  -- local allocator = tdengine.ffi.ma_find('standard');
+  -- self.cdata.fp = ffi.cast('float *', allocator:alloc(4));
+  -- self.cdata.fp = 
+  -- print(self.fp[0])
+  -- self.cdata.fp[0] = 100
+
 end
 
+-- ffi.cdef([[
+--   typedef enum {
+--   SomeEnum_A,
+--   SomeEnum_B,
+-- } SomeEnum;
+-- ]])
+
+ffi.cdef([[
+  typedef struct OpaquePtr OpaquePtr;
+
+  typedef struct {
+    float fi;
+  } InnerStruct;
+  
+  typedef struct {
+    float fi;
+    InnerStruct inner;
+  } InnerStruct2;
+  
+  typedef struct {
+    float f;
+    int i;
+    SomeEnum e;
+    float* fp;
+    int* ip;
+    bool* bp;
+    float something_quite_long;
+    OpaquePtr* opaque;
+    InnerStruct2 inner;
+    Vector2* vec2;
+    double normal_double;
+  } CdataTest10;
+]])
 
 local PointLight = tdengine.entity.define('PointLight') 
 

@@ -98,36 +98,230 @@ imgui.extensions.TableMenuItem = function(name, t)
 	end
 end
 
-imgui.extensions.CData = function(key, value, color, padding)
-	local cdata_label = string.format('%s##%s', key, tdengine.ffi.address_of(value))
+-- imgui.extensions.
 
-	if imgui.TreeNode(key) then
-		local ctypes = tdengine.enums.ctype
+StructEditor = tdengine.class.define('StructEditor')
 
-		local type_info = reflect.typeof(value)
-		for member in type_info:members() do
-			local type_primitive = member.what
-			if ctypes.field:match(type_primitive) then
-				type_primitive = member.type.what
-			end
+function StructEditor:init(name, struct, color)
+	self.name = name
+	self.struct = struct
+	self.color = color
 
-			local field_ptr = tdengine.ffi.field_ptr(value, member)
-			local label = string.format('##%s:%s', tdengine.ffi.address_of(value), member.name)
+	self.colors = {
+		type_column = tdengine.colors.cadet_gray:copy()
+	}
 
-			local cursor = imgui.GetCursorPosX()
-			imgui.extensions.VariableName(member.name, color)
-			imgui.SameLine()
-			if padding then imgui.SetCursorPosX(cursor + padding) end
+	self.padding = 12
+	self.columns = {
+		field_name = 0,
+		field_type = 0,
+		widget = 0
+	}
 
-			if ctypes.float:match(type_primitive) then
-				imgui.PushItemWidth(-1)
-				ffi.C.igInputFloat(label, field_ptr, 0, 0, '%.3f', 0)
-				imgui.PopItemWidth()
-			end
+	
+	local type_info = tdengine.ffi.inner_typeof(self.struct)
+	for member_info in type_info:members() do
+		self.columns.field_name = math.max(self.columns.field_name, imgui.CalcTextSize(member_info.name).x)
+	end
+
+	self.columns.field_type = imgui.CalcTextSize('i32*').x
+	for member_info in type_info:members() do
+		local inner_type = tdengine.ffi.inner_type(member_info)
+		local pretty_type = tdengine.ffi.pretty_ptr(inner_type)
+		self.columns.field_type = math.max(
+			self.columns.field_type, 
+			imgui.CalcTextSize(pretty_type).x)
+	end
+
+	for column_name in tdengine.iterator.keys(self.columns) do
+		self.columns[column_name] = self.columns[column_name] + self.padding
+	end
+end
+
+function StructEditor:draw()
+	local label = string.format('%s##%s', self.name, tdengine.ffi.address_of(self.struct))
+
+	local type_info = tdengine.ffi.inner_typeof(self.struct) -- For ref types
+
+	if imgui.TreeNode(label) then
+		for member_info in tdengine.ffi.sorted_members(type_info) do
+			self:member(self.struct, member_info, self.color, 0)
 		end
+
 		imgui.TreePop()
 	end
 end
+
+
+function StructEditor:use_name_column()
+	imgui.Columns(3, nil, false)
+	imgui.SetColumnWidth(0, self.columns.field_name)
+end
+
+function StructEditor:use_type_column()
+	imgui.NextColumn()
+	imgui.SetColumnWidth(1, self.columns.field_type)
+end
+
+function StructEditor:use_widget_column()
+	imgui.NextColumn()
+	imgui.SetColumnWidth(2, 2000)--self.columns.widget)
+end
+
+
+function StructEditor:member(struct, member_info, color, alignment)
+	local ctype = tdengine.enums.ctype
+
+	local inner_type = member_info.type
+	local element_type = inner_type.element_type or {}
+
+	if ctype.float:match(inner_type.what) then
+		self:CFloatMember(struct, member_info, color, alignment)
+
+	elseif ctype.enum:match(inner_type.what) then
+		self:CEnumMember(struct, member_info, color, alignment)
+
+	elseif ctype.int:match(inner_type.what) then
+		self:int(member_info.name, tdengine.ffi.field_ptr(struct, member_info), color, alignment)
+
+	elseif ctype.int:match(element_type.what) then
+		self:pointer(member_info.name, struct[member_info.name], color, alignment)
+
+	elseif ctype.struct:match(inner_type.what) then
+		StructEditor:new(member_info.name, struct[member_info.name], color):draw()
+
+	elseif ctype.ptr:match(inner_type.what) then
+		self:pointer(member_info.name, struct[member_info.name], color, alignment)
+	else
+		-- p(member_info)
+	end
+end
+
+
+
+function StructEditor:name_column(field_name, color)
+	self:use_name_column()
+	imgui.PushStyleColor(ffi.C.ImGuiCol_Text, color:to_u32())
+	imgui.Text(field_name)
+	imgui.PopStyleColor()
+end
+
+function StructEditor:type_column(pretty_type)
+	self:use_type_column()
+	imgui.PushStyleColor(ffi.C.ImGuiCol_Text, self.colors.type_column:to_u32())
+	imgui.Text(pretty_type)
+	imgui.PopStyleColor()
+end
+
+function StructEditor:opaque_ptr(field_name, type_info, color)
+	self:name_column(field_name, color)
+	self:type_column(type_info.name)
+
+	self:use_widget_column()
+	imgui.Text('opaque')
+	imgui.Columns()
+
+end
+
+function StructEditor:Float(field_name, ptr, color)
+	self:name_column(field_name, color)
+	self:type_column(tdengine.ffi.pretty_typeof(ptr))
+
+	self:use_widget_column()
+
+	imgui.PushItemWidth(-1)
+	local label = string.format('##%s:%s', tdengine.ffi.address_of(ptr), field_name)
+	imgui.InputScalar(label, tdengine.ffi.imgui_datatypeof(ptr), ptr, nil, nil, '%.3f', 0)
+	imgui.PopItemWidth()
+	imgui.Columns()
+end
+
+function StructEditor:CFloatMember(struct, member_info, color, alignment)
+	return self:Float(member_info.name, tdengine.ffi.field_ptr(struct, member_info), color, alignment)
+end
+
+
+function StructEditor:int(field_name, ptr, color, alignment)
+	self:name_column(field_name, color)
+	self:type_column(tdengine.ffi.pretty_typeof(ptr))
+
+	self:use_widget_column()
+	imgui.PushItemWidth(-1)
+	local label = string.format('##%s:%s', tdengine.ffi.address_of(ptr), field_name)
+	imgui.InputScalar(label, tdengine.ffi.imgui_datatypeof(ptr), ptr, nil, nil, '%.3f', 0)
+
+	-- ffi.C.igInputInt(label, ptr, 0, 0, 0)
+	imgui.PopItemWidth()
+	imgui.Columns()
+end
+
+function StructEditor:pointer(field_name, ptr, color, alignment)
+	self:name_column(field_name, color)
+	self:type_column(tdengine.ffi.pretty_ptrof(ptr))
+
+	self:use_widget_column()
+	if tdengine.ffi.is_opaque(ptr) then
+		imgui.Text('OPAQUE')
+	else
+		imgui.Text(tdengine.ffi.address_of(ptr))
+	end
+	imgui.Columns()
+end
+
+
+function StructEditor:CEnumMember(struct, member_info, color, alignment)
+	local enum_type = tdengine.ffi.inner_typeof(struct[member_info.name])
+	-- self:Enum(member_info.name, tdengine.ffi.field_ptr(struct, member_info), enum_type, color, alignment)
+end
+
+function StructEditor:Enum(field_name, ptr, enum_type, color, alignment)
+	local current_enum_info = enum_type:value(ptr[0])
+
+	self:use_name_column()
+	imgui.extensions.VariableName(field_name, color)
+
+	self:use_type_column()
+	imgui.Text('enum')
+
+
+	self:use_widget_column()
+	imgui.PushItemWidth(-1)
+	local label = string.format('##%s:%s', tdengine.ffi.address_of(ptr), field_name)
+	if imgui.BeginCombo(label, current_enum_info.name) then
+		for enum in enum_type:values() do
+			if imgui.Selectable(enum.name, enum.value == ptr) then
+				ptr[0] = enum.value
+			end
+		end
+
+		imgui.EndCombo()
+	end
+	imgui.PopItemWidth()
+	imgui.Columns()
+
+end
+
+
+
+
+
+
+
+
+function imgui.extensions.CStruct(name, struct, color)
+	local editor = StructEditor:new(name, struct, color)
+	editor:draw()
+end
+
+function imgui.extensions.CType(name, value, color, alignment)
+	local ctype = tdengine.enums.ctype
+
+	local type_info = tdengine.ffi.inner_typeof(value)
+	if ctype.struct:match(type_info.what) then
+		imgui.extensions.CStruct(name, value, color)
+	end
+end
+
 
 --
 -- TABLE EDITOR
@@ -220,7 +414,7 @@ imgui.internal.draw_table_editor = function(editor)
 
 	-- Figure out ImGui stuff for alignment
 	local cursor = imgui.GetCursorPosX()
-	local padding = imgui.internal.table_editor_padding(editor)
+	local padding = imgui.internal.calc_alignment(table.collect_keys(editor.editing))
 	local open_item_context_menu = false
 
 	local sorted_keys = find_sorted_keys(editor.editing)
@@ -322,7 +516,7 @@ imgui.internal.draw_table_editor = function(editor)
 					mark_field_changed(key)
 				end
 			elseif type(value) == 'cdata' then
-				imgui.extensions.CData(display_key, value, variable_name_color, padding)
+				imgui.extensions.CType(display_key, value, variable_name_color, padding)
 				-- Functions, trivialls
 			elseif type(value) == 'function' then
 				-- @spader 2/20/23: It's useful sometimes to see whether a function member is set,
@@ -534,18 +728,23 @@ imgui.internal.draw_table_field_add = function(editor)
 	return enter_on_key or enter_on_value
 end
 
-imgui.internal.table_editor_padding = function(editor)
-	-- Very hacky way to line up the inputs: Figure out the largest key, then when drawing a key,
-	-- use the difference in length between current key and largest key as a padding. Does not work
-	-- that well, but kind of works
+function imgui.internal.calc_alignment(keys)
 	local max_key_size = 0
-	for key, value in pairs(editor.editing) do
-		local key_size = imgui.CalcTextSize(tostring(key))
+	for key in tdengine.iterator.values(keys) do
+		local display_key = tostring(key)
+		local key_size = imgui.CalcTextSize(display_key)
 		max_key_size = math.max(max_key_size, key_size.x)
 	end
 
-	local padding = 10
+	local padding = 12
 	return max_key_size + padding
+end
+
+imgui.internal.table_editor_padding = function(editor)
+	local keys = table.collect_keys(editor.editing)
+	-- Very hacky way to line up the inputs: Figure out the largest key, then when drawing a key,
+	-- use the difference in length between current key and largest key as a padding. Does not work
+	-- that well, but kind of works
 end
 
 imgui.internal.table_editor_depth_color = function(depth)
@@ -635,7 +834,7 @@ function imgui.extensions.TreeNodeFont(label, font)
 	return tree_expanded
 end
 
-imgui.extensions.ComboBox = function(label, active, items, on_select, ...)
+function imgui.extensions.ComboBox(label, active, items, on_select, ...)
 	local change = false
 	if imgui.BeginCombo(label, active) then
 		for index, item in pairs(items) do

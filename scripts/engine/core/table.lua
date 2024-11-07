@@ -116,6 +116,14 @@ function table.get_or_nil(t, ...)
 	return t
 end
 
+function table.collect_keys(t)
+	local keys = {}
+	for key in tdengine.iterator.keys(t) do
+		table.insert(keys, key)
+	end
+	return keys
+end
+
 function table_address(t)
 	if not t then return '0x00000000' end
 

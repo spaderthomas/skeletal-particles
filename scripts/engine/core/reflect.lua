@@ -361,21 +361,40 @@ metatables.struct.__index.members = siblings
 metatables.func.__index.arguments = siblings
 metatables.enum.__index.values = siblings
 
-local function find_sibling(refct, name)
-  local num = tonumber(name)
-  if num then
-    for sib in siblings(refct) do
-      if num == 1 then
-        return sib
-      end
-      num = num - 1
+local function find_sibling_by_index(refct, index)
+  for sibling in siblings(refct) do
+    if index == 1 then
+      return sibling
     end
-  else
-    for sib in siblings(refct) do
-      if sib.name == name then
-        return sib
-      end
+    index = index - 1
+  end
+end
+
+local function find_sibling_by_cdata(refct, value)
+  for sibling in siblings(refct) do
+    if sibling.value == value then
+      return sibling
     end
+  end
+end
+
+local function find_sibling_by_name(refct, name)
+  for sibling in siblings(refct) do
+    if sibling.name == name then
+      return sibling
+    end
+  end
+end
+
+
+
+local function find_sibling(refct, needle)
+  if type(needle) == 'cdata' then
+    return find_sibling_by_cdata(refct, needle)
+  elseif type(needle) == 'string' then
+    return find_sibling_by_name(refct, needle)
+  elseif type(needle) == 'number' then
+    return find_sibling_by_index(refct, needle)
   end
 end
 

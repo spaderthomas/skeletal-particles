@@ -157,26 +157,211 @@ function tdengine.ffi.init()
 	ffi.cdef(header)
 end
 
-function tdengine.ffi.member_type(member)
-	local ctypes = tdengine.enums.ctype
-
-	if ctypes.field:match(member.what) then
-		return member.type.what
-	end
-
-	return member.what
-end
 
 function tdengine.ffi.field_ptr(cdata, member)
+	local inner_type = tdengine.ffi.inner_type(member)
+	local type_name = tdengine.ffi.type_name(inner_type)
 	local byte_ptr = ffi.cast('u8*', cdata)
-	local member_type = tdengine.ffi.member_type(member)
-	return ffi.cast(string.format('%s *', member_type), byte_ptr + member.offset)
+	return ffi.cast(type_name .. '*', byte_ptr + member.offset)
 end
 
-function tdengine.ffi.address_of(cdata)
-	local as_string = tostring(cdata)
-	return as_string:match("%S+%s+%S+%s+(%S+)")
+function tdengine.ffi.type_name(inner_type)
+	local ctype = tdengine.enums.ctype
+
+	local type_name = inner_type.what
+	if ctype.float:match(inner_type.what) then
+		if inner_type.size == 4 then
+			type_name = 'float'
+		elseif inner_type.size == 8 then
+			type_name = 'double'
+		end
+	elseif ctype.int:match(inner_type.what) then
+		if inner_type.unsigned then
+			if inner_type.size == 1 then
+				type_name = 'uint8_t'
+			elseif inner_type.size == 2 then
+				type_name = 'uint16_t'
+			elseif inner_type.size == 4 then
+				type_name = 'uint32_t'
+			elseif inner_type.size == 8 then
+				type_name = 'uint64_t'
+			end
+		else
+			if inner_type.size == 1 then
+				type_name = 'int8_t'
+			elseif inner_type.size == 2 then
+				type_name = 'int16_t'
+			elseif inner_type.size == 4 then
+				type_name = 'int32_t'
+			elseif inner_type.size == 8 then
+				type_name = 'int64_t'
+			end
+		end
+	end
+
+	return type_name
 end
+
+function tdengine.ffi.imgui_datatype(inner_type)
+	local ctype = tdengine.enums.ctype
+
+	local type_name = inner_type.what
+	if ctype.float:match(inner_type.what) then
+		if inner_type.size == 4 then
+			type_name = ffi.C.ImGuiDataType_Float
+		elseif inner_type.size == 8 then
+			type_name = ffi.C.ImGuiDataType_Double
+		end
+	elseif ctype.int:match(inner_type.what) then
+		if inner_type.unsigned then
+			if inner_type.size == 1 then
+				type_name = ffi.C.ImGuiDataType_U8
+			elseif inner_type.size == 2 then
+				type_name = ffi.C.ImGuiDataType_U16
+			elseif inner_type.size == 4 then
+				type_name = ffi.C.ImGuiDataType_U32
+			elseif inner_type.size == 8 then
+				type_name = ffi.C.ImGuiDataType_U64
+			end
+		else
+			if inner_type.size == 1 then
+				type_name = ffi.C.ImGuiDataType_S8
+			elseif inner_type.size == 2 then
+				type_name = ffi.C.ImGuiDataType_S16
+			elseif inner_type.size == 4 then
+				type_name = ffi.C.ImGuiDataType_S32
+			elseif inner_type.size == 8 then
+				type_name = ffi.C.ImGuiDataType_S64
+			end
+		end
+	end
+
+	return type_name
+end
+
+function tdengine.ffi.imgui_datatypeof(cdata)
+	return tdengine.ffi.imgui_datatype(tdengine.ffi.inner_typeof(cdata))
+end
+
+function tdengine.ffi.pretty_type(type_info)
+	local ctype = tdengine.enums.ctype
+
+	local inner_type = tdengine.ffi.inner_type(type_info)
+
+	-- p(type_info)
+	local type_name = inner_type.what
+	if ctype.float:match(inner_type.what) then
+		if inner_type.size == 4 then
+			type_name = 'f32'
+		elseif inner_type.size == 8 then
+			type_name = 'f64'
+		end
+	elseif ctype.int:match(inner_type.what) then
+		if inner_type.bool then
+			return 'bool'
+		elseif inner_type.unsigned then
+			if inner_type.size == 1 then
+				type_name = 'u8'
+			elseif inner_type.size == 2 then
+				type_name = 'u16'
+			elseif inner_type.size == 4 then
+				type_name = 'u32'
+			elseif inner_type.size == 8 then
+				type_name = 'u64'
+			end
+		else
+			if inner_type.size == 1 then
+				type_name = 's8'
+			elseif inner_type.size == 2 then
+				type_name = 's16'
+			elseif inner_type.size == 4 then
+				type_name = 's32'
+			elseif inner_type.size == 8 then
+				type_name = 's64'
+			end
+		end
+	elseif ctype.struct:match(inner_type.what) then
+		return inner_type.name or string.format('struct %d', inner_type.typeid)
+	end
+
+	return type_name
+
+end
+
+function tdengine.ffi.pretty_typeof(cdata)
+	return tdengine.ffi.pretty_type(tdengine.ffi.typeof(cdata))
+end
+
+function tdengine.ffi.pretty_ptr(type_info)
+	return string.format('%s*', tdengine.ffi.pretty_type(type_info))
+end
+
+function tdengine.ffi.pretty_ptrof(cdata)
+	return string.format('%s*', tdengine.ffi.pretty_type(tdengine.ffi.typeof(cdata)))
+end
+
+
+
+
+function tdengine.ffi.address_of(cdata)
+	local s = tostring(cdata)
+	local parts = s:split(':')
+	return parts[2]:gsub(' ', '')
+end
+
+function tdengine.ffi.sorted_members(type_info)
+	local members = {}
+	for member in type_info:members() do
+		table.insert(members, member)
+	end
+
+	table.sort(members, function (a, b)
+		local A_FIRST = false
+		local B_FIRST = true
+
+		local inner_type_a = tdengine.ffi.inner_type(a)
+		local is_a_struct = tdengine.enums.ctype.struct:match(inner_type_a.what)
+		local inner_type_b = tdengine.ffi.inner_type(b)
+		local is_b_struct = tdengine.enums.ctype.struct:match(inner_type_b.what)
+
+		if is_a_struct and not is_b_struct then
+			return B_FIRST
+		elseif not is_a_struct and is_b_struct then
+			return A_FIRST
+		else
+			return a.name < b.name
+		end
+	end)
+
+	return tdengine.iterator.values(members)
+end
+
+function tdengine.ffi.typeof(cdata)
+	return reflect.typeof(cdata)
+end
+
+function tdengine.ffi.inner_typeof(cdata)
+	return tdengine.ffi.inner_type(reflect.typeof(cdata))
+end
+
+function tdengine.ffi.inner_type(type_info)
+	local ctype = tdengine.enums.ctype
+
+	if ctype.ref:match(type_info.what) then
+		type_info = type_info.element_type
+	elseif ctype.ptr:match(type_info.what) then
+		type_info = type_info.element_type
+	elseif ctype.field:match(type_info.what) then
+		type_info = tdengine.ffi.inner_type(type_info.type)
+	end
+
+	return type_info
+end
+
+function tdengine.ffi.is_opaque(cdata)
+	return tdengine.ffi.inner_typeof(cdata).size == 'none'
+end
+
 
 Matrix3 = tdengine.class.metatype('Matrix3')
 
@@ -219,7 +404,6 @@ function SdfCircle:init(px, py, radius, edge_thickness)
   self.radius = radius
 	self.edge_thickness = edge_thickness
 end
-
 
 tdengine.enum.define(
 	'ctype',
