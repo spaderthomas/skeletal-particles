@@ -105,18 +105,30 @@ function DeferredRenderer:on_start_game()
   self.visualize_light_map:add_uniform('num_lights', 0, tdengine.enums.UniformKind.I32)
   self.visualize_light_map:add_ssbo(0, self.lights.gpu_buffer.ssbo)
 
-  self.command_buffers = {}
+  local command_buffers = {}
+
   local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
+	buffer_descriptor.num_vertex_attributes = 5
+	buffer_descriptor.max_vertices = 64 * 1024
+	buffer_descriptor.max_draw_calls = 256
+	buffer_descriptor.vertex_attributes = ffi.new('VertexAttribute[5]')
+	buffer_descriptor.vertex_attributes[0].count = 2 -- Position
+	buffer_descriptor.vertex_attributes[0].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+	buffer_descriptor.vertex_attributes[1].count = 2 -- UV
+	buffer_descriptor.vertex_attributes[1].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+	buffer_descriptor.vertex_attributes[2].count = 3 -- Color
+	buffer_descriptor.vertex_attributes[2].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+  buffer_descriptor.vertex_attributes[3].count = 1 -- Rotation
+	buffer_descriptor.vertex_attributes[3].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
+	buffer_descriptor.vertex_attributes[4].count = 1 -- Rotation
+	buffer_descriptor.vertex_attributes[4].kind = tdengine.enums.VertexAttributeKind.U32:to_number()
+  command_buffers.shapes = tdengine.gpu.add_command_buffer('shapes', buffer_descriptor)
 
-  self.render_passes = {
+	tdengine.gpu.add_render_pass('shapes', command_buffers.shapes, tdengine.gpu.find_render_target('color'), nil, tdengine.enums.GpuLoadOp.Clear)
 
-  }
-
-    -- self.shapes = SimplePostProcess:new()
-  -- self.visualize_light_map:set_render_pass('light_map')
-  -- self.visualize_light_map:set_shader('light_map')
-  -- self.visualize_light_map:add_uniform('num_lights', 0, tdengine.enums.UniformKind.I32)
-  -- self.visualize_light_map:add_ssbo(0, self.lights.gpu_buffer.ssbo)
+  self.shapes = SimplePostProcess:new()
+  self.shapes:set_render_pass('shapes')
+  self.shapes:set_shader('shape')
 
 end
 
@@ -129,6 +141,7 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
+
   if not self.render_enabled then return end
 
   for light in tdengine.entity.iterate('PointLight') do
@@ -143,6 +156,8 @@ function DeferredRenderer:on_scene_rendered()
 
   self.apply_lighting:add_uniform('num_lights', self.lights.cpu_buffer.size, tdengine.enums.UniformKind.I32)
   self.apply_lighting:render()
+
+  self.shapes:render()
 
   tdengine.subsystem.find('PostProcess'):upscale()
 end

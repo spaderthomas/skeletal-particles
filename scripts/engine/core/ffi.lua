@@ -91,6 +91,7 @@ function tdengine.ffi.init()
 		'VertexAttributeKind',
 		{
 			Float = tdengine.ffi.VertexAttributeKind_Float,
+			U32 = tdengine.ffi.VertexAttributeKind_U32,
 		}
 	)
 
@@ -176,7 +177,9 @@ function tdengine.ffi.type_name(inner_type)
 			type_name = 'double'
 		end
 	elseif ctype.int:match(inner_type.what) then
-		if inner_type.unsigned then
+		if inner_type.bool then
+			type_name = 'bool'
+		elseif inner_type.unsigned then
 			if inner_type.size == 1 then
 				type_name = 'uint8_t'
 			elseif inner_type.size == 2 then
@@ -250,7 +253,11 @@ function tdengine.ffi.pretty_type(type_info)
 
 	-- p(type_info)
 	local type_name = inner_type.what
-	if ctype.float:match(inner_type.what) then
+	if ctype.struct:match(inner_type.what) then
+		type_name = inner_type.name or string.format('struct %d', inner_type.typeid)
+	elseif ctype.enum:match(type_info.what) then
+		type_name = inner_type.name or string.format('enum %d', inner_type.typeid)
+	elseif ctype.float:match(inner_type.what) then
 		if inner_type.size == 4 then
 			type_name = 'f32'
 		elseif inner_type.size == 8 then
@@ -268,6 +275,8 @@ function tdengine.ffi.pretty_type(type_info)
 				type_name = 'u32'
 			elseif inner_type.size == 8 then
 				type_name = 'u64'
+			else
+				type_name = 'unknown unsigned'
 			end
 		else
 			if inner_type.size == 1 then
@@ -278,10 +287,12 @@ function tdengine.ffi.pretty_type(type_info)
 				type_name = 's32'
 			elseif inner_type.size == 8 then
 				type_name = 's64'
+			else
+				type_name = 'unknown signed'
 			end
 		end
-	elseif ctype.struct:match(inner_type.what) then
-		return inner_type.name or string.format('struct %d', inner_type.typeid)
+	else
+		type_name = 'unknown'
 	end
 
 	return type_name
@@ -309,6 +320,12 @@ function tdengine.ffi.address_of(cdata)
 	return parts[2]:gsub(' ', '')
 end
 
+function tdengine.ffi.is_composite_type(type_info)
+	return
+		tdengine.enums.ctype.struct:match(type_info.what) or
+		tdengine.enums.ctype.array:match(type_info.what)
+end
+
 function tdengine.ffi.sorted_members(type_info)
 	local members = {}
 	for member in type_info:members() do
@@ -316,18 +333,16 @@ function tdengine.ffi.sorted_members(type_info)
 	end
 
 	table.sort(members, function (a, b)
-		local A_FIRST = false
-		local B_FIRST = true
+		local A_FIRST = true
+		local B_FIRST = false
 
-		local inner_type_a = tdengine.ffi.inner_type(a)
-		local is_a_struct = tdengine.enums.ctype.struct:match(inner_type_a.what)
-		local inner_type_b = tdengine.ffi.inner_type(b)
-		local is_b_struct = tdengine.enums.ctype.struct:match(inner_type_b.what)
+		local is_a_composite = tdengine.ffi.is_composite_type(a)
+		local is_b_composite = tdengine.ffi.is_composite_type(b)
 
-		if is_a_struct and not is_b_struct then
-			return B_FIRST
-		elseif not is_a_struct and is_b_struct then
+		if is_a_composite and not is_b_composite then
 			return A_FIRST
+		elseif not is_a_composite and is_b_composite then
+			return B_FIRST
 		else
 			return a.name < b.name
 		end
@@ -353,6 +368,8 @@ function tdengine.ffi.inner_type(type_info)
 		type_info = type_info.element_type
 	elseif ctype.field:match(type_info.what) then
 		type_info = tdengine.ffi.inner_type(type_info.type)
+	elseif ctype.enum:match(type_info.what) then
+		type_info = type_info.type
 	end
 
 	return type_info
@@ -404,6 +421,49 @@ function SdfCircle:init(px, py, radius, edge_thickness)
   self.radius = radius
 	self.edge_thickness = edge_thickness
 end
+
+
+Vector2 = tdengine.class.metatype('Vector2')
+
+function  Vector2:init(x, y)
+	self.x = x or self.x
+	self.y = y or self.y
+end
+
+
+Vector3 = tdengine.class.metatype('Vector3')
+
+function  Vector3:init(x, y, z)
+	self.x = x or self.x
+	self.y = y or self.y
+	self.z = z or self.z
+end
+
+
+Vector4 = tdengine.class.metatype('Vector4')
+
+function Vector4:init(x, y, z, w)
+	self.x = x or self.x
+	self.y = y or self.y
+	self.z = z or self.z
+	self.w = w or self.w
+end
+
+Vertex = tdengine.class.metatype('Vertex')
+
+function Vertex:Quad(top, bottom, left, right)
+	local vertices = ffi.new('Vertex [6]')
+
+	vertices[0].position = Vector3:new(left, top)
+	vertices[1].position = Vector3:new(left, bottom)
+	vertices[2].position = Vector3:new(right, bottom)
+	vertices[3].position = Vector3:new(left, top)
+	vertices[4].position = Vector3:new(right, bottom)
+	vertices[5].position = Vector3:new(right, top)
+
+	return vertices
+end
+
 
 tdengine.enum.define(
 	'ctype',

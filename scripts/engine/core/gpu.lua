@@ -48,6 +48,7 @@ function tdengine.gpu.render()
 
   -- Update metadata
   for _, render_pass in pairs(self.render_passes) do
+    -- print(render_pass.name, render_pass.handle.clear_render_target)
     render_pass.handle.dirty = false
   end
   tdengine.ffi.tm_end('render')
@@ -121,7 +122,7 @@ end
 
 function tdengine.gpu.find_render_pass(name)
   if not self.render_passes[name] then dbg() end
-  return self.render_passes[name].handle
+  return self.render_passes[name]
 end
 
 function tdengine.gpu.find_command_buffer(name)

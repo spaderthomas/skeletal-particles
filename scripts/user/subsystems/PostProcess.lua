@@ -187,7 +187,7 @@ function SimplePostProcess:add_uniform(name, value, kind)
   self.uniforms:add(UniformBinding:new(name, value, kind))
 end
 
-function SimplePostProcess:render()
+function SimplePostProcess:bind()
   tdengine.gpu.bind_render_pass(self.render_pass)
   tdengine.ffi.set_active_shader(self.shader)
   tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
@@ -199,15 +199,46 @@ function SimplePostProcess:render()
   for ssbo in self.ssbos:iterate_values() do
     ssbo:bind()
   end
+end
+
+
+function SimplePostProcess:render()
+  self:bind()
 
   local size = tdengine.gpu.find_write_target(self.render_pass).size
+
+  local command_buffer = tdengine.gpu.find_render_pass(self.render_pass).command_buffer
+
+  -- tdengine.app.vertices = Vertex:Quad(size.y, 0, 0, size.x)
   ffi.C.push_quad(
-    0, size.y, 
-    size.x, size.y, 
-    nil, 
+    0, size.y,
+    size.x, size.y,
+    nil,
     1.0)
 
-  tdengine.gpu.submit_render_pass(self.render_pass)
+  self:submit()
+end
 
+function SimplePostProcess:submit()
+  tdengine.gpu.submit_render_pass(self.render_pass)
   tdengine.gpu.apply_ping_pong(self.render_pass)
 end
+
+local vertex = ffi.new('Vertex', {
+  position = {
+    x = 0, 
+    y = 2, 
+    z = 3
+  },
+  color = {
+    x = .5, 
+    y = .6, 
+    z = .7, 
+    w = .8
+  }, 
+  uv = {
+    x = 0.0, 
+    y = 1.0
+  }
+})
+print(vertex.position.x, vertex.position.y, vertex.color.x, vertex.color.y, vertex.color.z, vertex.color.w, vertex.uv.x, vertex.uv.y)

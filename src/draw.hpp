@@ -43,6 +43,7 @@ u32 convert_gl_id(GlId id);
 
 enum class VertexAttributeKind : u32 {
 	Float,
+	U32,
 };
 
 struct GlTypeInfo {
@@ -56,6 +57,14 @@ struct GlTypeInfo {
 			info.value = GL_FLOAT;
 			info.size = sizeof(GLfloat);
 		}
+		else if (kind == VertexAttributeKind::U32) {
+			info.value = GL_UNSIGNED_INT;
+			info.size = sizeof(GLuint);
+		}
+		else {
+			assert(false);
+		}
+
 
 		return info;
 	}
@@ -227,6 +236,7 @@ FM_LUA_EXPORT void gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTa
 FM_LUA_EXPORT void gpu_swap_buffers();
 
 FM_LUA_EXPORT GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
+FM_LUA_EXPORT void gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
 void gpu_bind_commands(GpuCommandBuffer* command_buffer);
 void gpu_preprocess_commands(GpuCommandBuffer* command_buffer);
 void gpu_draw_commands(GpuCommandBuffer* command_buffer);

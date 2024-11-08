@@ -7,6 +7,7 @@ function RenderTest:update()
 end
 
 function RenderTest:draw()
+  -- self.vertex = ffi.new('Vertex')
   -- self.render_passes = tdengine.gpu.render_passes
   -- self.cdata = ffi.new('CdataTest10', 69.0, 0, 1, ffi.new('float [1]', 100))
   -- self.fp = ffi.new('float [1]', 200)
@@ -18,40 +19,6 @@ function RenderTest:draw()
   -- self.cdata.fp[0] = 100
 
 end
-
--- ffi.cdef([[
---   typedef enum {
---   SomeEnum_A,
---   SomeEnum_B,
--- } SomeEnum;
--- ]])
-
-ffi.cdef([[
-  typedef struct OpaquePtr OpaquePtr;
-
-  typedef struct {
-    float fi;
-  } InnerStruct;
-  
-  typedef struct {
-    float fi;
-    InnerStruct inner;
-  } InnerStruct2;
-  
-  typedef struct {
-    float f;
-    int i;
-    SomeEnum e;
-    float* fp;
-    int* ip;
-    bool* bp;
-    float something_quite_long;
-    OpaquePtr* opaque;
-    InnerStruct2 inner;
-    Vector2* vec2;
-    double normal_double;
-  } CdataTest10;
-]])
 
 local PointLight = tdengine.entity.define('PointLight') 
 
@@ -108,5 +75,6 @@ function PointLight:to_ctype()
 end
  
 function PointLight:draw()
-  self.angle = tdengine.ffi.perlin(tdengine.elapsed_time / 2, self.id, .4, .7)
-end  
+  -- self.angle = tdengine.ffi.perlin(tdengine.elapsed_time / 2, self.id, .4, .7)
+  self.angle = tdengine.math.ranged_sin(tdengine.elapsed_time * 2, .4, .7)
+end

@@ -625,7 +625,13 @@ GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descripto
 	return buffer;
 }
 
+void gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count) {
+	assert(command_buffer);
+	vertex_buffer_push(&command_buffer->vertex_buffer, data, count);
+}
+
 void gpu_bind_commands(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
 	glBindVertexArray(command_buffer->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, command_buffer->vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_byte_size(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW); // @VERTEX

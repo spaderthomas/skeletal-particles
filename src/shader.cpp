@@ -230,6 +230,7 @@ void init_shaders() {
 		shader->init_graphics(name);
 	};
 
+	add_graphics_shader("shape");
 	add_graphics_shader("sdf");
 	add_graphics_shader("sdf_normal");
 	add_graphics_shader("light_map");

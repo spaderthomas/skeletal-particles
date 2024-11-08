@@ -173,10 +173,25 @@ function tdengine.editor.init()
   for name, class in pairs(tdengine.editor.types) do
     tdengine.editor.entities[name] = class:new()
   end
+
+  tdengine.editor.colors = {
+    main_list = tdengine.colors.white:copy(),
+    cdata_member = tdengine.colors.red:copy(),
+    lua_member = tdengine.colors.green:copy(),
+    scalar = tdengine.colors.white:copy(),
+  }
 end
+tdengine.editor.colors = {
+  main_list = tdengine.colors.white:copy(),
+  cdata_member = tdengine.colors.red:copy(),
+  lua_member = tdengine.colors.green:copy(),
+  scalar = tdengine.colors.zomp:copy(),
+}
 
 function tdengine.editor.update()
   tdengine.gpu.bind_render_pass('scene')
+  local metrics = tdengine.time_metric.query_all()
+  -- print(metrics.frame.last)
   for _, editor in pairs(tdengine.editor.entities) do
     editor:update()
     editor:draw()

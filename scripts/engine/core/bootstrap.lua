@@ -25,6 +25,7 @@ typedef struct {
 typedef struct {
 	float x;
 	float y;
+	float z;
 } Vector3;
 
 typedef struct {
@@ -235,21 +236,22 @@ void render_imgui();
 //
 typedef enum {
     VertexAttributeKind_Float,
-};
+    VertexAttributeKind_U32,
+} VertexAttributeKind;
 
 typedef enum {
     DrawMode_Triangles,
-};
+} DrawMode;
 
 typedef enum {
     GlId_Framebuffer,
     GlId_Shader,
     GlId_Program,
-};
+} GlId;
 
 typedef enum {
 	GpuMemoryBarrier_ShaderStorage,
-};
+} GpuMemoryBarrier;
 
 
 typedef struct {
@@ -300,6 +302,7 @@ void              gpu_clear_target(GpuRenderTarget* target);
 void              gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination);
 void              gpu_swap_buffers();
 GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
+void              gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
 GpuRenderPass*    gpu_create_pass(GpuRenderPassDescriptor descriptor);
 void              gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
 void              gpu_end_pass();
@@ -355,9 +358,16 @@ typedef enum {
 } BlendMode;
 
 typedef struct {
+  Vector3 position;
+  Vector4 color;
+  Vector2 uv;
+} Vertex;
+
+typedef struct {
   Vector2 position;
   Vector2 uv;
   Vector3 color;
+  float rotation;
   u32 shape_index;
 } SdfVertex;
 
