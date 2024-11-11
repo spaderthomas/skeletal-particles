@@ -12,6 +12,11 @@ void MemoryAllocator::free(T* buffer) {
 }
 
 template<typename T>
+T* MemoryAllocator::realloc(T* buffer, u32 size) {
+	return (T*)on_alloc(AllocatorMode::Resize, size, buffer);
+}
+
+template<typename T>
 T* MemoryAllocator::alloc() {
 	return alloc<T>(1);
 }
@@ -54,6 +59,7 @@ void BumpAllocator::init(u32 capacity) {
 			}
 
 			auto memory_block = this->buffer + this->bytes_used;
+			allocations[this->bytes_used] = size;
 			this->bytes_used += size;
 		
 			return memory_block;
@@ -62,7 +68,19 @@ void BumpAllocator::init(u32 capacity) {
 			return nullptr;
 		}
 		else if (mode == AllocatorMode::Resize) {
-			return old_memory;
+			if (!old_memory) {
+				return on_alloc(AllocatorMode::Allocate, size, nullptr);
+			}
+	
+			auto offset = (u32)((u8*)old_memory - (u8*)this->buffer);
+			auto old_size = allocations[offset];
+			if (old_size >= size) {
+				return old_memory;
+			} 
+
+			auto memory_block = on_alloc(AllocatorMode::Allocate, size, nullptr);
+			copy_memory(old_memory, memory_block, size);
+			return memory_block;
 		}
 
 		assert(false);
@@ -73,6 +91,7 @@ void BumpAllocator::init(u32 capacity) {
 void BumpAllocator::clear() {
 	std::memset(buffer, 0, bytes_used);
 	bytes_used = 0;
+	allocations.clear();
 }
 
 
@@ -89,7 +108,7 @@ void DefaultAllocator::init() {
 			return nullptr;
 		}
 		else if (mode == AllocatorMode::Resize) {
-			return realloc(old_memory, size);
+			return ::realloc(old_memory, size);
 		}
 	
 		assert(false);
@@ -121,6 +140,12 @@ void* ma_alloc(MemoryAllocator* allocator, u32 size) {
 
 	auto buffer = allocator->alloc<u8>(size);
 	return reinterpret_cast<void*>(buffer);
+}
+
+void* ma_realloc(MemoryAllocator* allocator, void* memory, u32 size) {
+	if (!allocator) return nullptr;
+
+	return reinterpret_cast<void*>(allocator->realloc(memory, size));
 }
 
 void ma_free(MemoryAllocator* allocator, void* buffer) {

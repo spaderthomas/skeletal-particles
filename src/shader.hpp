@@ -1,22 +1,24 @@
 #define MAX_UNIFORMS 32
 #define MAX_UNIFORM_LEN 32
 
-enum class UniformKind {
+enum class UniformKind : u32 {
 	None = 0,
-	Matrix4,
-	Matrix3,
-	Vector4,
-	Vector3,
-	Vector2,
-	I32,
-	F32,
-	Texture
+	Matrix4 = 1,
+	Matrix3 = 2,
+	Vector4 = 3,
+	Vector3 = 4,
+	Vector2 = 5,
+	I32 = 6,
+	F32 = 7,
+	Texture = 100,
+	ColorAttachment = 101,
 };
+
 
 struct Uniform {
 	UniformKind kind = UniformKind::None;
 
-	static constexpr int32 max_name_len = 64;
+	static constexpr u32 max_name_len = 64;
 	char name [max_name_len];
 	
 	union {
@@ -25,9 +27,9 @@ struct Uniform {
 		HMM_Vec4 vec4;
 		HMM_Vec3 vec3;
 		Vector2 vec2;
-		int32 i32;
+		i32 as_i32;
 		float32 f32;
-		int32 texture;
+		i32 texture;
 	};
 
 	Uniform();
@@ -37,7 +39,7 @@ struct Uniform {
 	Uniform(const char* name, const HMM_Vec4& v);
 	Uniform(const char* name, const HMM_Vec3& v);
 	Uniform(const char* name, const Vector2& v);
-	Uniform(const char* name, int32 i);
+	Uniform(const char* name, i32 i);
 	Uniform(const char* name, float32 f);
 };
 bool are_uniforms_equal(Uniform& a, Uniform& b);

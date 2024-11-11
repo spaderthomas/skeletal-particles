@@ -1,73 +1,3 @@
-CpuBuffer = tdengine.class.define('CpuBuffer')
-
-function CpuBuffer:init(ctype, capacity)
-  self.size = 0
-  self.capacity = capacity
-  self.ctype = ctype
-  self.data = ffi.new(string.format('%s [%d]', ctype, capacity))
-end
-
-function CpuBuffer:push(element)
-  if self.size == self.capacity then
-    dbg()
-  end
-
-  self.data[self.size] = element
-  self.size = self.size + 1
-end
-
-function CpuBuffer:fast_clear()
-  self.size = 0
-end
-
-
-
-
-BackedGpuBuffer = tdengine.class.define('BackedGpuBuffer')
-function BackedGpuBuffer:init(ctype, capacity)
-  self.ctype = ctype
-  self.cpu_buffer = CpuBuffer:new(ctype, capacity)
-  self.gpu_buffer = GpuBuffer:new(ctype, capacity)
-end
-
-function BackedGpuBuffer:sync()
-  tdengine.ffi.gpu_sync_buffer_subdata(
-  self.gpu_buffer.ssbo, self.cpu_buffer.data,
-  ffi.sizeof(self.ctype) * self.cpu_buffer.size,
-  0)
-end
-
-
-
-GpuBuffer = tdengine.class.define('GpuBuffer')
-
-function GpuBuffer:init(ctype, capacity)
-  self.ctype = ctype
-  self.capacity = capacity
-  self.ssbo = tdengine.ffi.gpu_create_buffer()
-end
-
-function GpuBuffer:zero()
-  tdengine.ffi.gpu_zero_buffer(self.ssbo, self.capacity * ffi.sizeof(self.ctype))
-end
-
-function GpuBuffer:bind_base(base)
-  tdengine.ffi.gpu_bind_buffer_base(self.ssbo, base)
-end
-
-
-GpuCommandBufferDescriptor = tdengine.class.metatype('GpuCommandBufferDescriptor')
-
-GpuCommandBufferDescriptor.editor_fields = {
-  'num_vertex_attributes',
-  'max_vertices',
-  'num_vertex_attributes',
-
-}
-
-function GpuCommandBufferDescriptor:init(params)
-  self.num_vertex_attributes = params.num_vertex_attributes
-end
 
 
 DeferredRenderer = tdengine.subsystem.define('DeferredRenderer')
@@ -89,6 +19,41 @@ function DeferredRenderer:on_start_game()
 
   self.lights = BackedGpuBuffer:new('Light', self.max_lights)
   self.lights.gpu_buffer:zero()
+
+  local light_scene = GpuRenderPassDescriptor2:new({
+    color_attachment = {
+      write = RenderTarget.LitScene,
+      read = nil,
+      load_op = tdengine.enums.GpuLoadOp.Clear,
+    },
+    shader = Shader.ApplyLighting,
+    uniforms = {
+      light_map = {
+        kind = tdengine.enums.UniformKind.ColorAttachment,
+        value = RenderTarget.LightMap -- actually, color attachment means "pull the read texture from some render pass' color attachment"
+      },
+      color_buffer = {
+        kind = tdengine.enums.UniformKind.ColorAttachment,
+        value = RenderTarget.Color
+      },
+      normal_buffer = {
+        kind = tdengine.enums.UniformKind.ColorAttachment,
+        value = RenderTarget.Normals
+      },
+      editor = {
+        kind = tdengine.enums.UniformKind.ColorAttachment,
+        value = RenderTarget.Scene
+      },
+      num_lights = {
+        kind = tdengine.enums.UniformKind.I32,
+        value = 0
+      }
+    },
+    ssbos = {
+      self.lights.gpu_buffer.ssbo
+    }
+  })
+
 
   self.apply_lighting:set_render_pass('light_scene')
   self.apply_lighting:set_shader('apply_lighting')
@@ -165,4 +130,3 @@ end
 function DeferredRenderer:draw_circle(sdf_circle)
   self.shape_buffers.circle.cpu_buffer:push(sdf_circle)
 end
-

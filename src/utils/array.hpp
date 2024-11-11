@@ -1,3 +1,5 @@
+struct MemoryAllocator;
+
 void memfill(void* dst, i32 size, void* pattern, i32 pattern_size);
 
 template<typename T>

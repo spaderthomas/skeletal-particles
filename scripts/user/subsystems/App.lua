@@ -60,9 +60,42 @@ function App:build_renderer()
 	tdengine.gpu.add_render_pass('bloom_blur',    command_buffers.post_process, render_targets.bloom_b,        render_targets.bloom_a)
 end
 
+Shader = tdengine.enum.define(
+  'Shader',
+  {
+    ApplyLighting = 0,
+  }
+)
+
+RenderPass = tdengine.enum.define(
+  'RenderPass',
+  {
+    ChromaticAberration = 0,
+    BloomBlur = 1,
+    Color = 2,
+  }
+)
+
+RenderTarget = tdengine.enum.define(
+  'RenderTarget',
+  {
+    LitScene = 0,
+    Color = 1,
+    Normals = 2,
+    LightMap = 3,
+    Scene = 4,
+  }
+)
+
 function App:build_deferred_renderer()
+	dbg()
 	local render_targets = {
-		color   = tdengine.gpu.add_render_target('color',       self.native_resolution.x, self.native_resolution.y),
+		color = tdengine.gpus.add_render_target(
+			RenderTarget.Color,
+			GpuRenderTargetDescriptor:new(
+				Vector2:new(self.native_resolution.x, self.native_resolution.y)
+			)
+		),
 		normals = tdengine.gpu.add_render_target('normals',     self.native_resolution.x, self.native_resolution.y),
 		light_map = tdengine.gpu.add_render_target('light_map', self.native_resolution.x, self.native_resolution.y),
 		lit_scene = tdengine.gpu.add_render_target('lit_scene', self.native_resolution.x, self.native_resolution.y),
@@ -98,6 +131,16 @@ function App:build_deferred_renderer()
 	command_buffers.upscale = tdengine.gpu.add_command_buffer('upscale', buffer_descriptor)
 	command_buffers.light_map = tdengine.gpu.add_command_buffer('light_map', buffer_descriptor)
 
+  tdengine.gpus.add_render_pass(
+    RenderPass.Color,
+    GpuRenderPassDescriptor2:new({
+      color_attachment = {
+        read = nil,
+        write = RenderTarget.Color,
+        load_op = tdengine.enums.GpuLoadOp.Clear
+      }
+    })
+  )
 	tdengine.gpu.add_render_pass('color',           command_buffers.color,   render_targets.color,            nil, tdengine.enums.GpuLoadOp.Clear)
 	tdengine.gpu.add_render_pass('normals',         command_buffers.normals, render_targets.normals,          nil, tdengine.enums.GpuLoadOp.Clear)
 	tdengine.gpu.add_render_pass('light_map',       command_buffers.light_map, render_targets.light_map,      nil, tdengine.enums.GpuLoadOp.Clear)

@@ -11,7 +11,20 @@ tdengine.enum.define(
   }
 )
 
+
+
+
+
+
 function PostProcess:on_start_game()
+
+
+
+  self.bloom_filter = SimplePostProcess:new()
+  self.bloom_filter:set_render_pass('bloom_blur')
+  self.bloom_filter:set_shader('bloom')
+  self.bloom_filter:add_uniform('unfiltered_frame', 'post_process', tdengine.enums.UniformKind.RenderPassTexture)
+  self.bloom_filter:add_uniform('mode', tdengine.enums.BloomMode.Filter, tdengine.enums.UniformKind.Enum)
 
   self.chromatic_aberration = SimplePostProcess:new()
   self.chromatic_aberration:set_render_pass('post_process')
@@ -146,7 +159,9 @@ function SsboBinding:bind()
 end
 
 
+
 SimplePostProcess = tdengine.class.define('SimplePostProcess')
+-- GpuRenderPass = tdengine.class.define('GpuRenderPass')
 
 function SimplePostProcess.blit(render_pass, source_texture)
   local post_process = SimplePostProcess:new()
@@ -223,22 +238,3 @@ function SimplePostProcess:submit()
   tdengine.gpu.submit_render_pass(self.render_pass)
   tdengine.gpu.apply_ping_pong(self.render_pass)
 end
-
-local vertex = ffi.new('Vertex', {
-  position = {
-    x = 0, 
-    y = 2, 
-    z = 3
-  },
-  color = {
-    x = .5, 
-    y = .6, 
-    z = .7, 
-    w = .8
-  }, 
-  uv = {
-    x = 0.0, 
-    y = 1.0
-  }
-})
-print(vertex.position.x, vertex.position.y, vertex.color.x, vertex.color.y, vertex.color.z, vertex.color.w, vertex.uv.x, vertex.uv.y)

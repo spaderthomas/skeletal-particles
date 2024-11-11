@@ -3,8 +3,8 @@ local self = tdengine.gpu
 ---------------------
 -- UTILITY STRUCTS --
 ---------------------
-local RenderPass = tdengine.class.define('RenderPass')
-function RenderPass:init(params)
+local OldRenderPass = tdengine.class.define('OldRenderPass')
+function OldRenderPass:init(params)
   self.name = params.name
   self.handle = params.handle
   self.command_buffer = params.command_buffer
@@ -107,7 +107,7 @@ function tdengine.gpu.add_render_pass(name, command_buffer, target, ping_pong, l
   pass_descriptor.ping_pong = ping_pong
   pass_descriptor.clear_render_target = load_op == tdengine.enums.GpuLoadOp.Clear
 
-  self.render_passes[name] = RenderPass:new({
+  self.render_passes[name] = OldRenderPass:new({
     name = name,
     command_buffer = command_buffer,
     handle = tdengine.ffi.gpu_create_pass(pass_descriptor),

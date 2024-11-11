@@ -178,15 +178,9 @@ function tdengine.editor.init()
     main_list = tdengine.colors.white:copy(),
     cdata_member = tdengine.colors.red:copy(),
     lua_member = tdengine.colors.green:copy(),
-    scalar = tdengine.colors.white:copy(),
+    scalar = tdengine.colors.zomp:copy(),
   }
 end
-tdengine.editor.colors = {
-  main_list = tdengine.colors.white:copy(),
-  cdata_member = tdengine.colors.red:copy(),
-  lua_member = tdengine.colors.green:copy(),
-  scalar = tdengine.colors.zomp:copy(),
-}
 
 function tdengine.editor.update()
   tdengine.gpu.bind_render_pass('scene')

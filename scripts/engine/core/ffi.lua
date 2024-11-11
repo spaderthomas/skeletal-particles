@@ -6,6 +6,7 @@ function tdengine.ffi.namespaced_metatype(namespace, struct_name)
 	})
 end
 
+
 function tdengine.ffi.init()
 	setmetatable(
 		tdengine.ffi,
@@ -29,6 +30,7 @@ function tdengine.ffi.init()
 	}
 	ffi.metatype('tstring', string_metatable)
 	ffi.metatype('string', string_metatable)
+
 
 	tdengine.ffi.namespaced_metatype('ma', 'MemoryAllocator')
 
@@ -158,6 +160,32 @@ function tdengine.ffi.init()
 	ffi.cdef(header)
 end
 
+
+----------------
+-- REFLECTION --
+----------------
+tdengine.enum.define(
+	'ctype',
+	{
+		void = 0,
+		int = 1,
+		float = 2,
+		enum = 3,
+		constant = 4,
+		ptr = 5,
+		ref = 6,
+		array = 7,
+		struct = 8,
+		union = 9,
+		func = 10,
+		field = 11,
+		bitfield = 12
+	}
+)
+
+function tdengine.ffi.is_nil(cdata)
+	return cdata == nil
+end
 
 function tdengine.ffi.field_ptr(cdata, member)
 	local inner_type = tdengine.ffi.inner_type(member)
@@ -311,10 +339,8 @@ function tdengine.ffi.pretty_ptrof(cdata)
 	return string.format('%s*', tdengine.ffi.pretty_type(tdengine.ffi.typeof(cdata)))
 end
 
-
-
-
 function tdengine.ffi.address_of(cdata)
+	-- Not for actual addressing; just for printing
 	local s = tostring(cdata)
 	local parts = s:split(':')
 	return parts[2]:gsub(' ', '')
@@ -380,6 +406,13 @@ function tdengine.ffi.is_opaque(cdata)
 end
 
 
+---------------
+-- METATYPES -- 
+---------------
+
+------------
+-- MATRIX --
+------------
 Matrix3 = tdengine.class.metatype('Matrix3')
 
 function Matrix3:Identity()
@@ -412,19 +445,10 @@ function Matrix3:serialize()
 	return serialized
 end
 
-
-SdfCircle = tdengine.class.metatype('SdfCircle')
-
-function SdfCircle:init(px, py, radius, edge_thickness)
-  self.position.x = px
-  self.position.y = py
-  self.radius = radius
-	self.edge_thickness = edge_thickness
-end
-
-
+------------
+-- VECTOR --
+------------
 Vector2 = tdengine.class.metatype('Vector2')
-
 function  Vector2:init(x, y)
 	self.x = x or self.x
 	self.y = y or self.y
@@ -432,7 +456,6 @@ end
 
 
 Vector3 = tdengine.class.metatype('Vector3')
-
 function  Vector3:init(x, y, z)
 	self.x = x or self.x
 	self.y = y or self.y
@@ -441,7 +464,6 @@ end
 
 
 Vector4 = tdengine.class.metatype('Vector4')
-
 function Vector4:init(x, y, z, w)
 	self.x = x or self.x
 	self.y = y or self.y
@@ -450,7 +472,6 @@ function Vector4:init(x, y, z, w)
 end
 
 Vertex = tdengine.class.metatype('Vertex')
-
 function Vertex:Quad(top, bottom, left, right)
 	local vertices = ffi.new('Vertex [6]')
 
@@ -465,26 +486,105 @@ function Vertex:Quad(top, bottom, left, right)
 end
 
 
-tdengine.enum.define(
-	'ctype',
-	{
-		void = 0,
-		int = 1,
-		float = 2,
-		enum = 3,
-		constant = 4,
-		ptr = 5,
-		ref = 6,
-		array = 7,
-		struct = 8,
-		union = 9,
-		func = 10,
-		field = 11,
-		bitfield = 12
-	}
-)
+----------------
+-- SDF CIRCLE --
+----------------
+SdfCircle = tdengine.class.metatype('SdfCircle')
+function SdfCircle:init(px, py, radius, edge_thickness)
+  self.position.x = px
+  self.position.y = py
+  self.radius = radius
+	self.edge_thickness = edge_thickness
+end
 
 
+-------------------
+-- DYNAMIC ARRAY --
+-------------------
+DynamicArray = tdengine.class.define('DynamicArray')
+function DynamicArray:init(ctype, allocator)
+	self.data = ffi.new('void* [1]')
+	self.value_type = ctype
+	self.reference_type = string.format('%s [1]', ctype)
+	self.pointer_type = string.format('%s*', ctype)
+	self.element_size = ffi.sizeof(self.value_type)
+	self.allocator = allocator or tdengine.ffi.ma_find('bump')
+
+	self.data[0] = tdengine.ffi._dyn_array_alloc(self.element_size, self.allocator)
+end
+
+function DynamicArray:push(value)
+	local marshalled_value = ffi.new(self.reference_type, value)
+	tdengine.ffi._dyn_array_push_n(self.data, marshalled_value, 1)
+end
+
+function DynamicArray:at(index)
+	local pointer = ffi.cast(self.pointer_type, self.data[0])
+	return pointer[index]
+end
+
+
+CpuBuffer = tdengine.class.define('CpuBuffer')
+
+function CpuBuffer:init(ctype, capacity)
+  self.size = 0
+  self.capacity = capacity
+  self.ctype = ctype
+  self.data = ffi.new(string.format('%s [%d]', ctype, capacity))
+end
+
+function CpuBuffer:push(element)
+  if self.size == self.capacity then
+    dbg()
+  end
+
+  self.data[self.size] = element
+  self.size = self.size + 1
+end
+
+function CpuBuffer:fast_clear()
+  self.size = 0
+end
+
+
+
+
+BackedGpuBuffer = tdengine.class.define('BackedGpuBuffer')
+function BackedGpuBuffer:init(ctype, capacity)
+  self.ctype = ctype
+  self.cpu_buffer = CpuBuffer:new(ctype, capacity)
+  self.gpu_buffer = GpuBuffer:new(ctype, capacity)
+end
+
+function BackedGpuBuffer:sync()
+  tdengine.ffi.gpu_sync_buffer_subdata(
+  self.gpu_buffer.ssbo, self.cpu_buffer.data,
+  ffi.sizeof(self.ctype) * self.cpu_buffer.size,
+  0)
+end
+
+
+
+GpuBuffer = tdengine.class.define('GpuBuffer')
+
+function GpuBuffer:init(ctype, capacity)
+  self.ctype = ctype
+  self.capacity = capacity
+  self.ssbo = tdengine.ffi.gpu_create_buffer()
+end
+
+function GpuBuffer:zero()
+  tdengine.ffi.gpu_zero_buffer(self.ssbo, self.capacity * ffi.sizeof(self.ctype))
+end
+
+function GpuBuffer:bind_base(base)
+  tdengine.ffi.gpu_bind_buffer_base(self.ssbo, base)
+end
+
+
+------------------
+-- FFI WRAPPERS --
+------------------
 function tdengine.ffi.draw_line(ax, ay, bx, by, thickness, color)
 	ffi.C.draw_line(
 		ffi.new('Vector2', ax, ay),
@@ -506,7 +606,6 @@ end
 function tdengine.ffi.draw_image_l(image, position, size, opacity)
 	ffi.C.draw_image_ex(image, position.x, position.y, size.x, size.y, opacity or 1.0)
 end
-
 
 function tdengine.ffi.draw_line_l(a, b, thickness, color)
 	ffi.C.draw_line(a:to_ctype(), b:to_ctype(), thickness, tdengine.color_to_vec4(color))
@@ -541,7 +640,6 @@ function tdengine.ffi.draw_quad(px, py, sx, sy, color)
 	ffi.C.draw_quad(ffi.new('Vector2', px, py), ffi.new('Vector2', sx, sy), color)
 end
 
-
 function tdengine.ffi.get_display_mode()
 	return tdengine.enums.DisplayMode(ffi.C.get_display_mode())
 end
@@ -575,8 +673,4 @@ end
 
 function tdengine.ffi.set_uniform_enum(name, value)
 	tdengine.ffi.set_uniform_i32(name, value:to_number())
-end
-
-function tdengine.ffi.is_nil(cdata)
-	return cdata == nil
 end

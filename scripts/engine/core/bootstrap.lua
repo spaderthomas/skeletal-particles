@@ -47,6 +47,7 @@ typedef struct {
   float data [4] [4];
 } Matrix4;
 
+typedef struct MemoryAllocator MemoryAllocator;
 
 typedef struct {
 	u32 index;
@@ -231,9 +232,9 @@ void save_editor_layout(const char* file_name);
 void render_imgui();
 
 
-//
-// GPU
-//
+/////////
+// GPU //
+/////////
 typedef enum {
     VertexAttributeKind_Float,
     VertexAttributeKind_U32,
@@ -253,12 +254,79 @@ typedef enum {
 	GpuMemoryBarrier_ShaderStorage,
 } GpuMemoryBarrier;
 
+typedef enum {
+	UniformKind_None,
+	UniformKind_Matrix4,
+	UniformKind_Matrix3,
+	UniformKind_Vector4,
+	UniformKind_Vector3,
+	UniformKind_Vector2,
+	UniformKind_I32,
+	UniformKind_F32,
+	UniformKind_Texture,
+	UniformKind_ColorAttachment,
+} UniformKind;
+
+typedef enum {
+  GpuLoadOp_None,
+  GpuLoadOp_Clear,
+} GpuLoadOp;
+
+
+typedef u32 GpuResourceId;
+
+typedef struct {
+	UniformKind kind;
+
+	union {
+		Matrix4       mat4;
+		Matrix3       mat3;
+		Vector4       vec4;
+		Vector3       vec3;
+		Vector2       vec2;
+		i32           i32;
+		float         f32;
+		GpuResourceId color_attachment;
+	};
+} GpuUniformBinding;
+
+typedef struct Shader Shader;
+
+typedef struct {
+	u32 ssbo;
+	u32 index;
+} GpuSsboBinding;
+
+typedef struct {
+	Vector2 size;
+} GpuRenderTargetDescriptor;
 
 typedef struct {
 	u32 handle;
 	u32 color_buffer;
 	Vector2 size;
 } GpuRenderTarget;
+
+typedef struct {
+	GpuRenderTarget* read;
+	GpuRenderTarget* write;
+	GpuLoadOp load_op;
+} GpuColorAttachment;
+
+typedef struct {
+	GpuColorAttachment color_attachment;
+	Shader* shader;
+	GpuUniformBinding* uniforms;
+	GpuSsboBinding* ssbos;
+} GpuRenderPassDescriptor2;
+
+typedef struct {
+	GpuColorAttachment color_attachment;
+	Shader* shader;
+	GpuUniformBinding* uniforms;
+	GpuSsboBinding* ssbos;
+} GpuRenderPass2;
+
 
 typedef struct {
 	u32 count;
@@ -268,8 +336,8 @@ typedef struct {
 typedef struct {
 	VertexAttribute* vertex_attributes;
 	u32 num_vertex_attributes;
-    u32 max_vertices;
-    u32 max_draw_calls;
+  u32 max_vertices;
+  u32 max_draw_calls;
 } GpuCommandBufferDescriptor;
 
 typedef void* GpuCommandBuffer;
@@ -278,7 +346,7 @@ typedef void* GpuBuffer;
 
 typedef struct {
 	GpuRenderTarget* target;
-	GpuRenderTarget* ping_pong;
+	GpuRenderTarget* ping_pong; 
 	
 	bool clear_render_target;
 } GpuRenderPassDescriptor;
@@ -295,6 +363,7 @@ typedef struct {
 
 
 
+GpuRenderTarget*  gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
 GpuRenderTarget*  gpu_create_target(float x, float y);
 GpuRenderTarget*  gpu_acquire_swapchain();
 void              gpu_bind_target(GpuRenderTarget* target);
@@ -303,6 +372,7 @@ void              gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTar
 void              gpu_swap_buffers();
 GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
 void              gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
+GpuRenderPass2*   gpu_create_render_pass_ex(GpuRenderPassDescriptor2 descriptor);
 GpuRenderPass*    gpu_create_pass(GpuRenderPassDescriptor descriptor);
 void              gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
 void              gpu_end_pass();
@@ -423,17 +493,34 @@ typedef struct DateTime {
 
 DateTime get_date_time();
 
-typedef struct {} MemoryAllocator;
-
 void ma_add(const char* name, MemoryAllocator* allocator);
 MemoryAllocator* ma_find(const char* name);
 void* ma_alloc(MemoryAllocator* allocator, u32 size);
 void ma_free(MemoryAllocator* allocator, void* buffer);
 
+typedef struct dyn_array
+{
+    u32 size;
+    u32 capacity;
+    u32 element_size;
+    MemoryAllocator* allocator;
+} dyn_array_header;
+
+void*             _dyn_array_alloc(u32 element_size, MemoryAllocator* allocator);
+void              _dyn_array_push_n(void** array, void* data, u32 num_elements);
+void*             _dyn_array_reserve(void** array, u32 num_elements);
+dyn_array_header* _dyn_array_head(void** array);
+u32               _dyn_array_size(void** array);
+u32               _dyn_array_capacity(void** array);
+u32               _dyn_array_element_size(void** array);
+MemoryAllocator*  _dyn_array_allocator(void** array);
+bool              _dyn_array_full(void** array);
+bool              _dyn_array_need_grow(void** array, u32 num_elements);
+void              _dyn_array_grow(void** array, u32 requested_size);
+u32               _dyn_array_byte_size(void** array);
+
 void copy_string(const char* str, char* buffer, u32 buffer_length);
 void copy_string_n(const char* str, u32 length, char* buffer, u32 buffer_length);
-
-
 
 //
 // ACTIONS
@@ -735,6 +822,7 @@ function tdengine.init_phase_0()
   tdengine.shaders = {}
 
   tdengine.gpu = {}
+  tdengine.gpus = {}
 
   tdengine.app = {}
 
@@ -832,6 +920,7 @@ function tdengine.init_phase_1()
   tdengine.time_metric.init()
   tdengine.input.init()
   tdengine.gpu.init()
+  tdengine.gpus.init()
   tdengine.state.init()
   tdengine.animation.load()
   tdengine.texture.load()

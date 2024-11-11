@@ -100,9 +100,11 @@ end
 
 function tdengine.enum.load(serialized_enum)
 	if not serialized_enum then return nil end
+
 	local enum_class = tdengine.enum_data[serialized_enum.__enum]
 	if not enum_class then return nil end
-	return enum_class[serialized_enum.value]
+
+	return enum_class[serialized_enum.value or serialized_enum.as_string] -- @hack
 end
 
 function tdengine.enum.bitwise_and(...)

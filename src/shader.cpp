@@ -145,8 +145,8 @@ ShaderManager& get_shader_manager() {
 }
 
 
-Uniform::Uniform() : kind(UniformKind::I32), i32(0) {}
-Uniform::Uniform(const char* name) : kind(UniformKind::I32), i32(0) {
+Uniform::Uniform() : kind(UniformKind::I32), as_i32(0) {}
+Uniform::Uniform(const char* name) : kind(UniformKind::I32), as_i32(0) {
 	strncpy(this->name, name, max_name_len);
 }
 Uniform::Uniform(const char* name, const HMM_Mat4& m) : kind(UniformKind::Matrix4), mat4(m) {
@@ -164,7 +164,7 @@ Uniform::Uniform(const char* name, const HMM_Vec3& v) : kind(UniformKind::Vector
 Uniform::Uniform(const char* name, const Vector2& v) : kind(UniformKind::Vector2), vec2(v) {
 	strncpy(this->name, name, max_name_len);
 }
-Uniform::Uniform(const char* name, int32 i) : kind(UniformKind::I32), i32(i) {
+Uniform::Uniform(const char* name, int32 i) : kind(UniformKind::I32), as_i32(i) {
 	strncpy(this->name, name, max_name_len);
 }
 Uniform::Uniform(const char* name, float32 f) : kind(UniformKind::F32), f32(f) {
@@ -188,7 +188,7 @@ bool are_uniforms_equal(Uniform& a, Uniform& b) {
         case UniformKind::Vector2:
             return v2_equal(a.vec2, b.vec2);
         case UniformKind::I32:
-            return a.i32 == b.i32;
+            return a.as_i32 == b.as_i32;
         case UniformKind::F32:
             return a.f32 == b.f32;
         case UniformKind::Texture:

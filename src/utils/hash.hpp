@@ -68,6 +68,6 @@ size_t hash_siphash_bytes(void *p, size_t len, size_t seed) {
 #endif
 }
 
-size_t hash_bytes(void *p, size_t len, size_t seed) {
+size_t hash_bytes_ex(void *p, size_t len, size_t seed) {
   return hash_siphash_bytes(p,len,seed);
 }

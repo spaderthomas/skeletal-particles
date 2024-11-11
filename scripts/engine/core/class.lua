@@ -1,4 +1,3 @@
-print('class')
 function tdengine.is_instance_of(self, class)
   if type(class) == 'table' then
     class = class.name

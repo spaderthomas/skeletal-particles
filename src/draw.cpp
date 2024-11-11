@@ -419,7 +419,7 @@ void set_uniform_immediate(const Uniform& uniform) {
 		set_uniform_immediate_vec2(uniform.name, uniform.vec2);
 	}
 	else if (uniform.kind == UniformKind::I32) { 
-		set_uniform_immediate_i32(uniform.name, uniform.i32);
+		set_uniform_immediate_i32(uniform.name, uniform.as_i32);
 	}
 	else if (uniform.kind == UniformKind::F32) {
 		set_uniform_immediate_f32(uniform.name, uniform.f32);
@@ -521,8 +521,15 @@ void log_gl_error() {
 // RENDER TARGET //
 ///////////////////
 GpuRenderTarget* gpu_create_target(float x, float y) {
+	GpuRenderTargetDescriptor descriptor;
+	descriptor.size.x = x;
+	descriptor.size.y = y;
+	return gpu_create_target_ex(descriptor);
+}
+
+GpuRenderTarget* gpu_create_target_ex(GpuRenderTargetDescriptor descriptor) {
 	auto target = arr_push(&render.targets);
-	target->size = Vector2(x, y);
+	target->size = descriptor.size;
 	
 	glGenFramebuffers(1, &target->handle);
 	glBindFramebuffer(GL_FRAMEBUFFER, target->handle);
@@ -532,7 +539,7 @@ GpuRenderTarget* gpu_create_target(float x, float y) {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, target->color_buffer);
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, target->size.x, target->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -671,6 +678,13 @@ void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
 /////////////////
 // RENDER PASS //
 /////////////////
+GpuRenderPass2* gpu_create_render_pass_ex(GpuRenderPassDescriptor2 descriptor) {
+	auto render_pass = arr_push(&render.render_passes_2);
+	render_pass->color_attachment = descriptor.color_attachment;
+
+	return render_pass;
+}
+
 GpuRenderPass* gpu_create_pass(GpuRenderPassDescriptor descriptor) {
 	auto render_pass = arr_push(&render.render_passes);
 	render_pass->render_target = descriptor.target;
@@ -757,6 +771,7 @@ void init_render() {
 	arr_init(&render.render_passes, RenderEngine::max_render_passes);
 	arr_init(&render.targets, RenderEngine::max_targets);
 	arr_init(&render.gpu_buffers, RenderEngine::max_gpu_buffers);
+	arr_init(&render.render_passes_2, RenderEngine::max_render_passes);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;

@@ -7,8 +7,8 @@
 #include "utils/macros.hpp"
 #include "utils/log.hpp"
 #include "utils/enum.hpp"
-#include "utils/memory.hpp"
 #include "utils/array.hpp"
+#include "utils/memory.hpp"
 #include "utils/stack_array.hpp"
 #include "utils/ring_buffer.hpp"
 #include "utils/string.hpp"
@@ -24,13 +24,8 @@
 #include "utils/filesystem.hpp"
 #include "utils/time_function.hpp"
 #include "utils/noise.hpp"
-
-// Ripped verbatim from the excellent https://github.com/MrFrenik/gunslinger, since I never got around
-// to making quite a few pure C data structures. Thank you kindly for your excellent code!
 #include "utils/dyn_array.hpp"
 #include "utils/hash.hpp"
-#include "utils/hash_table.hpp"
-#include "utils/slot_array.hpp"
 #include "imgui/imgui_extensions.hpp"
 #include "lua.hpp"
 #include "engine.hpp"
@@ -76,17 +71,21 @@
 #include "imgui/imgui_extensions.cpp"
 #include "utils/array.cpp"
 #include "utils/coordinate.cpp"
+#define DYNAMIC_ARRAY_IMPLEMENTATION
+#include "utils/dyn_array.hpp"
 #include "utils/file_monitor.cpp"
 #include "utils/log.cpp"
 #include "utils/memory.cpp"
 #include "utils/path.cpp"
 #include "utils/noise.cpp"
 #include "utils/string.cpp"
+#include "test.hpp"
 
 #include "user/user_includes.hpp"
 
 int main() {
 	init_allocators();
+	run_tests();
 	init_random();
 	init_paths();
 	init_log();
