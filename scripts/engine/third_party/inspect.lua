@@ -75,6 +75,7 @@ local function isIdentifier(str)
   return type(str) == 'string' and str:match("^[_%a][_%a%d]*$")
 end
 
+
 local function isSequenceKey(k, sequenceLength)
   return type(k) == 'number'
       and 1 <= k
@@ -299,11 +300,14 @@ end
 function Inspector:putValue(v)
   local tv = type(v)
 
+  
   if tv == 'string' then
     self:puts(smartQuote(escape(v)))
   elseif tv == 'number' or tv == 'boolean' or tv == 'nil' or
       tv == 'cdata' or tv == 'ctype' then
     self:puts(tostring(v))
+  elseif tdengine.enum.is_enum(v) then
+    self:puts(v:to_qualified_string())
   elseif tv == 'table' then
     self:putTable(v)
   else

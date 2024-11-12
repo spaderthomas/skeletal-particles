@@ -2,7 +2,7 @@ struct MemoryAllocator;
 
 void memfill(void* dst, i32 size, void* pattern, i32 pattern_size);
 
-template<typename T>
+template<typename T, u64 N = 0>
 struct Array {
 	u64 size      = 0;
 	u64 capacity  = 0;
@@ -20,6 +20,12 @@ fm_error arr_init(Array<T>* array, u64 capacity);
 
 template<typename T>
 fm_error arr_init(Array<T>* array, u64 capacity, T fill);
+
+template<typename T, u32 N>
+fm_error arr_init(Array<T, N>* array);
+
+template<typename T, u32 N>
+fm_error arr_init(Array<T, N>* array, MemoryAllocator* allocator);
 
 template<typename T>
 void arr_clear(Array<T>* array);
@@ -82,8 +88,8 @@ T* arr_push(Array<T>* array, T* data);
 template<typename T>
 T* arr_push(Array<T>* array, T data);
 
-template<typename T>
-T* arr_push(Array<T>* array);
+template<typename T, u32 N>
+T* arr_push(Array<T, N>* array);
 
 template<typename T>
 void arr_pop(Array<T>* array);

@@ -117,6 +117,7 @@ function tdengine.gpu.add_render_pass(name, command_buffer, target, ping_pong, l
 end
 
 function tdengine.gpu.find_render_target(name)
+  if not self.render_targets[name] then dbg() end
   return self.render_targets[name].handle
 end
 
@@ -198,3 +199,7 @@ function tdengine.gpu.find_write_target(pass_name)
 
   return render_pass.handle.render_target
 end
+
+
+
+

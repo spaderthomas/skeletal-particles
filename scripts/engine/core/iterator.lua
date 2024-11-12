@@ -1,5 +1,7 @@
 function tdengine.iterator.values(t, filter)
   local function iterator()
+    if not t then coroutine.yield(nil) end
+
     for key, value in pairs(t) do
       if not filter then
         coroutine.yield(value)
@@ -14,6 +16,8 @@ end
 
 function tdengine.iterator.keys(t, filter)
   local function iterator()
+    if not t then coroutine.yield(nil) end
+    
     for key, value in pairs(t) do
       if not filter then
         coroutine.yield(key)

@@ -34,6 +34,22 @@ fm_error arr_init(Array<T>* array, u64 capacity, T fill) {
 	return FM_ERR_SUCCESS;
 }
 
+template<typename T, u32 N>
+fm_error arr_init(Array<T, N>* array) {
+	return arr_init(array, &standard_allocator);
+}
+
+template<typename T, u32 N>
+fm_error arr_init(Array<T, N>* array, MemoryAllocator* allocator) {
+	static_assert(N > 0, "If you want to bake a fixed capacity into an Array, you need to put it as the second template parameter. Otherwise, specify the capacity when initializing.");
+	array->size = 0;
+	array->capacity = N;
+	array->data = allocator->alloc<T>(N);
+	
+	if (array->data) return FM_ERR_SUCCESS;
+	return FM_ERR_FAILED_ALLOC;
+}
+
 template<typename T>
 void arr_clear(Array<T>* array) {
 	memset(array->data, 0, array->size * sizeof(T));
@@ -190,8 +206,8 @@ T* arr_push(Array<T>* array, T data) {
 	return out;
 }
 
-template<typename T>
-T* arr_push(Array<T>* array) {
+template<typename T, u32 N>
+T* arr_push(Array<T, N>* array) {
 	assert(array->size < array->capacity && "Insufficient space remaining!");
 	array->data[array->size] = T();
 	T* out = array->data + array->size;

@@ -58,6 +58,8 @@ return {
 								font_info = 'fonts.lua',
 								ffi_info = 'ffi.lua',
 								texture_info = 'textures.lua',
+								gpu_info = 'gpu.lua',
+								shader_info = 'shaders.lua',
 
 								skeletal_animations = {
 									path = 'skeletal_animations',
@@ -105,9 +107,9 @@ return {
 				shaders = {
 					path = 'shaders',
 					children = {
-						vertex_shader = '%s.vertex',
-						fragment_shader = '%s.fragment',
-						compute_shader = '%s.compute',
+						vertex_shader = '%s',
+						fragment_shader = '%s',
+						compute_shader = '%s',
 					}
 				},
 				audio = 'audio',

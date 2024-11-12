@@ -516,6 +516,14 @@ void log_gl_error() {
 }
 
 
+////////////////
+// GPU SHADER //
+////////////////
+GpuShader* gpu_create_shader(GpuShaderDescriptor descriptor) {
+	auto shader = arr_push(&shaders);
+	shader->init(descriptor);
+	return shader;
+}
 
 ///////////////////
 // RENDER TARGET //
@@ -595,7 +603,8 @@ void gpu_swap_buffers() {
 ////////////////////
 GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor) {
 	auto buffer = arr_push(&render.command_buffers);
-	
+
+	// Collect vertex attributes, so we know how much memory we need
 	u32 vertex_size = 0;
 	for (u32 i = 0; i < descriptor.num_vertex_attributes; i++) {
 		auto attribute = descriptor.vertex_attributes[i];
@@ -603,12 +612,11 @@ GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descripto
 		vertex_size += attribute.count * type_info.size;
 	}
 
+	// Set up the CPU buffers
 	vertex_buffer_init(&buffer->vertex_buffer, descriptor.max_vertices, vertex_size);
 	arr_init(&buffer->draw_calls, descriptor.max_draw_calls);
-	//render.command_buffer = buffer;
-	//render.add_draw_call();
-	//arr_push(&buffer->draw_calls);
-	
+
+	// Set up the GPU buffers
 	glGenVertexArrays(1, &buffer->vao);
 	glGenBuffers(1, &buffer->vbo);
 
@@ -678,11 +686,17 @@ void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
 /////////////////
 // RENDER PASS //
 /////////////////
-GpuRenderPass2* gpu_create_render_pass_ex(GpuRenderPassDescriptor2 descriptor) {
-	auto render_pass = arr_push(&render.render_passes_2);
-	render_pass->color_attachment = descriptor.color_attachment;
+GpuGraphicsPipeline* gpu_create_graphics_pipeline(GpuGraphicsPipelineDescriptor descriptor) {
+	auto pipeline = arr_push(&render.graphics_pipelines);
+	pipeline->color_attachment = descriptor.color_attachment;
+	arr_init(&pipeline->uniforms);
+	arr_init(&pipeline->ssbos);
 
-	return render_pass;
+	for (u32 i = 0; i < descriptor.num_uniforms; i++) {
+		// auto uniform = arr_push(&pipeline->uniforms);
+	}
+
+	return pipeline;
 }
 
 GpuRenderPass* gpu_create_pass(GpuRenderPassDescriptor descriptor) {
@@ -771,7 +785,7 @@ void init_render() {
 	arr_init(&render.render_passes, RenderEngine::max_render_passes);
 	arr_init(&render.targets, RenderEngine::max_targets);
 	arr_init(&render.gpu_buffers, RenderEngine::max_gpu_buffers);
-	arr_init(&render.render_passes_2, RenderEngine::max_render_passes);
+	arr_init(&render.graphics_pipelines, RenderEngine::max_render_passes);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;

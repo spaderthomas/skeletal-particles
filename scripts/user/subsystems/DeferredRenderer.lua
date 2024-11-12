@@ -17,42 +17,8 @@ function DeferredRenderer:on_start_game()
     circle = BackedGpuBuffer:new('SdfCircle', self.sdf_buffer_length)
   }
 
-  self.lights = BackedGpuBuffer:new('Light', self.max_lights)
+  self.lights = BackedGpuBuffer:new('Light', self.max_lights, tdengine.gpus.find_storage_buffer(StorageBuffer.Lights))
   self.lights.gpu_buffer:zero()
-
-  local light_scene = GpuRenderPassDescriptor2:new({
-    color_attachment = {
-      write = RenderTarget.LitScene,
-      read = nil,
-      load_op = tdengine.enums.GpuLoadOp.Clear,
-    },
-    shader = Shader.ApplyLighting,
-    uniforms = {
-      light_map = {
-        kind = tdengine.enums.UniformKind.ColorAttachment,
-        value = RenderTarget.LightMap -- actually, color attachment means "pull the read texture from some render pass' color attachment"
-      },
-      color_buffer = {
-        kind = tdengine.enums.UniformKind.ColorAttachment,
-        value = RenderTarget.Color
-      },
-      normal_buffer = {
-        kind = tdengine.enums.UniformKind.ColorAttachment,
-        value = RenderTarget.Normals
-      },
-      editor = {
-        kind = tdengine.enums.UniformKind.ColorAttachment,
-        value = RenderTarget.Scene
-      },
-      num_lights = {
-        kind = tdengine.enums.UniformKind.I32,
-        value = 0
-      }
-    },
-    ssbos = {
-      self.lights.gpu_buffer.ssbo
-    }
-  })
 
 
   self.apply_lighting:set_render_pass('light_scene')

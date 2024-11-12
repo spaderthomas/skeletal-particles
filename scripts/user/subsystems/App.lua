@@ -60,11 +60,38 @@ function App:build_renderer()
 	tdengine.gpu.add_render_pass('bloom_blur',    command_buffers.post_process, render_targets.bloom_b,        render_targets.bloom_a)
 end
 
+Resolution = tdengine.enum.define(
+	'Resolution', 
+	{
+		Native = 0,
+		Upscaled = 1
+	}
+)
+
 Shader = tdengine.enum.define(
   'Shader',
   {
     ApplyLighting = 0,
-  }
+		Shape = 1,
+		Sdf = 2,
+		SdfNormal = 3,
+		LightMap = 4,
+		Solid = 5,
+		Sprite = 6,
+		Text = 7,
+		PostProcess = 8,
+		Blit = 9,
+		Particle = 10,
+		Fluid = 11,
+		FluidEulerian = 12,
+		Scanline = 13,
+		Bloom = 14,
+		ChromaticAberration = 15,
+		FluidInit = 16,
+		FluidUpdate = 17,
+		FluidEulerianInit = 18,
+		FluidEulerianUpdate = 19,
+	}
 )
 
 RenderPass = tdengine.enum.define(
@@ -73,6 +100,13 @@ RenderPass = tdengine.enum.define(
     ChromaticAberration = 0,
     BloomBlur = 1,
     Color = 2,
+    Shapes = 3,
+		VisualizeLightMap = 4,
+		LightScene = 5,
+		UpscaleColor = 6,
+		UpscaleNormals = 7,
+		UpscaleLitScene = 8,
+    Normals = 9
   }
 )
 
@@ -84,70 +118,36 @@ RenderTarget = tdengine.enum.define(
     Normals = 2,
     LightMap = 3,
     Scene = 4,
-  }
+		UpscaledColor = 6,
+		UpscaledNormals = 7,
+		UpscaledLitScene = 8,
+	}
 )
 
-function App:build_deferred_renderer()
-	dbg()
-	local render_targets = {
-		color = tdengine.gpus.add_render_target(
-			RenderTarget.Color,
-			GpuRenderTargetDescriptor:new(
-				Vector2:new(self.native_resolution.x, self.native_resolution.y)
-			)
-		),
-		normals = tdengine.gpu.add_render_target('normals',     self.native_resolution.x, self.native_resolution.y),
-		light_map = tdengine.gpu.add_render_target('light_map', self.native_resolution.x, self.native_resolution.y),
-		lit_scene = tdengine.gpu.add_render_target('lit_scene', self.native_resolution.x, self.native_resolution.y),
-		upscaled = {
-			color   = tdengine.gpu.add_render_target('upscaled_color',   self.gbuffer_resolution.x, self.gbuffer_resolution.y),
-			normals = tdengine.gpu.add_render_target('upscaled_normals', self.gbuffer_resolution.x, self.gbuffer_resolution.y),
-			lit_scene = tdengine.gpu.add_render_target('upscaled_lit_scene', self.gbuffer_resolution.x, self.gbuffer_resolution.y),
-		}
-}
-
-	local command_buffers = {
-		color = nil,
-		normals = nil,
-		upscale = nil,
+CommandBuffer = tdengine.enum.define(
+	'CommandBuffer',
+	{
+		Color = 0,
+		Normals = 1,
+		Upscale = 2,
+		LightMap = 3,
 	}
+)
 
-	local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
-	buffer_descriptor.num_vertex_attributes = 3
-	buffer_descriptor.max_vertices = 64 * 1024
-	buffer_descriptor.max_draw_calls = 256
-	buffer_descriptor.vertex_attributes = ffi.new('VertexAttribute[3]')
-	buffer_descriptor.vertex_attributes[0].count = 3
-	buffer_descriptor.vertex_attributes[0].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	buffer_descriptor.vertex_attributes[1].count = 4
-	buffer_descriptor.vertex_attributes[1].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	buffer_descriptor.vertex_attributes[2].count = 2
-	buffer_descriptor.vertex_attributes[2].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	command_buffers.color   = tdengine.gpu.add_command_buffer('color', buffer_descriptor)
-	command_buffers.normals = tdengine.gpu.add_command_buffer('normals', buffer_descriptor)
+StorageBuffer = tdengine.enum.define(
+	'StorageBuffer',
+	{
+		Lights = 0,
+	}
+)
 
-	buffer_descriptor.max_vertices = 6
-	buffer_descriptor.max_draw_calls = 1
-	command_buffers.upscale = tdengine.gpu.add_command_buffer('upscale', buffer_descriptor)
-	command_buffers.light_map = tdengine.gpu.add_command_buffer('light_map', buffer_descriptor)
 
-  tdengine.gpus.add_render_pass(
-    RenderPass.Color,
-    GpuRenderPassDescriptor2:new({
-      color_attachment = {
-        read = nil,
-        write = RenderTarget.Color,
-        load_op = tdengine.enums.GpuLoadOp.Clear
-      }
-    })
-  )
-	tdengine.gpu.add_render_pass('color',           command_buffers.color,   render_targets.color,            nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('normals',         command_buffers.normals, render_targets.normals,          nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('light_map',       command_buffers.light_map, render_targets.light_map,      nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('light_scene',     command_buffers.light_map, render_targets.lit_scene,      nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('upscale_color',   command_buffers.upscale, render_targets.upscaled.color,   nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('upscale_normals', command_buffers.upscale, render_targets.upscaled.normals, nil, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('upscale_lit_scene', command_buffers.upscale, render_targets.upscaled.lit_scene, nil, tdengine.enums.GpuLoadOp.Clear)
+
+function App:build_deferred_renderer()
+	tdengine.gpus.add_shaders(tdengine.module.read_from_named_path('shader_info'))
+
+	local gpu_info = tdengine.module.read_from_named_path('gpu_info')
+	tdengine.gpus.build(gpu_info)
 end
 
 function App:on_start_game()
@@ -169,25 +169,25 @@ function App:on_start_game()
 
   game_views:add_view(GameView:new(
 		'Scene',
-		tdengine.gpu.find_render_target('upscaled_lit_scene'),
+		tdengine.gpus.find_render_target(RenderTarget.UpscaledLitScene),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Color Buffer',
-		tdengine.gpu.find_render_target('upscaled_color'),
+		tdengine.gpus.find_render_target(RenderTarget.UpscaledColor),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Normal Buffer',
-		tdengine.gpu.find_render_target('upscaled_normals'),
+		tdengine.gpus.find_render_target(RenderTarget.UpscaledNormals),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Light Map',
-		tdengine.gpu.find_render_target('light_map'),
+		tdengine.gpus.find_render_target(RenderTarget.LightMap),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 end

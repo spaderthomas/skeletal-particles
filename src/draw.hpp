@@ -146,35 +146,17 @@ u8*  vertex_buffer_at(VertexBuffer* vertex_buffer, u32 index);
 /////////
 // GPU //
 /////////
-typedef u32 GpuResourceId;
-
-// struct String {
-// 	u8* data;
-// 	u32 length;
-// };
+struct GpuGraphicsPipeline;
 
 enum class GpuLoadOp : u32 {
 	None = 0,
 	Clear = 1
 };
 
-struct GpuRenderTargetDescriptor {
-	Vector2 size;
-};
-
-struct GpuRenderTarget {
-	u32 handle;
-	u32 color_buffer;
-	Vector2 size;
-};
-
-struct VertexAttribute {
-	u32 count;
-	VertexAttributeKind kind;
-};
 
 struct GpuUniformBinding {
 	UniformKind kind;
+	string name;
 	union {
 		HMM_Mat4 mat4;
 		HMM_Mat3 mat3;
@@ -183,7 +165,8 @@ struct GpuUniformBinding {
 		Vector2 vec2;
 		int32 i32;
 		float f32;
-		GpuResourceId color_attachment;
+		GpuGraphicsPipeline* pipeline;
+		GpuRenderTarget* render_target;
 	};
 };
 
@@ -192,24 +175,41 @@ struct GpuSsboBinding {
 	u32 index;
 };
 
+struct VertexAttribute {
+	u32 count;
+	VertexAttributeKind kind;
+};
+
+struct GpuColorAttachment {
+	GpuRenderTarget* read;
+	GpuRenderTarget* write;
+	GpuLoadOp load_op;
+};
+
+
+struct GpuRenderTargetDescriptor {
+	Vector2 size;
+};
+struct GpuRenderTarget {
+	u32 handle;
+	u32 color_buffer;
+	Vector2 size;
+};
+
+
 
 struct GpuCommandBufferDescriptor {
 	VertexAttribute* vertex_attributes;
 	u32 num_vertex_attributes = 0;
 	u32 max_vertices = 256 * 1024;
 	u32 max_draw_calls = 1024;
-
-	// u32 id;
 };
-
 struct GpuCommandBuffer {
 	VertexBuffer vertex_buffer;
 	Array<DrawCall> draw_calls;
 
 	u32 vao;
 	u32 vbo;
-
-	// u32 id;
 };
 
 
@@ -219,7 +219,6 @@ struct GpuRenderPassDescriptor {
 	
 	bool clear_render_target = true;
 };
-
 struct GpuRenderPass {
 	GpuRenderTarget* render_target = nullptr;
 	GpuRenderTarget* ping_pong = nullptr;
@@ -230,24 +229,20 @@ struct GpuRenderPass {
 
 
 
-struct GpuColorAttachment {
-	GpuRenderTarget* read;
-	GpuRenderTarget* write;
-	GpuLoadOp load_op;
-};
 
-struct GpuRenderPassDescriptor2 {
+struct GpuGraphicsPipelineDescriptor {
 	GpuColorAttachment color_attachment;
-	Shader* shader;
+	GpuShader* shader;
 	GpuUniformBinding* uniforms;
+	u32 num_uniforms;
 	GpuSsboBinding* ssbos;
+	u32 num_storage_buffers;
 };
-
-struct GpuRenderPass2 {
+struct GpuGraphicsPipeline {
 	GpuColorAttachment color_attachment;
-	Shader* shader;
-	GpuUniformBinding* uniforms;
-	GpuSsboBinding* ssbos;
+	GpuShader* shader;
+	Array<GpuUniformBinding, 32> uniforms;
+	Array<GpuSsboBinding, 32> ssbos;
 };
 
 
@@ -280,8 +275,8 @@ struct RenderEngine {
 
 
 
-	Array<GpuRenderPass2> render_passes_2;
-	GpuRenderPass2* render_pass_2;
+	Array<GpuGraphicsPipeline> graphics_pipelines;
+	GpuGraphicsPipeline* graphics_pipeline;
 
 	static constexpr u32 max_gpu_buffers = 128;
 	Array<GpuBuffer> gpu_buffers;
@@ -295,43 +290,32 @@ RenderEngine render;
 /////////
 // GPU //
 /////////
-FM_LUA_EXPORT GpuRenderTarget* gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
-FM_LUA_EXPORT GpuRenderTarget* gpu_create_target(float x, float y);
-FM_LUA_EXPORT GpuRenderTarget* gpu_acquire_swapchain();
-FM_LUA_EXPORT void gpu_bind_target(GpuRenderTarget* target);
-FM_LUA_EXPORT void gpu_clear_target(GpuRenderTarget* target);
-FM_LUA_EXPORT void gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination);
-FM_LUA_EXPORT void gpu_swap_buffers();
-
-FM_LUA_EXPORT GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
-FM_LUA_EXPORT void gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
-FM_LUA_EXPORT void gpu_bind_commands(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void gpu_preprocess_commands(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void gpu_draw_commands(GpuCommandBuffer* command_buffer);
-
-FM_LUA_EXPORT GpuRenderPass2* gpu_create_render_pass_ex(GpuRenderPassDescriptor2 descriptor);
-FM_LUA_EXPORT GpuRenderPass* gpu_create_pass(GpuRenderPassDescriptor descriptor);
-FM_LUA_EXPORT void gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void gpu_end_pass();
-FM_LUA_EXPORT void gpu_submit_commands(GpuCommandBuffer* command_buffer);
-
-FM_LUA_EXPORT GpuBuffer* gpu_create_buffer();
-FM_LUA_EXPORT void gpu_bind_buffer(GpuBuffer* buffer);
-FM_LUA_EXPORT void gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
-FM_LUA_EXPORT void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
-FM_LUA_EXPORT void gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
-FM_LUA_EXPORT void gpu_zero_buffer(GpuBuffer* buffer, u32 size);
-FM_LUA_EXPORT void gpu_memory_barrier(GpuMemoryBarrier barrier);
-FM_LUA_EXPORT void gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
-
-// FM_LUA_EXPORT void gpu_bind_render_pass(GpuRenderPass* render_pass);
-// FM_LUA_EXPORT void gpu_submit_render_pass(GpuRenderPass* render_pass);
-// FM_LUA_EXPORT void gpu_create_buffer(GpuBufferDescriptor descriptor);
-// FM_LUA_EXPORT void gpu_find_command_buffer(GpuResourceId id);
-// FM_LUA_EXPORT void gpu_find_render_target(GpuResourceId id);
-// FM_LUA_EXPORT void gpu_find_render_pass(GpuResourceId id);
-
-
+FM_LUA_EXPORT GpuShader*           gpu_create_shader(GpuShaderDescriptor descriptor);
+FM_LUA_EXPORT GpuRenderTarget*     gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
+FM_LUA_EXPORT GpuRenderTarget*     gpu_create_target(float x, float y);
+FM_LUA_EXPORT GpuRenderTarget*     gpu_acquire_swapchain();
+FM_LUA_EXPORT void                 gpu_bind_target(GpuRenderTarget* target);
+FM_LUA_EXPORT void                 gpu_clear_target(GpuRenderTarget* target);
+FM_LUA_EXPORT void                 gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination);
+FM_LUA_EXPORT void                 gpu_swap_buffers();
+FM_LUA_EXPORT GpuCommandBuffer*    gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
+FM_LUA_EXPORT void                 gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
+FM_LUA_EXPORT void                 gpu_bind_commands(GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT void                 gpu_preprocess_commands(GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT void                 gpu_draw_commands(GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT GpuGraphicsPipeline* gpu_create_graphics_pipeline(GpuGraphicsPipelineDescriptor descriptor);
+FM_LUA_EXPORT GpuRenderPass*       gpu_create_pass(GpuRenderPassDescriptor descriptor);
+FM_LUA_EXPORT void                 gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT void                 gpu_end_pass();
+FM_LUA_EXPORT void                 gpu_submit_commands(GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT GpuBuffer*           gpu_create_buffer();
+FM_LUA_EXPORT void                 gpu_bind_buffer(GpuBuffer* buffer);
+FM_LUA_EXPORT void                 gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
+FM_LUA_EXPORT void                 gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
+FM_LUA_EXPORT void                 gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
+FM_LUA_EXPORT void                 gpu_zero_buffer(GpuBuffer* buffer, u32 size);
+FM_LUA_EXPORT void                 gpu_memory_barrier(GpuMemoryBarrier barrier);
+FM_LUA_EXPORT void                 gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 
 ////////////////////////
 // DRAWING PRIMITIVES //

@@ -11,7 +11,8 @@ enum class UniformKind : u32 {
 	I32 = 6,
 	F32 = 7,
 	Texture = 100,
-	ColorAttachment = 101,
+	PipelineOutput = 101,
+	RenderTarget = 102,
 };
 
 
@@ -44,6 +45,20 @@ struct Uniform {
 };
 bool are_uniforms_equal(Uniform& a, Uniform& b);
 
+enum class GpuShaderKind : u32 {
+	Graphics = 0,
+	Compute = 1
+};
+
+struct GpuShaderDescriptor {
+	string name;
+	string vertex_shader;
+	string fragment_shader;
+	string compute_shader;
+
+	GpuShaderKind kind;
+};
+
 struct Shader {
 	enum class Kind : i32 {
 		Graphics,
@@ -51,7 +66,7 @@ struct Shader {
 	};
 
 	Kind kind;
-	char name    [MAX_PATH_LEN] = {0};
+	string name;
 	
 	u32 program = 0;
 	
@@ -67,8 +82,11 @@ struct Shader {
 	
 	static int active;
 
+	void init(GpuShaderDescriptor descriptor);
 	void init_graphics(const char* name);
+	void init_graphics_ex(const char* name, const char* vertex_path, const char* fragment_path);
 	void init_compute(const char* name);
+	void init_compute_ex(const char* name, const char* compute_path);
 	void reload();
 	
 	unsigned int get_uniform_loc(const char* name);
@@ -80,6 +98,7 @@ struct Shader {
 
 };
 int Shader::active = -1;
+typedef Shader GpuShader;
 
 Array<Shader> shaders;
 

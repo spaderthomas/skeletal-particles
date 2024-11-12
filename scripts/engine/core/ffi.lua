@@ -32,7 +32,6 @@ function tdengine.ffi.init()
 	ffi.metatype('string', string_metatable)
 
 
-	tdengine.ffi.namespaced_metatype('ma', 'MemoryAllocator')
 
 	tdengine.enum.define(
 		'CoordinateSystem',
@@ -119,6 +118,35 @@ function tdengine.ffi.init()
 			ShaderStorage = tdengine.ffi.GpuMemoryBarrier_ShaderStorage,
 		}
 	)
+
+	tdengine.enum.define(
+		'GpuShaderKind',
+		{
+			Graphics = tdengine.ffi.GpuShaderKind_Graphics,
+			Compute = tdengine.ffi.GpuShaderKind_Compute,
+		}
+	)
+
+	tdengine.enum.define(
+		'UniformKind',
+		{
+			Matrix4        = tdengine.ffi.UniformKind_Matrix4,
+			Matrix3        = tdengine.ffi.UniformKind_Matrix3,
+			Vector4        = tdengine.ffi.UniformKind_Vector4,
+			Vector3        = tdengine.ffi.UniformKind_Vector3,
+			Vector2        = tdengine.ffi.UniformKind_Vector2,
+			F32            = tdengine.ffi.UniformKind_F32,
+			I32            = tdengine.ffi.UniformKind_I32,
+			Texture        = tdengine.ffi.UniformKind_Texture,
+			PipelineOutput = tdengine.ffi.UniformKind_PipelineOutput,
+			RenderTarget   = tdengine.ffi.UniformKind_RenderTarget,
+			RenderPassTexture = 200,
+			Enum = 201,
+			
+
+		}
+	)
+
 
 
 	tdengine.enum.define(
@@ -405,10 +433,41 @@ function tdengine.ffi.is_opaque(cdata)
 	return tdengine.ffi.inner_typeof(cdata).size == 'none'
 end
 
+function tdengine.ffi.ptr_type(ctype)
+	return string.format('%s *', ctype)
+end
+
+
 
 ---------------
 -- METATYPES -- 
 ---------------
+
+----------------------
+-- MEMORY ALLOCATOR --
+----------------------
+MemoryAllocator = tdengine.class.metatype('MemoryAllocator')
+
+function MemoryAllocator:find(name)
+	return tdengine.ffi.ma_find(name)
+end
+
+function MemoryAllocator:add(name)
+	return tdengine.ffi.ma_add(self, name)
+end
+
+function MemoryAllocator:alloc(size)
+	return tdengine.ffi.ma_alloc(self, size)
+end
+
+function MemoryAllocator:free(pointer)
+	return tdengine.ffi.ma_free(self, pointer)
+end
+
+function MemoryAllocator:alloc_array(ctype, n)
+	return ffi.cast(tdengine.ffi.ptr_type(ctype), tdengine.ffi.ma_alloc(self, ffi.sizeof(ctype) * n))
+end
+
 
 ------------
 -- MATRIX --
@@ -439,6 +498,30 @@ function Matrix3:serialize()
 	for i = 0, 2 do
 		serialized[i + 1] = {}
 		for j = 0, 2 do
+			serialized[i + 1][j + 1] = self.data[i][j]
+		end
+	end
+	return serialized
+end
+
+Matrix4 = tdengine.class.metatype('Matrix4')
+
+function Matrix4:init(data)
+	if data then
+		for i = 0, 3 do
+			for j = 0, 3 do
+				self.data[i][j] = data[i + 1][j + 1]
+			end
+		end
+	end	
+end
+
+function Matrix4:serialize()
+	local serialized = {}
+
+	for i = 0, 3 do
+		serialized[i + 1] = {}
+		for j = 0, 3 do
 			serialized[i + 1][j + 1] = self.data[i][j]
 		end
 	end
@@ -547,13 +630,11 @@ function CpuBuffer:fast_clear()
 end
 
 
-
-
 BackedGpuBuffer = tdengine.class.define('BackedGpuBuffer')
-function BackedGpuBuffer:init(ctype, capacity)
+function BackedGpuBuffer:init(ctype, capacity, gpu_buffer)
   self.ctype = ctype
   self.cpu_buffer = CpuBuffer:new(ctype, capacity)
-  self.gpu_buffer = GpuBuffer:new(ctype, capacity)
+  self.gpu_buffer = GpuBuffer:new(ctype, capacity, gpu_buffer)
 end
 
 function BackedGpuBuffer:sync()
@@ -567,10 +648,10 @@ end
 
 GpuBuffer = tdengine.class.define('GpuBuffer')
 
-function GpuBuffer:init(ctype, capacity)
+function GpuBuffer:init(ctype, capacity, gpu_buffer)
   self.ctype = ctype
   self.capacity = capacity
-  self.ssbo = tdengine.ffi.gpu_create_buffer()
+  self.ssbo = gpu_buffer or tdengine.ffi.gpu_create_buffer()
 end
 
 function GpuBuffer:zero()

@@ -13,32 +13,33 @@ typedef struct dyn_array
 } dyn_array_header;
 
 #define dyn_array void*
-#define DYN_ARRAY(ptr) ((void**)&ptr)
+#define DYN_ARRAY_VOIDP(ptr) ((void**)&ptr)
+#define DYN_ARRAY(type) type*
 
 FM_LUA_EXPORT dyn_array         _dyn_array_alloc(u32 element_size, MemoryAllocator* allocator);
 #define                         dyn_array_alloc(element_size, allocator) _dyn_array_alloc(element_size, allocator)
 FM_LUA_EXPORT void              _dyn_array_push_n(dyn_array* array, void* data, u32 num_elements);
-#define                          dyn_array_push_n(array, data, num_elements) _dyn_array_alloc(DYN_ARRAY(array), data, num_elements)
+#define                          dyn_array_push_n(array, data, num_elements) _dyn_array_alloc(DYN_ARRAY_VOIDP(array), data, num_elements)
 FM_LUA_EXPORT void*             _dyn_array_reserve(dyn_array* array, u32 num_elements);
-#define                          dyn_array_reserve(array, num_elements) _dyn_array_reserve(DYN_ARRAY(array), num_elements)
+#define                          dyn_array_reserve(array, num_elements) _dyn_array_reserve(DYN_ARRAY_VOIDP(array), num_elements)
 FM_LUA_EXPORT dyn_array_header* _dyn_array_head(dyn_array* array);
-#define                          dyn_array_head(array) _dyn_array_head(DYN_ARRAY(array))
+#define                          dyn_array_head(array) _dyn_array_head(DYN_ARRAY_VOIDP(array))
 FM_LUA_EXPORT u32               _dyn_array_size(dyn_array* array);
-#define                          dyn_array_size(array) _dyn_array_size(DYN_ARRAY(array))
+#define                          dyn_array_size(array) _dyn_array_size(DYN_ARRAY_VOIDP(array))
 FM_LUA_EXPORT u32               _dyn_array_capacity(dyn_array* array);
-#define                          dyn_array_capacity(array) _dyn_array_capacity(DYN_ARRAY(array))
+#define                          dyn_array_capacity(array) _dyn_array_capacity(DYN_ARRAY_VOIDP(array))
 FM_LUA_EXPORT u32               _dyn_array_element_size(dyn_array* array);
-#define                          dyn_array_element_size(array) _dyn_array_element_size(DYN_ARRAY(array))
+#define                          dyn_array_element_size(array) _dyn_array_element_size(DYN_ARRAY_VOIDP(array))
 FM_LUA_EXPORT MemoryAllocator*  _dyn_array_allocator(dyn_array* array);
-#define                          dyn_array_allocator(array) _dyn_array_allocator(DYN_ARRAY(array))
+#define                          dyn_array_allocator(array) _dyn_array_allocator(DYN_ARRAY_VOIDP(array))
 FM_LUA_EXPORT bool              _dyn_array_full(dyn_array* array);
-#define                          dyn_array_full(array) _dyn_array_full(DYN_ARRAY(array))
+#define                          dyn_array_full(array) _dyn_array_full(DYN_ARRAY_VOIDP(array))
 FM_LUA_EXPORT bool              _dyn_array_need_grow(dyn_array* array, u32 num_elements);
-#define                          dyn_array_need_grow(array, num_elements) _dyn_array_need_grow(DYN_ARRAY(array), num_elements)
+#define                          dyn_array_need_grow(array, num_elements) _dyn_array_need_grow(DYN_ARRAY_VOIDP(array), num_elements)
 FM_LUA_EXPORT void              _dyn_array_grow(dyn_array* array, u32 requested_size);
-#define                          dyn_array_grow(array, requested_size) _dyn_array_grow(DYN_ARRAY(array), requested_size)
+#define                          dyn_array_grow(array, requested_size) _dyn_array_grow(DYN_ARRAY_VOIDP(array), requested_size)
 FM_LUA_EXPORT u32               _dyn_array_byte_size(dyn_array* array);
-#define                          dyn_array_byte_size(array) _dyn_array_byte_size(DYN_ARRAY(array))
+#define                          dyn_array_byte_size(array) _dyn_array_byte_size(DYN_ARRAY_VOIDP(array))
 
 #endif
 

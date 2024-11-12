@@ -114,16 +114,6 @@ end
 
 
 
-tdengine.enum.define(
-  'UniformKind',
-  {
-    Texture = 0,
-    Enum = 1,
-    RenderPassTexture = 2,
-    F32 = 3,
-    I32 = 4,
-  }
-)
 
 UniformBinding = tdengine.class.define('UniformBinding')
 function UniformBinding:init(name, value, kind)
