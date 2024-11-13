@@ -78,7 +78,7 @@ void draw_circle(float32 px, float32 py, float32 radius, Vector4 color) {
 }
 
 void draw_circle_sdf(float32 px, float32 py, float32 radius, Vector4 color, float edge_thickness) {
-	render.flush_draw_call();
+	gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 
 	set_active_shader("sdf");
 	set_draw_mode(DrawMode::Triangles);
@@ -92,7 +92,7 @@ void draw_circle_sdf(float32 px, float32 py, float32 radius, Vector4 color, floa
 }
 
 void draw_ring_sdf(float32 px, float32 py, float inner_radius, float radius, Vector4 color, float edge_thickness) {
-	render.flush_draw_call();
+	gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 
 	set_active_shader("sdf");
 	set_draw_mode(DrawMode::Triangles);
@@ -243,28 +243,28 @@ void draw_line(Vector2 start, Vector2 end, float thickness, Vector4 color) {
 // BATCHED OPENGL CONFIGURATION //
 //////////////////////////////////
 void set_draw_mode(DrawMode mode) {
-	auto draw_call = render.find_draw_call();
+	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 	if (draw_call->mode == mode) return;
 	
-	draw_call = render.flush_draw_call();
+	draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->mode = mode;
 }
 
 void set_blend_enabled(bool enabled) {
-	auto draw_call = render.find_draw_call();
+	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 	if (draw_call->state.blend_enabled != enabled) return;
 	
-	draw_call = render.flush_draw_call();
+	draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.blend_enabled = enabled;
 }
 
 void set_blend_mode(i32 source, i32 dest) {
 	auto blend_source = convert_blend_mode(static_cast<BlendMode>(source));
 	auto blend_dest = convert_blend_mode(static_cast<BlendMode>(dest));
-	auto draw_call = render.find_draw_call();
+	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 	if ((draw_call->state.blend_source == blend_source) && (draw_call->state.blend_dest == blend_dest)) return;
 	
-	draw_call = render.flush_draw_call();
+	draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.blend_source = blend_source;
 	draw_call->state.blend_dest = blend_dest;
 }
@@ -278,10 +278,10 @@ void set_active_shader(const char* name) {
 void set_active_shader_ex(GpuShader* shader) {
 	if (!shader) return;
 
-	auto draw_call = render.find_draw_call();
+	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 	if (draw_call->state.shader == shader) return;
 		
-	draw_call = render.flush_draw_call();
+	draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.shader = shader;
 
 }
@@ -291,19 +291,19 @@ void set_orthographic_projection(float left, float right, float bottom, float to
 }
 
 void begin_scissor(float px, float py, float dx, float dy) {
-	auto draw_call = render.flush_draw_call();
+	auto draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.scissor = true;
 	draw_call->state.scissor_region.position = Vector2(px, py);
 	draw_call->state.scissor_region.dimension = Vector2(dx, dy);
 }
 
 void end_scissor() {
-	auto draw_call = render.flush_draw_call();
+	auto draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.scissor = false;
 }
 
 void set_layer(i32 layer) {
-	auto draw_call = render.flush_draw_call();
+	auto draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.layer = layer;
 }
 
@@ -312,20 +312,20 @@ void set_camera(float px, float py) {
 }
 
 void set_uniform(Uniform& uniform) {
-	auto draw_call = render.find_draw_call();
+	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 	bool had_uniform = draw_call->state.has_uniform(uniform.name);
 	auto previous_uniform = draw_call->state.find_uniform(uniform.name);
 	bool uniform_changed = (previous_uniform) && !are_uniforms_equal(uniform, *previous_uniform);
 
 	// CASE 1: The uniform was already set to a different value, so we need a new draw call
 	if (had_uniform && uniform_changed) {
-		draw_call = render.flush_draw_call();
+		draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 		draw_call->state.add_uniform(uniform);
 		return;
 	}
 	// CASE 2: The uniform was never set, so we don't need a new draw call, but we DO need to add the uniform
 	else if (!had_uniform) {
-		draw_call = render.find_draw_call();
+		draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 		draw_call->state.add_uniform(uniform);
 		return;
 	}
@@ -464,10 +464,10 @@ void set_uniform_immediate_texture(const char* name, i32 val) {
 }
 
 void set_world_space(bool world_space) {
-	auto draw_call = render.find_draw_call();
+	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
 	if (draw_call->state.world_space == world_space) return;
 	
-	draw_call = render.flush_draw_call();
+	draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 	draw_call->state.world_space = world_space;
 }
 
@@ -884,7 +884,6 @@ void init_render() {
 	render.screenshot = standard_allocator.alloc<u8>(window.native_resolution.x * window.native_resolution.y * 4);
 
 	arr_init(&render.command_buffers);
-	arr_init(&render.render_passes);
 	arr_init(&render.targets);
 	arr_init(&render.gpu_buffers);
 	arr_init(&render.graphics_pipelines);
@@ -906,22 +905,6 @@ void init_render() {
 	render.shader_monitor->add_directory(resolve_named_path("shaders"));
 }
 
-// RENDERER
-DrawCall* RenderEngine::add_draw_call() {
-	assert(this->pipeline);
-
-	return gpu_graphics_pipeline_alloc_draw_call(this->pipeline);
-}
-	
-DrawCall* RenderEngine::flush_draw_call() {
-	assert(this->pipeline);
-	return gpu_command_buffer_flush_draw_call(this->pipeline->command_buffer);
-}
-
-DrawCall* RenderEngine::find_draw_call() {
-	assert(this->pipeline);
-	return gpu_command_buffer_find_draw_call(this->pipeline->command_buffer);
-}
 
 void DrawCall::copy_from(DrawCall* other) {
 	this->mode = other->mode;
