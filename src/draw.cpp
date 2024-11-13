@@ -1,6 +1,44 @@
-////////////////////////
-// DRAWING PRIMITIVES //
-////////////////////////
+//////////////////////
+// DEFAULT RENDERER //
+//////////////////////
+Vertex* push_vertex(float px, float py, Vector4 color) {
+	return push_vertex(px, py, Vector2(), color);
+}
+
+Vertex* push_vertex(float px, float py, Vector2 uv, Vector4 color) {
+	auto vertex = alloc_vertices(1);
+	vertex->position.x = px;
+	vertex->position.y = py;
+	vertex->uv = uv;
+	vertex->color = color;
+
+	return vertex;
+}
+
+Vertex* alloc_vertices(u32 count) {
+	auto draw_call = render.find_draw_call();
+	draw_call->count += count;
+	return (Vertex*)vertex_buffer_reserve(&render.pipeline->command_buffer->vertex_buffer, count);
+}
+
+void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity) {
+	push_quad(px, py, dx, dy, uv, Vector4(1.0, 1.0, 1.0, opacity));
+}
+
+void push_quad(float px, float py, float dx, float dy, Vector2* uv, Vector4 color) {
+	static Vector2 default_uvs [6] = fm_quad(1, 0, 0, 1);
+	if (!uv) uv = default_uvs;
+
+	Vector2 vx [6] = fm_quad(py, py - dy, px, px + dx);
+	for (i32 i = 0; i < 6; i++) {
+		auto vertex = alloc_vertices(1);
+		vertex->position.x = vx[i].x;
+		vertex->position.y = vx[i].y;
+		vertex->color = color;
+		vertex->uv = uv[i];
+	}
+}
+
 void draw_quad_ex(float px, float py, float sx, float sy, Vector4 color) {
 	set_active_shader("solid");
 	set_draw_mode(DrawMode::Triangles);
@@ -203,9 +241,9 @@ void draw_line(Vector2 start, Vector2 end, float thickness, Vector4 color) {
 }
 
 
-//////////////////////////
-// OPENGL CONFIGURATION //
-//////////////////////////
+//////////////////////////////////
+// BATCHED OPENGL CONFIGURATION //
+//////////////////////////////////
 void set_draw_mode(DrawMode mode) {
 	auto draw_call = render.find_draw_call();
 	if (draw_call->mode == mode) return;
@@ -338,55 +376,10 @@ void set_uniform_texture(const char* name, i32 value) {
 	set_uniform(uniform);
 }
 
-///////////////////
-// VERTEX BUFFER //
-///////////////////
-void vertex_buffer_init(VertexBuffer* buffer, u32 max_vertices, u32 vertex_size) {
-	assert(buffer);
 
-	buffer->size = 0;
-	buffer->capacity = max_vertices;
-	buffer->vertex_size = vertex_size;
-	buffer->data = (u8*)ma_alloc(&standard_allocator, max_vertices * vertex_size);
-}
-
-u8* vertex_buffer_at(VertexBuffer* buffer, u32 index) {
-	assert(buffer);
-	return buffer->data + (index * buffer->vertex_size);
-}
-
-u8* vertex_buffer_push(VertexBuffer* buffer, void* data, u32 count) {
-	assert(buffer);
-	assert(buffer->size < buffer->capacity);
-
-	auto vertices = vertex_buffer_reserve(buffer, count);
-	copy_memory(data, vertices, buffer->vertex_size * count);
-	return vertices;
-}
-
-u8* vertex_buffer_reserve(VertexBuffer* buffer, u32 count) {
-	assert(buffer);
-	
-	auto vertex = vertex_buffer_at(buffer, buffer->size);
-	buffer->size += count;
-	return vertex;
-}
-
-void vertex_buffer_clear(VertexBuffer* buffer) {
-	assert(buffer);
-
-	buffer->size = 0;
-}
-
-u32 vertex_buffer_byte_size(VertexBuffer* buffer) {
-	assert(buffer);
-
-	return buffer->size * buffer->vertex_size;
-}
-
-///////////////////////
-// IMMEDIATE DRAWING //
-///////////////////////
+////////////////////////////////////
+// IMMEDIATE OPENGL CONFIGURATION //
+////////////////////////////////////
 i32 find_uniform_index(const char* name) {
 	i32 program = 0;
 	glGetIntegerv(GL_CURRENT_PROGRAM, &program);
@@ -484,17 +477,20 @@ void set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name) {
 	glObjectLabel(convert_gl_id(static_cast<GlId>(kind)), handle, name_len, name);
 }
 
+
 ///////////////////
 // OPENGL ERRORS //
 ///////////////////
 void clear_gl_error() {
 	while (glGetError() != GL_NO_ERROR) {}
-	
-	// while (true) {
-	// 	auto error = read_gl_error();
-	// 	if (!error) break;
-	// 	if (!strcmp(error, "GL_NO_ERROR")) break;
-	// }
+
+#if defined(DEBUG_OPENGL)
+	while (true) {
+		auto error = read_gl_error();
+		if (!error) break;
+		if (!strcmp(error, "GL_NO_ERROR")) break;
+	}
+#endif
 }
 
 tstring read_gl_error() {
@@ -518,6 +514,54 @@ tstring read_gl_error() {
 void log_gl_error() {
 	tdns_log.write(read_gl_error());
 }
+
+
+///////////////////
+// VERTEX BUFFER //
+///////////////////
+void vertex_buffer_init(VertexBuffer* buffer, u32 max_vertices, u32 vertex_size) {
+	assert(buffer);
+
+	buffer->size = 0;
+	buffer->capacity = max_vertices;
+	buffer->vertex_size = vertex_size;
+	buffer->data = (u8*)ma_alloc(&standard_allocator, max_vertices * vertex_size);
+}
+
+u8* vertex_buffer_at(VertexBuffer* buffer, u32 index) {
+	assert(buffer);
+	return buffer->data + (index * buffer->vertex_size);
+}
+
+u8* vertex_buffer_push(VertexBuffer* buffer, void* data, u32 count) {
+	assert(buffer);
+	assert(buffer->size < buffer->capacity);
+
+	auto vertices = vertex_buffer_reserve(buffer, count);
+	copy_memory(data, vertices, buffer->vertex_size * count);
+	return vertices;
+}
+
+u8* vertex_buffer_reserve(VertexBuffer* buffer, u32 count) {
+	assert(buffer);
+	
+	auto vertex = vertex_buffer_at(buffer, buffer->size);
+	buffer->size += count;
+	return vertex;
+}
+
+void vertex_buffer_clear(VertexBuffer* buffer) {
+	assert(buffer);
+
+	buffer->size = 0;
+}
+
+u32 vertex_buffer_byte_size(VertexBuffer* buffer) {
+	assert(buffer);
+
+	return buffer->size * buffer->vertex_size;
+}
+
 
 
 ////////////////
@@ -915,59 +959,6 @@ bool GlStateDiff::need_apply_scissor(GlState* state) {
 	if (!v2_equal(current->scissor_region.dimension, state->scissor_region.dimension)) return true;
 
 	return false;
-}
-
-
-//////////////////////////////
-// VERTEX BUFFER PRIMITIVES //
-//////////////////////////////
-Vertex* push_vertex(float px, float py) {
-	return push_vertex(px, py, Vector2(), colors::white);
-}
-
-Vertex* push_vertex(float px, float py, Vector4 color) {
-	return push_vertex(px, py, Vector2(), color);
-}
-
-Vertex* push_vertex(float px, float py, Vector2 uv, Vector4 color) {
-	auto vertex = push_vertex();
-	vertex->position.x = px;
-	vertex->position.y = py;
-	vertex->uv = uv;
-	vertex->color = color;
-
-	return vertex;
-}
-
-Vertex* push_vertex() {
-	return push_vertex(1);
-}
-
-Vertex* push_vertex(i32 count) {
-	auto draw_call = render.find_draw_call();
-	draw_call->count += count;
-	return (Vertex*)vertex_buffer_reserve(&render.pipeline->command_buffer->vertex_buffer, count); // @VERTEX
-}
-
-void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity) {
-	auto color = colors::white;
-	color.a = opacity;
-
-	push_quad(px, py, dx, dy, uv, color);
-}
-
-void push_quad(float px, float py, float dx, float dy, Vector2* uv, Vector4 color) {
-	static Vector2 default_uvs [6] = fm_quad(1, 0, 0, 1);
-	if (!uv) uv = default_uvs;
-
-	Vector2 vx [6] = fm_quad(py, py - dy, px, px + dx);
-	for (i32 i = 0; i < 6; i++) {
-		auto vertex = push_vertex();
-		vertex->position.x = vx[i].x;
-		vertex->position.y = vx[i].y;
-		vertex->color = color;
-		vertex->uv = uv[i];
-	}
 }
 
 

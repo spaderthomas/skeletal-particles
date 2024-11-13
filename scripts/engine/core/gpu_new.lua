@@ -156,7 +156,6 @@ function ConfiguredPostProcess:render()
 end
 
 local todo = [[
-- Properly clear render targets on load
 - Clean up push_vertex() so the call stack isn't four deep
 - Make sure the old draw API works and make sure the GPU setup for that is included in the base engine
   - Why is the grid totally filling up the vertex buffer? Are the sizes correct?
@@ -182,6 +181,7 @@ local todo = [[
 local done = [[
 - find_resource() -> find()
   - Move the named assets thing into the right place in the user folder
+- Properly clear render targets on load
 ]]
 
 ----------------
