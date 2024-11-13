@@ -117,15 +117,21 @@ function EditorUtility:draw_grid()
   )
 
   if self.style.grid.draw_body then
+    local i = 0
     -- Draw vertical lines
-    for x = min.x, max.x, grid_size do
-      tdengine.ffi.draw_line(x, min.y, x, max.y, line_thickness, self.colors.grid:to_vec4())
+    for x = min.x, max.x, grid_size do  
+      i = i + 1
+      --tdengine.ffi.draw_line(x, min.y, x, max.y, line_thickness, self.colors.grid:to_vec4())
     end
 
     -- Draw horizontal lines
     for y = min.y, max.y, grid_size do
-      tdengine.ffi.draw_line(min.x, y, max.x, y, line_thickness, self.colors.grid:to_vec4())
+      i = i + 1
+      --tdengine.ffi.draw_line(min.x, y, max.x, y, line_thickness, self.colors.grid:to_vec4())
     end
+
+    print(i)
+
   end
 
 

@@ -59,7 +59,6 @@ return {
 								ffi_info = 'ffi.lua',
 								texture_info = 'textures.lua',
 								gpu_info = 'gpu.lua',
-								shader_info = 'shaders.lua',
 
 								skeletal_animations = {
 									path = 'skeletal_animations',

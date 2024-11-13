@@ -236,8 +236,12 @@ void set_blend_mode(i32 source, i32 dest) {
 
 void set_active_shader(const char* name) {
 	auto shader = find_shader(name);
+	set_active_shader_ex(shader);
+}
+
+void set_active_shader_ex(GpuShader* shader) {
 	if (!shader) return;
-	
+
 	auto draw_call = render.find_draw_call();
 	if (draw_call->state.shader == shader) return;
 		
@@ -245,7 +249,7 @@ void set_active_shader(const char* name) {
 	draw_call->state.shader = shader;
 
 }
-	
+
 void set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far) {
 	render.projection = HMM_Orthographic_RH_NO(left, right, bottom, top, _near, _far);
 }
@@ -389,7 +393,7 @@ i32 find_uniform_index(const char* name) {
 	return glGetUniformLocation(program, name);
 }
 
-void set_shader_immediate(Shader* shader) {
+void set_shader_immediate_ex(GpuShader* shader) {
 	if (!shader) return;
 	
 	glUseProgram(shader->program);
@@ -399,7 +403,7 @@ void set_shader_immediate(Shader* shader) {
 
 void set_shader_immediate(const char* name) {
 	auto shader = find_shader(name);
-	set_shader_immediate(shader);
+	set_shader_immediate_ex(shader);
 }
 
 void set_uniform_immediate(const Uniform& uniform) {
@@ -686,44 +690,25 @@ void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
 /////////////////
 // RENDER PASS //
 /////////////////
-GpuGraphicsPipeline* gpu_create_graphics_pipeline(GpuGraphicsPipelineDescriptor descriptor) {
+GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor) {
 	auto pipeline = arr_push(&render.graphics_pipelines);
 	pipeline->color_attachment = descriptor.color_attachment;
-	arr_init(&pipeline->uniforms);
-	arr_init(&pipeline->ssbos);
-
-	for (u32 i = 0; i < descriptor.num_uniforms; i++) {
-		// auto uniform = arr_push(&pipeline->uniforms);
-	}
-
+	pipeline->command_buffer = descriptor.command_buffer;
 	return pipeline;
 }
 
-GpuRenderPass* gpu_create_pass(GpuRenderPassDescriptor descriptor) {
-	auto render_pass = arr_push(&render.render_passes);
-	render_pass->render_target = descriptor.target;
-	render_pass->ping_pong = descriptor.ping_pong;
-	render_pass->clear_render_target = descriptor.clear_render_target;
-
-	return render_pass;
+void gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline) {
+	render.pipeline = pipeline;
 }
 
-void gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer) {
-	render.render_pass = render_pass;
-	render.command_buffer = command_buffer;
-
-	if (!render_pass->dirty) {
-		if (render_pass->clear_render_target) {
-			gpu_clear_target(render_pass->render_target);
-		}
-	}
-	render_pass->dirty = true;
+void gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline) {
+	gpu_submit_commands(pipeline->command_buffer);
 }
 
-void gpu_end_pass() {
-	render.render_pass = nullptr;
-	render.command_buffer = nullptr;
-}
+
+GpuRenderPass* gpu_create_pass(GpuRenderPassDescriptor descriptor) { return nullptr; }
+void gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer) {}
+void gpu_end_pass() {}
 
 void gpu_submit_commands(GpuCommandBuffer* command_buffer) {
 	gpu_bind_commands(command_buffer);
@@ -781,11 +766,11 @@ void gpu_dispatch_compute(GpuBuffer* buffer, u32 size) {
 void init_render() {
 	render.screenshot = standard_allocator.alloc<u8>(window.native_resolution.x * window.native_resolution.y * 4);
 
-	arr_init(&render.command_buffers, RenderEngine::max_command_buffers);
-	arr_init(&render.render_passes, RenderEngine::max_render_passes);
-	arr_init(&render.targets, RenderEngine::max_targets);
-	arr_init(&render.gpu_buffers, RenderEngine::max_gpu_buffers);
-	arr_init(&render.graphics_pipelines, RenderEngine::max_render_passes);
+	arr_init(&render.command_buffers);
+	arr_init(&render.render_passes);
+	arr_init(&render.targets);
+	arr_init(&render.gpu_buffers);
+	arr_init(&render.graphics_pipelines);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;
@@ -795,15 +780,14 @@ void init_render() {
 
 // RENDERER
 DrawCall* RenderEngine::add_draw_call() {
-	if (!command_buffer) return nullptr;
-	if (!render_pass) return nullptr;
+	if (!this->pipeline) return nullptr;
 	
 	DrawCall draw_call;
 	memset(&draw_call, 0, sizeof(DrawCall));
-	draw_call.offset = command_buffer->vertex_buffer.size; // @VERTEX
+	draw_call.offset = this->pipeline->command_buffer->vertex_buffer.size; // @VERTEX
 	draw_call.count = 0;
 
-	if (command_buffer->draw_calls.size) {
+	if (this->pipeline->command_buffer->draw_calls.size) {
 		auto previous = find_draw_call();
 		draw_call.copy_from(previous);
 	}
@@ -811,9 +795,9 @@ DrawCall* RenderEngine::add_draw_call() {
 		draw_call.state = GlState();
 	}
 	
-	draw_call.state.render_target = render_pass->render_target;
+	draw_call.state.render_target = this->pipeline->color_attachment.write;
 
-	return arr_push(&command_buffer->draw_calls, draw_call);
+	return arr_push(&this->pipeline->command_buffer->draw_calls, draw_call);
 }
 	
 DrawCall* RenderEngine::flush_draw_call() {
@@ -825,10 +809,10 @@ DrawCall* RenderEngine::flush_draw_call() {
 }
 
 DrawCall* RenderEngine::find_draw_call() {
-	if (!command_buffer) return nullptr;
+	if (!this->pipeline) return nullptr;
 
-	if (!command_buffer->draw_calls.size) add_draw_call();
-	return arr_back(&command_buffer->draw_calls);
+	if (!this->pipeline->command_buffer->draw_calls.size) add_draw_call();
+	return arr_back(&this->pipeline->command_buffer->draw_calls);
 }
 
 void DrawCall::copy_from(DrawCall* other) {
@@ -872,7 +856,7 @@ void GlStateDiff::apply(GlState* state) {
 	}
 
 	// Shader
-	set_shader_immediate(state->shader);
+	set_shader_immediate_ex(state->shader);
 
 	if (state->world_space) {
 		set_uniform_immediate_mat4("view", this->camera);
@@ -953,13 +937,9 @@ Vertex* push_vertex() {
 }
 
 Vertex* push_vertex(i32 count) {
-	auto command_buffer = render.command_buffer;
-	
 	auto draw_call = render.find_draw_call();
 	draw_call->count += count;
-
-	// @VERTEX
-	return (Vertex*)vertex_buffer_reserve(&command_buffer->vertex_buffer, count);
+	return (Vertex*)vertex_buffer_reserve(&render.pipeline->command_buffer->vertex_buffer, count); // @VERTEX
 }
 
 void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity) {

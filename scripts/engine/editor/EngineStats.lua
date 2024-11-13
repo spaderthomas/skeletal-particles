@@ -304,7 +304,7 @@ function EngineStats:engine_viewer()
 	end
 
 	if imgui.TreeNode('GPU') then
-		imgui.extensions.Table(tdengine.gpu)
+		imgui.extensions.Table(tdengine.gpus)
 		imgui.TreePop()
 	end
 

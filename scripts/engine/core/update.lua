@@ -20,5 +20,5 @@ function tdengine.update_game(dt)
   
   tdengine.ffi.tm_end('update')
 
-  tdengine.gpu.render()
+  tdengine.gpus.render()
 end

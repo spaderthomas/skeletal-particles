@@ -183,13 +183,15 @@ function tdengine.editor.init()
 end
 
 function tdengine.editor.update()
-  tdengine.gpu.bind_render_pass('scene')
-  local metrics = tdengine.time_metric.query_all()
-  -- print(metrics.frame.last)
-  for _, editor in pairs(tdengine.editor.entities) do
+  local pipeline = tdengine.gpus.find_resource(GpuResourceKind.GraphicsPipeline, RenderPass.Editor)
+  tdengine.ffi.gpu_graphics_pipeline_bind(pipeline)
+
+  for editor in tdengine.iterator.values(tdengine.editor.entities) do
     editor:update()
     editor:draw()
   end
+
+  tdengine.ffi.gpu_graphics_pipeline_submit(pipeline)
 end
 
 function EditorImpl:init()

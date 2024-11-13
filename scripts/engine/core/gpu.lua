@@ -33,7 +33,7 @@ function tdengine.gpu.init()
 end
 
 function tdengine.gpu.render()
-  tdengine.ffi.tm_begin('render')
+  tdengine.ffi.tm_begin('render') -- @fix
 
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_render_scene)
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_scene_rendered)

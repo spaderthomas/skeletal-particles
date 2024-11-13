@@ -235,12 +235,12 @@ function tdengine.entity.update()
   
   if tdengine.tick then
     for entity in tdengine.entity.iterate() do
-      tdengine.gpu.bind_entity(entity)
+      tdengine.gpus.bind_entity(entity)
       tdengine.entity.run_update_callback(entity, tdengine.lifecycle.update_callbacks.update)
     end
 
     for entity in tdengine.entity.iterate_persistent() do
-      tdengine.gpu.bind_entity(entity)
+      tdengine.gpus.bind_entity(entity)
       tdengine.entity.run_update_callback(entity, tdengine.lifecycle.update_callbacks.update)
     end
 
@@ -249,12 +249,12 @@ function tdengine.entity.update()
   end
 
   for entity in tdengine.entity.iterate() do
-    tdengine.gpu.bind_entity(entity)
+    tdengine.gpus.bind_entity(entity)
     tdengine.entity.run_update_callback(entity, tdengine.lifecycle.update_callbacks.draw)
   end
 
   for entity in tdengine.entity.iterate_persistent() do
-    tdengine.gpu.bind_entity(entity)
+    tdengine.gpus.bind_entity(entity)
     tdengine.entity.run_update_callback(entity, tdengine.lifecycle.update_callbacks.draw)
   end
 end

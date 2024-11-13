@@ -19,10 +19,10 @@ tdengine.internal.enum_value_metatable = {
 		if not eb then return false end
 		if ea ~= eb then return false end
 
-		return a.as_number == b.as_number
+		return a:to_number() == b:to_number()
 	end,
 	__tostring = function(self)
-		return self.as_string
+		return self:to_string()
 	end,
 }
 
@@ -51,18 +51,18 @@ function tdengine.enum.define(enum_name, values)
 	tdengine.enums[enum_name] = {
 		name = enum_name,
 		iterate = function(self)
-			local iterator = function()
-				local it, enum, key = pairs(tdengine.enum_data[enum_name])
-
-				return function()
-					key, as_enum = it(enum, key)
-					if not as_enum then return nil end
-
-					return as_enum, as_enum:to_string(), as_enum:to_number()
+			local function iterator()
+				for str, enum in pairs(tdengine.enum_data[enum_name]) do
+					coroutine.yield(enum, enum:to_string(), enum:to_number())
 				end
 			end
 
-			return iterator()
+			return coroutine.wrap(iterator)
+		end,
+		match = function(_, other)
+			print(enum_name, other, tdengine.enum.is_enum(other))
+			if not tdengine.enum.is_enum(other) then return false end
+			return other.name == enum_name
 		end
 	}
 	setmetatable(tdengine.enums[enum_name], tdengine.internal.enum_proxy_metatable)
@@ -70,13 +70,15 @@ function tdengine.enum.define(enum_name, values)
 	-- These are the entries for each enum value
 	for string_id, value in pairs(values) do
 		tdengine.enum_data[enum_name][string_id] = {
-			as_string = string_id,
-			as_number = value,
-			to_string = function() return string_id end,
-			to_qualified_string = function() return string.format('%s::%s', enum_name, string_id) end,
-			to_number = function() return value end,
-			bitwise_and = function(...) return tdengine.enum.bitwise_and(self, ...) end,
-			bitwise_or = function(...) return tdengine.enum.bitwise_or(self, ...) end,
+			to_string = function()
+				return string_id
+			end,
+			to_qualified_string = function() 
+				return string.format('%s::%s', enum_name, string_id) 
+			end,
+			to_number = function()
+				return value
+			end,
 			match = function(self, check_value)
 				return check_value == string_id or check_value == value or check_value == self
 			end,
@@ -95,7 +97,9 @@ end
 
 
 function tdengine.enum.is_enum(v)
-	return type(v) == 'table' and v.__enum
+	if type(v) ~= 'table' then return false end
+	if not v.__enum then return false end
+	return true
 end
 
 function tdengine.enum.load(serialized_enum)
@@ -104,7 +108,7 @@ function tdengine.enum.load(serialized_enum)
 	local enum_class = tdengine.enum_data[serialized_enum.__enum]
 	if not enum_class then return nil end
 
-	return enum_class[serialized_enum.value or serialized_enum.as_string] -- @hack
+	return enum_class[serialized_enum.value or serialized_enum:to_string()] -- @hack
 end
 
 function tdengine.enum.bitwise_and(...)

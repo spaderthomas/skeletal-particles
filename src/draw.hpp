@@ -147,6 +147,7 @@ u8*  vertex_buffer_at(VertexBuffer* vertex_buffer, u32 index);
 // GPU //
 /////////
 struct GpuGraphicsPipeline;
+struct GpuBuffer;
 
 enum class GpuLoadOp : u32 {
 	None = 0,
@@ -171,7 +172,7 @@ struct GpuUniformBinding {
 };
 
 struct GpuSsboBinding {
-	u32 ssbo;
+	GpuBuffer* buffer;
 	u32 index;
 };
 
@@ -232,18 +233,27 @@ struct GpuRenderPass {
 
 struct GpuGraphicsPipelineDescriptor {
 	GpuColorAttachment color_attachment;
-	GpuShader* shader;
-	GpuUniformBinding* uniforms;
-	u32 num_uniforms;
-	GpuSsboBinding* ssbos;
-	u32 num_storage_buffers;
+	GpuCommandBuffer* command_buffer;
 };
 struct GpuGraphicsPipeline {
 	GpuColorAttachment color_attachment;
-	GpuShader* shader;
-	Array<GpuUniformBinding, 32> uniforms;
-	Array<GpuSsboBinding, 32> ssbos;
+	GpuCommandBuffer* command_buffer;
 };
+
+// struct GpuDrawConfigurationDescriptor {
+// 	GpuShader* shader;
+
+// 	GpuUniformBinding* uniforms;
+// 	u32 num_uniforms;
+
+// 	GpuSsboBinding* ssbos;
+// 	u32 num_storage_buffers;
+// };
+// struct GpuDrawConfiguration {
+// 	GpuShader* shader;
+// 	Array<GpuUniformBinding, 32> uniforms;
+// 	Array<GpuSsboBinding, 32> ssbos;
+// };
 
 
 
@@ -262,24 +272,17 @@ struct RenderEngine {
 
 	u8* screenshot;
 
-	static constexpr u32 max_command_buffers = 32;
-	Array<GpuCommandBuffer> command_buffers;
-	GpuCommandBuffer* command_buffer;
+	Array<GpuCommandBuffer,    32> command_buffers;
+	Array<GpuRenderPass,       32> render_passes;
+	Array<GpuRenderTarget,     32> targets;
+	Array<GpuGraphicsPipeline, 32> graphics_pipelines;
+	Array<GpuBuffer,           32> gpu_buffers;
 
-	static constexpr u32 max_render_passes = 32;
-	Array<GpuRenderPass> render_passes;
 	GpuRenderPass* render_pass;
+	GpuCommandBuffer* command_buffer;
+	
+	GpuGraphicsPipeline* pipeline;
 
-	static constexpr u32 max_targets = 32;
-	Array<GpuRenderTarget> targets;
-
-
-
-	Array<GpuGraphicsPipeline> graphics_pipelines;
-	GpuGraphicsPipeline* graphics_pipeline;
-
-	static constexpr u32 max_gpu_buffers = 128;
-	Array<GpuBuffer> gpu_buffers;
 
 	DrawCall* find_draw_call();
 	DrawCall* add_draw_call();
@@ -303,7 +306,9 @@ FM_LUA_EXPORT void                 gpu_push_vertex(GpuCommandBuffer* command_buf
 FM_LUA_EXPORT void                 gpu_bind_commands(GpuCommandBuffer* command_buffer);
 FM_LUA_EXPORT void                 gpu_preprocess_commands(GpuCommandBuffer* command_buffer);
 FM_LUA_EXPORT void                 gpu_draw_commands(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT GpuGraphicsPipeline* gpu_create_graphics_pipeline(GpuGraphicsPipelineDescriptor descriptor);
+FM_LUA_EXPORT GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
+FM_LUA_EXPORT void                 gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
+FM_LUA_EXPORT void                 gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
 FM_LUA_EXPORT GpuRenderPass*       gpu_create_pass(GpuRenderPassDescriptor descriptor);
 FM_LUA_EXPORT void                 gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
 FM_LUA_EXPORT void                 gpu_end_pass();
@@ -339,6 +344,7 @@ FM_LUA_EXPORT void draw_quad(Vector2 position, Vector2 size, Vector4 color);
 // OPENGL CONFIGURATION //
 //////////////////////////
 FM_LUA_EXPORT void set_active_shader(const char* name);
+FM_LUA_EXPORT void set_active_shader_ex(GpuShader* shader);
 FM_LUA_EXPORT void set_draw_mode(DrawMode mode);
 FM_LUA_EXPORT void set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far);
 FM_LUA_EXPORT void set_uniform_texture(const char* name, i32 value);
@@ -350,8 +356,8 @@ FM_LUA_EXPORT void set_uniform_vec4(const char* name, HMM_Vec4 value);
 FM_LUA_EXPORT void set_uniform_mat3(const char* name, HMM_Mat3 value);
 FM_LUA_EXPORT void set_uniform_mat4(const char* name, HMM_Mat4 value);
 
-FM_LUA_EXPORT i32 find_uniform_index(const char* name);
-void set_shader_immediate(Shader* shader);
+FM_LUA_EXPORT i32  find_uniform_index(const char* name);
+FM_LUA_EXPORT void set_shader_immediate_ex(GpuShader* shader);
 FM_LUA_EXPORT void set_shader_immediate(const char* name);
 FM_LUA_EXPORT void set_uniform_immediate_mat4(const char* name, HMM_Mat4 value);
 FM_LUA_EXPORT void set_uniform_immediate_mat3(const char* name, HMM_Mat3 value);

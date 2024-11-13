@@ -7,17 +7,6 @@ function RenderTest:update()
 end
 
 function RenderTest:draw()
-  -- self.vertex = ffi.new('Vertex')
-  -- self.render_passes = tdengine.gpu.render_passes
-  -- self.cdata = ffi.new('CdataTest10', 69.0, 0, 1, ffi.new('float [1]', 100))
-  -- self.fp = ffi.new('float [1]', 200)
-  -- self.cdata.fp = self.fp
-  -- local allocator = tdengine.ffi.ma_find('standard');
-  -- self.cdata.fp = ffi.cast('float *', allocator:alloc(4));
-  -- self.cdata.fp = 
-  -- print(self.fp[0])
-  -- self.cdata.fp[0] = 100
-
 end
 
 local PointLight = tdengine.entity.define('PointLight') 
@@ -34,13 +23,6 @@ PointLight.editor_fields = {
   'volumetric_intensity',
   'angle', 
 } 
-
-local Test = tdengine.enum.define(
-  'Test',
-  {
-    A = 1
-  }
-)
 
 PointLight:set_field_metadatas({ 
   angle = FieldMetadata.Presets.Float_01,

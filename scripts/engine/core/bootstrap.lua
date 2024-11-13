@@ -282,7 +282,8 @@ typedef enum {
 
 
 typedef struct GpuShader GpuShader;
-typedef struct GpuGraphicsPipeline GpuGraphicsPipeline;
+typedef struct GpuBuffer GpuBuffer;
+typedef struct GpuCommandBuffer GpuCommandBuffer;
 
 typedef struct {
   const char* name;
@@ -292,11 +293,6 @@ typedef struct {
 
   GpuShaderKind kind;
 } GpuShaderDescriptor;
-
-typedef struct {
-	u32 ssbo;
-	u32 index;
-} GpuSsboBinding;
 
 typedef struct {
 	Vector2 size;
@@ -315,32 +311,14 @@ typedef struct {
 } GpuColorAttachment;
 
 typedef struct {
-	UniformKind kind;
-  const char* name;
-
-	union {
-		Matrix4       mat4;
-		Matrix3       mat3;
-		Vector4       vec4;
-		Vector3       vec3;
-		Vector2       vec2;
-		i32           i32;
-		float         f32;
-		GpuGraphicsPipeline* pipeline;
-		GpuRenderTarget* render_target;
-	};
-} GpuUniformBinding;
+	GpuColorAttachment color_attachment;
+	GpuCommandBuffer* command_buffer;
+} GpuGraphicsPipelineDescriptor;
 
 typedef struct {
 	GpuColorAttachment color_attachment;
-	GpuShader* shader;
-	GpuUniformBinding* uniforms;
-  u32 num_uniforms;
-	GpuSsboBinding* ssbos;
-  u32 num_storage_buffers;
-} GpuGraphicsPipelineDescriptor;
-
-typedef struct GpuGraphicsPipeline GpuGraphicsPipeline;
+	GpuCommandBuffer* command_buffer;
+} GpuGraphicsPipeline;
 
 
 typedef struct {
@@ -354,10 +332,6 @@ typedef struct {
   u32 max_vertices;
   u32 max_draw_calls;
 } GpuCommandBufferDescriptor;
-
-typedef void* GpuCommandBuffer;
-typedef void* GpuBuffer;
-
 
 typedef struct {
 	GpuRenderTarget* target;
@@ -379,7 +353,6 @@ typedef struct {
 
 
 
-
 GpuShader*           gpu_create_shader(GpuShaderDescriptor descriptor);
 GpuRenderTarget*     gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
 GpuRenderTarget*     gpu_create_target(float x, float y);
@@ -390,7 +363,9 @@ void                 gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRender
 void                 gpu_swap_buffers();
 GpuCommandBuffer*    gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
 void                 gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
-GpuGraphicsPipeline* gpu_create_graphics_pipeline(GpuGraphicsPipelineDescriptor descriptor);
+GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
+void                 gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
+void                 gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
 GpuRenderPass*       gpu_create_pass(GpuRenderPassDescriptor descriptor);
 void                 gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
 void                 gpu_end_pass();
@@ -405,6 +380,7 @@ void                 gpu_zero_buffer(GpuBuffer* buffer, u32 size);
 void                 gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 
 void                 set_active_shader(const char* name);
+void                 set_active_shader_ex(GpuShader* shader);
 void                 set_draw_mode(u32 mode);
 void                 set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far);
 void                 set_uniform_texture(const char* name, i32 value);
@@ -415,7 +391,18 @@ void                 set_uniform_immediate_vec2(const char* name, Vector2 value)
 void                 set_uniform_immediate_i32(const char* name, i32 value);
 void                 set_uniform_immediate_f32(const char* name, float value);
 void                 set_uniform_immediate_texture(const char* name, i32 value);
+void                 set_shader_immediate(const char* name);
+void                 set_shader_immediate_ex(GpuShader* shader);
+void                 set_uniform_immediate_mat4(const char* name, Matrix4 value);
+void                 set_uniform_immediate_mat3(const char* name, Matrix3 value);
+void                 set_uniform_immediate_vec4(const char* name, Vector4 value);
+void                 set_uniform_immediate_vec3(const char* name, Vector3 value);
+void                 set_uniform_immediate_vec2(const char* name, Vector2 value);
+void                 set_uniform_immediate_i32(const char* name, i32 value);
+void                 set_uniform_immediate_f32(const char* name, float value);
+void                 set_uniform_immediate_texture(const char* name, i32 value);
 void                 push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity);
+i32                  find_uniform_index(const char* name);
 
 //
 // DRAW
