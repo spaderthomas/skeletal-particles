@@ -91,7 +91,7 @@ function LagrangianFluidSystem:draw()
 
   local color = self.colors.bounding_volume:alpha(.2):premultiply():to_vec4()
 
-  tdengine.ffi.begin_world_space()
+  tdengine.ffi.set_world_space(true)()
   tdengine.ffi.set_layer(self.layers.bounding_volume)
 
   tdengine.ffi.draw_circle(self.bounding_volume.a.x, self.bounding_volume.a.y, self.bounding_volume.radius, color)

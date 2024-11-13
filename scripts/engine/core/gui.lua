@@ -1465,7 +1465,7 @@ local function update_animations()
       -- this is copy and pasted from Gui:render() (except applying the offset)
       local layout = tdengine.gui.Gui:new()
 
-      tdengine.ffi.end_world_space()
+      tdengine.ffi.end_world_space(true)()
       for index, item in animation.hide_data.draw_list:iterate() do
         tdengine.ffi.set_layer(tdengine.layers.ui + index)
 

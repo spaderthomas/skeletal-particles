@@ -49,6 +49,7 @@ local function find_sorted_keys(t)
 	end
 
 	table.sort(sorted_keys, compare_keys)
+
 	return sorted_keys
 end
 
@@ -80,19 +81,34 @@ imgui.extensions.TableField = function(key, value, padding)
 		imgui.extensions.TableMenuItem(key, value)
 	elseif value_type == 'cdata' then
 		imgui.extensions.CType(key, value)
+	elseif value_type == 'function' then
+		imgui.extensions.VariableName(key)
+		imgui.SameLine()
+		if padding then imgui.SetCursorPosX(cursor + padding) end
+		imgui.Text('<function>')
 	end
 end
 
-imgui.extensions.Table = function(t, ignore)
-	ignore = ignore or {}
+TableOptions = tdengine.class.define('TableOptions')
+function TableOptions:init()
+	self.ignore_functions = false
+	self.ignored_fields = {}
+end
+
+imgui.extensions.Table = function(t, options)
+	options = options or TableOptions:new()
 
 	local sorted_keys = find_sorted_keys(t)
+	local padding = imgui.internal.calc_alignment(table.collect_keys(t))
 
-	for index, key in pairs(sorted_keys) do
-		if ignore[key] then goto continue end
-		if tdengine.editor.is_ignoring_field(t, key) then goto continue end
 
-		imgui.extensions.TableField(key, t[key])
+	for index, k in pairs(sorted_keys) do
+		local value = t[k]
+		if tdengine.editor.is_ignoring_field(t, k) then goto continue end
+		if options.ignored_fields[k] then goto continue end
+		if options.ignore_functions and type(value) == 'function' then goto continue end
+
+		imgui.extensions.TableField(k, t[k], padding)
 
 		::continue::
 	end
@@ -457,6 +473,7 @@ imgui.internal.draw_table_editor = function(editor)
 
 	-- Display each KVP
 	for _, key in ipairs(sorted_keys) do
+	
 		local value = editor.editing[key]
 		local metadata = tdengine.editor.get_field_metadata(tdengine.class.get(editor.editing), key)
 

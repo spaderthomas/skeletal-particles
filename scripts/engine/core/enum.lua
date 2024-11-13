@@ -63,7 +63,7 @@ function tdengine.enum.define(enum_name, values)
 			if not tdengine.enum.is_enum(other) then 
 				return false 
 			end
-			
+
 			return tdengine.enums[other.__enum].name == enum_name
 		end
 	}

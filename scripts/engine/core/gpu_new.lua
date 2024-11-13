@@ -65,19 +65,28 @@ function UniformBinding:init(name, value, kind)
 end
 
 function UniformBinding:bind()
-  if self.kind == tdengine.enums.UniformKind.Texture then
+  if UniformKind.Matrix4:match(self.kind) then
+    tdengine.ffi.set_uniform_mat4(self.name, self.value)
+  elseif UniformKind.Matrix3:match(self.kind) then
+    tdengine.ffi.set_uniform_mat3(self.name, self.value)
+  elseif UniformKind.Vector4:match(self.kind) then
+    tdengine.ffi.set_uniform_vec4(self.name, self.value)
+  elseif UniformKind.Vector3:match(self.kind) then
+    tdengine.ffi.set_uniform_vec3(self.name, self.value)
+  elseif UniformKind.Vector2:match(self.kind) then
+    tdengine.ffi.set_uniform_vec2(self.name, self.value)
+  elseif UniformKind.F32:match(self.kind) then
+    tdengine.ffi.set_uniform_f32(self.name, self.value)
+  elseif UniformKind.I32:match(self.kind) then
+    tdengine.ffi.set_uniform_i32(self.name, self.value)
+  elseif UniformKind.Enum:match(self.kind) then
+    tdengine.ffi.set_uniform_enum(self.name, self.value)
+  elseif UniformKind.RenderTarget:match(self.kind) then
     tdengine.ffi.set_uniform_texture(self.name, tdengine.gpus.find(self.value).color_buffer)
-  elseif self.kind == tdengine.enums.UniformKind.PipelineOutput then
-    local pipeline = tdengine.gpus.find(self.value)
-    tdengine.ffi.set_uniform_texture(self.name, pipeline.color_attachment.write)
-  elseif self.kind == tdengine.enums.UniformKind.RenderPassTexture then
-   tdengine.ffi.set_uniform_texture(self.name, tdengine.gpu.find_read_texture(self.value))
+  elseif UniformKind.PipelineOutput:match(self.kind) then
+    tdengine.ffi.set_uniform_texture(self.name, tdengine.gpus.find(self.value).color_attachment.read)
   elseif self.kind == tdengine.enums.UniformKind.Enum then
     tdengine.ffi.set_uniform_enum(self.name, self.value)
-  elseif self.kind == tdengine.enums.UniformKind.F32 then
-    tdengine.ffi.set_uniform_f32(self.name, self.value)
-  elseif self.kind == tdengine.enums.UniformKind.I32 then
-    tdengine.ffi.set_uniform_i32(self.name, self.value)
   end
 end
 
@@ -143,6 +152,17 @@ function ConfiguredPostProcess:render()
   tdengine.ffi.gpu_graphics_pipeline_bind(self.pipeline)
   self.draw_configuration:bind()
 
+  -- local binding = UniformBinding:new('u_float', .5, UniformKind.F32)
+  -- local binding = UniformBinding:new('u_int', 1, UniformKind.I32)
+  -- local binding = UniformBinding:new('u_vec2', ffi.new('Vector2', 1.0, 2.0), UniformKind.Vector2)
+  -- local binding = UniformBinding:new('u_vec3', ffi.new('Vector3', 1.0, 2.0, 6.0), UniformKind.Vector3)
+  -- local binding = UniformBinding:new('u_vec4', ffi.new('Vector4', 1.0, 2.0, 3.0, 10.0), UniformKind.Vector4)
+  -- local binding = UniformBinding:new('u_mat3', Matrix3:Identity(), UniformKind.Matrix3)
+  local m = Matrix4:new()
+  local binding = UniformBinding:new('u_mat4', m, UniformKind.Matrix4)
+  -- local binding = UniformBinding:new('u_render_target', RenderTarget.Editor, UniformKind.RenderTarget)
+  binding:bind()
+
   local size = self.pipeline.color_attachment.write.size
   ffi.C.push_quad(
     0, size.y,
@@ -156,10 +176,6 @@ function ConfiguredPostProcess:render()
 end
 
 local todo = [[
-- Make sure the old draw API works and mawe sure the GPU setup for that is included in the base engine
-  - Why is the grid totally filling up the vertex buffer? Are the sizes correct?
-- What is a store op?
-- Figure out the actual minimum number of command buffers you need
 - UniformBinding is still a mess of unimplemented and messy uniforms; fix those up
   - Can I just move all the union-uniform stuff into Lua? I think that'd mean moving all of your current draw stuff into Lua, which 
   isn't necessarily a problem. It's more that your whole immediate mode API doesn't make as much sense here. Or does it...? That's
@@ -172,6 +188,7 @@ local todo = [[
 - Render component should draw to the correct pipeline
 - Reimplement all of the post processing stuff
   - Reimplement ping-pong
+- Figure out the actual minimum number of command buffers you need
 - Make the benchmark timer API better (e.g. local timer = tdengine.ffi.tm_begin(Timer.Render); timer:end())
 - Fully remove gpu.lua
 - Merge into the base engine...?
@@ -182,6 +199,9 @@ local done = [[
   - Move the named assets thing into the right place in the user folder
 - Properly clear render targets on load
 - Clean up push_vertex() so the call stack isn't four deep
+- Make sure the old draw API works and mawe sure the GPU setup for that is included in the base engine
+  - Why is the grid totally filling up the vertex buffer? Are the sizes correct?
+- What is a store op?
 
 ]]
 

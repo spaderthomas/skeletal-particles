@@ -423,7 +423,13 @@ function DialogueEditor:draw_graph_validation()
 
 			if err.node then
 				if imgui.CollapsingHeader(imgui_id) then
-					imgui.extensions.Table(err, ignore)
+					imgui.extensions.Table(
+						err, 
+						{ 
+							ignore = {
+								kind = true
+							}
+						})
 
 					local btn_color = tdengine.color32(200, 0, 0, 255)
 					local btn_label = 'Take Me There' .. '##' .. address

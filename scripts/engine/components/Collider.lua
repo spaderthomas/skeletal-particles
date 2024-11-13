@@ -88,9 +88,9 @@ function Collider:is_world_space() return self.world_space end
 
 function Collider:set_draw_space()
 	if self:is_world_space() then
-		tdengine.ffi.begin_world_space()
+		tdengine.ffi.set_world_space(true)()
 	else
-		tdengine.ffi.end_world_space()
+		tdengine.ffi.end_world_space(true)()
 	end
 end
 

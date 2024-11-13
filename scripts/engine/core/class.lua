@@ -46,6 +46,22 @@ function tdengine.class.define(name)
         tdengine.editor.set_field_metadatas(tdengine.types[name], metadatas)
       end,
 
+      set_metamethod = function(__class, metamethod, fn)
+        -- Since the class system uses the indirection provided by __index to work, overriding it
+        -- would render the instance unusable. We can hack it in, though, by calling the internal
+        -- __index before we try whatever the user gave us
+        if metamethod == '__index' then
+          tdengine.types[name].__metamethods[metamethod] = function(__instance, key)
+            return tdengine.types[name].__metamethods.__default_index(__instance, key) or fn(__instance, key)
+          end
+        else
+          tdengine.types[name].__metamethods[metamethod] = fn
+        end
+        -- if metamethod_n
+        -- tdengine.editor.set_field_metadatas(tdengine.types[name], metadatas)
+      end,
+
+
 
 
 
@@ -54,15 +70,17 @@ function tdengine.class.define(name)
         for field_name, field in pairs(tdengine.types[name].__fields) do
           instance[field_name] = field
         end
+
+        setmetatable(instance, tdengine.types[name].__metamethods)
     
-        setmetatable(instance, {
-          __index = function(__instance, key)
-            -- If some key isn't found on the instance, check the class' instance methods
-            -- Look up the class in the global type table, so that it's not stale when hotloaded
-            return tdengine.types[name].__instance[key]
-          end,
-          __type = name
-        })
+        -- setmetatable(instance, {
+        --   __index = function(__instance, key)
+        --     -- If some key isn't found on the instance, check the class' instance methods
+        --     -- Look up the class in the global type table, so that it's not stale when hotloaded
+        --     return tdengine.types[name].__instance[key]
+        --   end,
+        --   __type = name
+        -- })
     
         return instance
       end,
@@ -73,8 +91,8 @@ function tdengine.class.define(name)
       end,
 
       construct = function(__class, instance, ...)
-        if tdengine.types[name].__static.init then
-          tdengine.types[name].__static.init(instance, ...)
+        if tdengine.types[name].__instance.init then
+          tdengine.types[name].__instance.init(instance, ...)
         end
     
         return instance
@@ -93,35 +111,38 @@ function tdengine.class.define(name)
       end,
 
       class = function(self)
-        return getmetatable(self).__type
+        local metatable = getmetatable(self)
+        return metatable and metatable.__type or ''
       end
     },
 
-    -- Fields are handled just a bit different; adding them to the __instance table, like methods, works
-    -- fine for lookups, but then the fields wouldn't be visible in the editor. Instead, we copy all
-    -- the base class' fields when we allocate an instance.
+    -- This metatable is applied to an instance when it is allocated
+    __metamethods = {
+      __index = function(__instance, key)
+        return rawget(tdengine.types[name].__instance, key)
+      end,
+      __default_index = function(__instance, key)
+        return rawget(tdengine.types[name].__instance, key)
+      end,
+      __type = name
+    },
+
+    -- If a class should have some default fields populated, they end up here. When an instance is allocated,
+    -- we copy any fields here onto the instance with a default value
     __fields = {
 
     }
   }
 
-  setmetatable(tdengine.types[name].__static, {
-    __index = function(_, key)
-      -- If we can't find a static method, then we'll see if it's an instance method
-      return rawget(tdengine.types[name].__instance, key)
-    end
-  })
-
+  -- This is the metatable for the class itself
   setmetatable(tdengine.types[name], {
-    -- Point missing keys to the static method table (which will in turn point still-missing keys to the instance method table)
     __index = function(_, key)
-      return tdengine.types[name].__static[key]
+      return rawget(tdengine.types[name].__static, key) or rawget(tdengine.types[name].__instance, key)
     end,
-
-    -- Any members you define on the class are instance methods
     __newindex = function(__class, member_name, member)
       tdengine.types[name].__instance[member_name] = member
-    end
+    end,
+    __type = name
   })
 
   return tdengine.types[name]

@@ -127,7 +127,7 @@ function tdengine.ffi.init()
 		}
 	)
 
-	tdengine.enum.define(
+	UniformKind = tdengine.enum.define(
 		'UniformKind',
 		{
 			Matrix4        = tdengine.ffi.UniformKind_Matrix4,
@@ -140,10 +140,7 @@ function tdengine.ffi.init()
 			Texture        = tdengine.ffi.UniformKind_Texture,
 			PipelineOutput = tdengine.ffi.UniformKind_PipelineOutput,
 			RenderTarget   = tdengine.ffi.UniformKind_RenderTarget,
-			RenderPassTexture = 200,
 			Enum = 201,
-			
-
 		}
 	)
 
@@ -473,6 +470,12 @@ end
 -- MATRIX --
 ------------
 Matrix3 = tdengine.class.metatype('Matrix3')
+Matrix3:set_metamethod('__index', function(self, key)
+	print('x')
+	if type(key) == 'number' then
+		return self.data[key]
+	end
+end)
 
 function Matrix3:Identity()
 	local matrix = Matrix3:new()
@@ -503,6 +506,10 @@ function Matrix3:serialize()
 	end
 	return serialized
 end
+
+local m = Matrix3:Identity()
+local z = m[0]
+-- print(m[0])
 
 Matrix4 = tdengine.class.metatype('Matrix4')
 
@@ -731,14 +738,6 @@ end
 
 function tdengine.ffi.set_display_mode(display_mode)
 	return ffi.C.set_display_mode(display_mode:to_number())
-end
-
-function tdengine.ffi.begin_world_space()
-	tdengine.ffi.set_world_space(true)
-end
-
-function tdengine.ffi.end_world_space()
-	tdengine.ffi.set_world_space(false)
 end
 
 function tdengine.ffi.gpu_clear_target(target)

@@ -68,8 +68,8 @@ function ColliderBox:show(color)
   if self.dbg_color then color = self.dbg_color end
 
 
-  if self.base.world_space then tdengine.ffi.begin_world_space() end
-  if not self.base.world_space then tdengine.ffi.end_world_space() end
+  if self.base.world_space then tdengine.ffi.set_world_space(true)() end
+  if not self.base.world_space then tdengine.ffi.end_world_space(true)() end
   tdengine.ffi.draw_quad_l(self.position, self.dimension, color)
 end
 

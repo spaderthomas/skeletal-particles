@@ -127,7 +127,7 @@ function EditorUtility:draw_grid()
     -- Draw horizontal lines
     for y = min.y, max.y, grid_size do
       i = i + 1
-      --tdengine.ffi.draw_line(min.x, y, max.x, y, line_thickness, self.colors.grid:to_vec4())
+      tdengine.ffi.draw_line(min.x, y, max.x, y, line_thickness, self.colors.grid:to_vec4())
     end
 
 

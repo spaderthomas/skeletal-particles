@@ -19,7 +19,7 @@ end
 
 function CameraBounds:draw()
   if self.debug then
-    tdengine.ffi.begin_world_space()
+    tdengine.ffi.set_world_space(true)()
     tdengine.ffi.set_layer(1000)
 
     tdengine.ffi.draw_quad_l(self.position, self.size, tdengine.colors.green_light_trans)

@@ -166,7 +166,7 @@ function EngineStats:engine_viewer()
 		if self.display_cursor then
 			local world = tdengine.vec2(tdengine.cursor(tdengine.coordinate.world))
 			tdengine.ffi.set_layer(100)
-			tdengine.ffi.begin_world_space()
+			tdengine.ffi.set_world_space(true)()
 			tdengine.draw_circle_l(world, 5, tdengine.colors.red)
 		end
 
@@ -402,37 +402,7 @@ function EngineStats:engine_viewer()
 		imgui.TreePop()
 	end
 
-	if imgui.TreeNode('Post Processing') then
-		if imgui.Button('Custom Dissolve') then
-			tdengine.ffi.end_screen_dissolve()
-			tdengine.ffi.begin_screen_dissolve()
-		end
-		imgui.SameLine()
-		if imgui.Button('Dissolve') then
-			tdengine.app.post_processing:begin_screen_dissolve(4)
-		end
-		imgui.SameLine()
-		if imgui.Button('End Dissolve') then
-			tdengine.app.post_processing:end_screen_dissolve()
-		end
 
-		if imgui.Button('Custom Fade') then
-			tdengine.ffi.disable_screen_fade()
-			tdengine.ffi.enable_screen_fade()
-		end
-		imgui.SameLine()
-		if imgui.Button('Enable Fade') then
-			tdengine.ffi.enable_screen_fade()
-		end
-		imgui.SameLine()
-		if imgui.Button('Disable Fade') then
-			tdengine.ffi.disable_screen_fade()
-		end
-
-
-		imgui.extensions.Table(tdengine.app.post_processing)
-		imgui.TreePop()
-	end
 
 	if imgui.TreeNode('Saves') then
 		self.save_data:draw()
@@ -441,6 +411,13 @@ function EngineStats:engine_viewer()
 
 	if imgui.TreeNode('Subsystems') then
 		imgui.extensions.Table(tdengine.subsystem.subsystems)
+		imgui.TreePop()
+	end
+
+	if imgui.TreeNode('Types') then
+		local options = TableOptions:new()
+		options.ignore_functions = false
+		imgui.extensions.Table(tdengine.types, options)
 		imgui.TreePop()
 	end
 

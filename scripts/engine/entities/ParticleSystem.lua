@@ -248,7 +248,7 @@ end
 
 function ParticleSystem:on_draw_colliders()
   if self.gravity_enabled then
-    tdengine.ffi.begin_world_space()
+    tdengine.ffi.set_world_space(true)()
     tdengine.draw_circle_l(self.gravity_source, math.abs(self.gravity_intensity) + 10, tdengine.colors.white_trans)
   end
 end

@@ -388,18 +388,31 @@ void                 gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 
 void                 set_active_shader(const char* name);
 void                 set_active_shader_ex(GpuShader* shader);
-void                 set_draw_mode(u32 mode);
-void                 set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far);
 void                 set_uniform_texture(const char* name, i32 value);
 void                 set_uniform_i32(const char* name, i32 value);
 void                 set_uniform_f32(const char* name, float value);
 void                 set_uniform_vec2(const char* name, Vector2 value);
+void                 set_uniform_vec3(const char* name, Vector3 value);
+void                 set_uniform_vec4(const char* name, Vector4 value);
+void                 set_uniform_mat3(const char* name, Matrix3 value);
+void                 set_uniform_mat4(const char* name, Matrix4 value);
+void                 set_world_space(bool world_space);
+void                 set_layer(i32 layer);
+void                 set_camera(f32 px, f32 py);
+void                 set_blend_enabled(bool enabled);
+void                 set_blend_mode(i32 source, i32 destination);
+void                 set_draw_mode(u32 mode);
+void                 set_orthographic_projection(float l, float r, float b, float t, float n, float f);
+void                 begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
+void                 end_scissor();
+
+
+void                 set_shader_immediate(const char* name);
+void                 set_shader_immediate_ex(GpuShader* shader);
 void                 set_uniform_immediate_vec2(const char* name, Vector2 value);
 void                 set_uniform_immediate_i32(const char* name, i32 value);
 void                 set_uniform_immediate_f32(const char* name, float value);
 void                 set_uniform_immediate_texture(const char* name, i32 value);
-void                 set_shader_immediate(const char* name);
-void                 set_shader_immediate_ex(GpuShader* shader);
 void                 set_uniform_immediate_mat4(const char* name, Matrix4 value);
 void                 set_uniform_immediate_mat3(const char* name, Matrix3 value);
 void                 set_uniform_immediate_vec4(const char* name, Vector4 value);
@@ -456,15 +469,6 @@ typedef struct {
   float edge_thickness;
 } SdfCircle;
 
-void begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
-void end_scissor();
-void begin_world_space();
-void end_world_space();
-void set_world_space(bool world_space);
-void set_layer(i32 layer);
-void set_camera(f32 px, f32 py);
-void set_blend_enabled(bool enabled);
-void set_blend_mode(i32 source, i32 destination);
 
 void draw_quad(Vector2 position, Vector2 size, Vector4 color);
 void draw_line(Vector2 start, Vector2 end, f32 thickness, Vector4 color);
