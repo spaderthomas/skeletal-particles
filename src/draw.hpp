@@ -280,31 +280,20 @@ struct GpuBuffer {
 
 
 struct RenderEngine {
-	HMM_Mat4 projection;
-	Vector2 camera;
-
-	u8* screenshot;
-
 	Array<GpuCommandBuffer,    32>  command_buffers;
-	Array<GpuRenderPass,       32>  render_passes;
 	Array<GpuRenderTarget,     32>  targets;
 	Array<GpuGraphicsPipeline, 32>  graphics_pipelines;
 	Array<GpuBuffer,           32>  gpu_buffers;
 	Array<GpuShader,           128> shaders;
 
-	GpuRenderPass* render_pass;
-	GpuCommandBuffer* command_buffer;
-	
 	GpuGraphicsPipeline* pipeline;
 
+	Matrix4 projection;
+	Vector2 camera;
+
+	u8* screenshot;
 
 	FileMonitor* shader_monitor;
-
-
-
-	DrawCall* find_draw_call();
-	DrawCall* add_draw_call();
-	DrawCall* flush_draw_call();
 };
 RenderEngine render;
 
@@ -347,27 +336,29 @@ FM_LUA_EXPORT void                 gpu_dispatch_compute(GpuBuffer* buffer, u32 s
 //////////////////////////////////
 // BATCHED OPENGL CONFIGURATION //
 //////////////////////////////////
-FM_LUA_EXPORT void set_active_shader(const char* name);
-FM_LUA_EXPORT void set_active_shader_ex(GpuShader* shader);
-FM_LUA_EXPORT void set_draw_mode(DrawMode mode);
-FM_LUA_EXPORT void set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far);
-FM_LUA_EXPORT void set_uniform_texture(const char* name, i32 value);
-FM_LUA_EXPORT void set_uniform_i32(const char* name, i32 value);
-FM_LUA_EXPORT void set_uniform_f32(const char* name, float value);
-FM_LUA_EXPORT void set_uniform_vec2(const char* name, Vector2 value);
-FM_LUA_EXPORT void set_uniform_vec3(const char* name, HMM_Vec3 value);
-FM_LUA_EXPORT void set_uniform_vec4(const char* name, HMM_Vec4 value);
-FM_LUA_EXPORT void set_uniform_mat3(const char* name, HMM_Mat3 value);
-FM_LUA_EXPORT void set_uniform_mat4(const char* name, HMM_Mat4 value);
-FM_LUA_EXPORT void set_blend_enabled(bool enabled);
-FM_LUA_EXPORT void set_blend_mode(i32 source, i32 destination);
-FM_LUA_EXPORT void begin_scissor(float px, float py, float dx, float dy);
-FM_LUA_EXPORT void end_scissor();
-FM_LUA_EXPORT void set_world_space(bool world_space);
-FM_LUA_EXPORT void set_layer(int32 layer);
-FM_LUA_EXPORT void set_camera(float px, float py);
-FM_LUA_EXPORT void set_zoom(float zoom);
-FM_LUA_EXPORT void set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name);
+FM_LUA_EXPORT void    set_active_shader(const char* name);
+FM_LUA_EXPORT void    set_active_shader_ex(GpuShader* shader);
+FM_LUA_EXPORT void    set_draw_mode(DrawMode mode);
+FM_LUA_EXPORT void    set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far);
+FM_LUA_EXPORT void    set_uniform_texture(const char* name, i32 value);
+FM_LUA_EXPORT void    set_uniform_i32(const char* name, i32 value);
+FM_LUA_EXPORT void    set_uniform_f32(const char* name, float value);
+FM_LUA_EXPORT void    set_uniform_vec2(const char* name, Vector2 value);
+FM_LUA_EXPORT void    set_uniform_vec3(const char* name, HMM_Vec3 value);
+FM_LUA_EXPORT void    set_uniform_vec4(const char* name, HMM_Vec4 value);
+FM_LUA_EXPORT void    set_uniform_mat3(const char* name, HMM_Mat3 value);
+FM_LUA_EXPORT void    set_uniform_mat4(const char* name, HMM_Mat4 value);
+FM_LUA_EXPORT void    set_blend_enabled(bool enabled);
+FM_LUA_EXPORT void    set_blend_mode(i32 source, i32 destination);
+FM_LUA_EXPORT void    begin_scissor(float px, float py, float dx, float dy);
+FM_LUA_EXPORT void    end_scissor();
+FM_LUA_EXPORT void    set_world_space(bool world_space);
+FM_LUA_EXPORT void    set_layer(int32 layer);
+FM_LUA_EXPORT void    set_camera(float px, float py);
+FM_LUA_EXPORT void    set_zoom(float zoom);
+FM_LUA_EXPORT void    set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name);
+FM_LUA_EXPORT tstring read_gl_error();
+FM_LUA_EXPORT void    log_gl_error();
 
 ////////////////////////////////////
 // IMMEDIATE OPENGL CONFIGURATION //
@@ -389,7 +380,3 @@ FM_LUA_EXPORT void set_uniform_immediate_texture(const char* name, i32 value);
 // RENDERER INTERNALS //
 ////////////////////////
 void init_render();
-void update_render();
-
-tstring read_gl_error();
-void log_gl_error();
