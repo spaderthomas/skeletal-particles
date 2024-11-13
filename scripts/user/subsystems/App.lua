@@ -73,31 +73,31 @@ function App:on_start_game()
 	local game_views = tdengine.editor.find('GameViewManager')
   game_views:add_view(GameView:new(
 		'Game',
-		tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, RenderTarget.Editor),
+		tdengine.gpus.find(RenderTarget.Editor),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Main))
 
   game_views:add_view(GameView:new(
 		'Scene',
-		tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, RenderTarget.UpscaledLitScene),
+		tdengine.gpus.find(RenderTarget.UpscaledLitScene),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Color Buffer',
-		tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, RenderTarget.UpscaledColor),
+		tdengine.gpus.find(RenderTarget.UpscaledColor),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Normal Buffer',
-		tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, RenderTarget.UpscaledNormals),
+		tdengine.gpus.find(RenderTarget.UpscaledNormals),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 
 	game_views:add_view(GameView:new(
 		'Light Map',
-		tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, RenderTarget.LightMap),
+		tdengine.gpus.find(RenderTarget.LightMap),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 end

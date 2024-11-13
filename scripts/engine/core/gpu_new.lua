@@ -3,8 +3,8 @@
 -------------
 GpuColorAttachment = tdengine.class.metatype('GpuColorAttachment')
 function GpuColorAttachment:init(params)
-  self.read = params.read and tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, params.read) or nil
-  self.write = tdengine.gpus.find_resource(GpuResourceKind.RenderTarget, params.write)
+  self.read = params.read and tdengine.gpus.find(params.read) or nil
+  self.write = tdengine.gpus.find(params.write)
   self.load_op = tdengine.enum.load(params.load_op):to_number()
 end
 
@@ -25,7 +25,7 @@ end
 GpuRenderTargetDescriptor = tdengine.class.metatype('GpuRenderTargetDescriptor')
 function GpuRenderTargetDescriptor:init(params)
   if params.resolution then
-    self.size = tdengine.gpus.find_resource(GpuResourceKind.Resolution, params.resolution)
+    self.size = tdengine.gpus.find(params.resolution)
   else
     self.size = Vector2:new(params.size.x, params.size.y)
   end
@@ -34,7 +34,7 @@ end
 GpuGraphicsPipelineDescriptor = tdengine.class.metatype('GpuGraphicsPipelineDescriptor')
 function GpuGraphicsPipelineDescriptor:init(params)
   self.color_attachment = GpuColorAttachment:new(params.color_attachment)
-  self.command_buffer = tdengine.gpus.find_resource(GpuResourceKind.CommandBuffer, params.command_buffer)
+  self.command_buffer = tdengine.gpus.find(params.command_buffer)
 end
 
 GpuCommandBufferDescriptor = tdengine.class.metatype('GpuCommandBufferDescriptor')
@@ -66,9 +66,9 @@ end
 
 function UniformBinding:bind()
   if self.kind == tdengine.enums.UniformKind.Texture then
-    tdengine.ffi.set_uniform_texture(self.name, tdengine.gpus.find_resource(tdengine.enums.GpuResourceKind.RenderTarget, self.value).color_buffer)
+    tdengine.ffi.set_uniform_texture(self.name, tdengine.gpus.find(self.value).color_buffer)
   elseif self.kind == tdengine.enums.UniformKind.PipelineOutput then
-    local pipeline = tdengine.gpus.find_resource(tdengine.enums.GpuResourceKind.GraphicsPipeline, self.value)
+    local pipeline = tdengine.gpus.find(self.value)
     tdengine.ffi.set_uniform_texture(self.name, pipeline.color_attachment.write)
   elseif self.kind == tdengine.enums.UniformKind.RenderPassTexture then
    tdengine.ffi.set_uniform_texture(self.name, tdengine.gpu.find_read_texture(self.value))
@@ -85,7 +85,7 @@ end
 SsboBinding = tdengine.class.define('SsboBinding')
 function SsboBinding:init(index, buffer_id)
   self.index = index
-  self.ssbo = tdengine.gpus.find_resource(GpuResourceKind.StorageBuffer, buffer_id)
+  self.ssbo = tdengine.gpus.find(buffer_id)
 end
 
 function SsboBinding:bind()
@@ -95,7 +95,7 @@ end
 
 GpuDrawConfiguration = tdengine.class.define('GpuDrawConfiguration')
 function GpuDrawConfiguration:init(params)
-  self.shader = tdengine.gpus.find_resource(GpuResourceKind.Shader, params.shader)
+  self.shader = tdengine.gpus.find(params.shader)
 
   self.uniforms = tdengine.data_types.Array:new()
   for binding in tdengine.iterator.values(params.uniforms) do
@@ -156,8 +156,7 @@ function ConfiguredPostProcess:render()
 end
 
 local todo = [[
-- find_resource() -> find()
-  - Move the named assets thing into the right place in the user folder- Properly clear render targets on load
+- Properly clear render targets on load
 - Clean up push_vertex() so the call stack isn't four deep
 - Make sure the old draw API works and make sure the GPU setup for that is included in the base engine
   - Why is the grid totally filling up the vertex buffer? Are the sizes correct?
@@ -178,6 +177,11 @@ local todo = [[
 - Make the benchmark timer API better (e.g. local timer = tdengine.ffi.tm_begin(Timer.Render); timer:end())
 - Fully remove gpu.lua
 - Merge into the base engine...?
+]]
+
+local done = [[
+- find_resource() -> find()
+  - Move the named assets thing into the right place in the user folder
 ]]
 
 ----------------
@@ -208,8 +212,14 @@ function tdengine.gpus.init()
   self.draw_configurations = {}
 end
 
+function tdengine.gpus.update()
+  for pipeline in tdengine.iterator.values(self.graphics_pipelines) do
+    tdengine.ffi.gpu_graphics_pipeline_begin_frame(pipeline)
+  end
+end
+
 function tdengine.gpus.render()
-  tdengine.ffi.tm_begin('render')
+    tdengine.ffi.tm_begin('render')
 
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_render_scene)
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_scene_rendered)
@@ -224,7 +234,7 @@ function tdengine.gpus.render()
 end
 
 function tdengine.gpus.bind_entity(entity)
-  local pipeline = self.find_resource(GpuResourceKind.GraphicsPipeline, RenderPass.Editor)
+  local pipeline = self.find(RenderPass.Editor)
 
   local render = entity:find_component('Render')
   if render then
@@ -245,26 +255,26 @@ function tdengine.gpus.build(gpu_info)
   self.add_draw_configurations(gpu_info.draw_configurations)
 end
 
-function tdengine.gpus.find_resource(kind, id)
+function tdengine.gpus.find(id)
   if not tdengine.enum.is_enum(id) then 
-    log.warn('Tried to find GPU resource, but ID passed in was not an enum; kind = %s, id = %s', tostring(kind), tostring(id))
+    log.warn('Tried to find GPU resource, but ID passed in was not an enum; id = %s', tostring(id))
     return nil
   end
 
   local resource_map
-  if tdengine.enums.GpuResourceKind.RenderTarget:match(kind) then
+  if tdengine.enums.RenderTarget:match(id) then
     resource_map = self.render_targets
-  elseif tdengine.enums.GpuResourceKind.GraphicsPipeline:match(kind) then
+  elseif tdengine.enums.RenderPass:match(id) then
     resource_map = self.graphics_pipelines
-  elseif tdengine.enums.GpuResourceKind.CommandBuffer:match(kind) then
+  elseif tdengine.enums.CommandBuffer:match(id) then
     resource_map = self.command_buffers
-  elseif tdengine.enums.GpuResourceKind.StorageBuffer:match(kind) then
+  elseif tdengine.enums.StorageBuffer:match(id) then
     resource_map = self.storage_buffers
-  elseif tdengine.enums.GpuResourceKind.Shader:match(kind) then
+  elseif tdengine.enums.Shader:match(id) then
     resource_map = self.shaders
-  elseif tdengine.enums.GpuResourceKind.Resolution:match(kind) then
+  elseif tdengine.enums.Resolution:match(id) then
     resource_map = self.resolutions
-  elseif tdengine.enums.GpuResourceKind.DrawConfiguration:match(kind) then
+  elseif tdengine.enums.DrawConfiguration:match(id) then
     resource_map = self.draw_configurations
   end
 
@@ -272,11 +282,12 @@ function tdengine.gpus.find_resource(kind, id)
   local resource = resource_map[string_id]
   if not resource then
     dbg()
-    log.warn('Could not find GPU resource; kind = %s, id = %s', kind:to_string(), string_id)
+    log.warn('Could not find GPU resource; id = %s', string_id)
   end
 
   return resource
 end
+
 
 -------------------
 -- RENDER TARGET -- 

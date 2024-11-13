@@ -130,7 +130,6 @@ function EditorUtility:draw_grid()
       --tdengine.ffi.draw_line(min.x, y, max.x, y, line_thickness, self.colors.grid:to_vec4())
     end
 
-    print(i)
 
   end
 

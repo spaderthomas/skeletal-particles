@@ -60,9 +60,11 @@ function tdengine.enum.define(enum_name, values)
 			return coroutine.wrap(iterator)
 		end,
 		match = function(_, other)
-			print(enum_name, other, tdengine.enum.is_enum(other))
-			if not tdengine.enum.is_enum(other) then return false end
-			return other.name == enum_name
+			if not tdengine.enum.is_enum(other) then 
+				return false 
+			end
+			
+			return tdengine.enums[other.__enum].name == enum_name
 		end
 	}
 	setmetatable(tdengine.enums[enum_name], tdengine.internal.enum_proxy_metatable)

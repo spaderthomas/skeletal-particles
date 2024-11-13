@@ -9,6 +9,7 @@ function tdengine.update_game(dt)
 
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_begin_frame)
 
+  tdengine.gpus.update()
   tdengine.editor.update()
   tdengine.scene.update()
   tdengine.entity.update()

@@ -307,6 +307,7 @@ FM_LUA_EXPORT void                 gpu_bind_commands(GpuCommandBuffer* command_b
 FM_LUA_EXPORT void                 gpu_preprocess_commands(GpuCommandBuffer* command_buffer);
 FM_LUA_EXPORT void                 gpu_draw_commands(GpuCommandBuffer* command_buffer);
 FM_LUA_EXPORT GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
+FM_LUA_EXPORT void                 gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline);
 FM_LUA_EXPORT void                 gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
 FM_LUA_EXPORT void                 gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
 FM_LUA_EXPORT GpuRenderPass*       gpu_create_pass(GpuRenderPassDescriptor descriptor);

@@ -15,16 +15,16 @@ function DeferredRenderer:on_start_game()
     circle = BackedGpuBuffer:new('SdfCircle', self.sdf_buffer_length)
   }
 
-  self.lights = BackedGpuBuffer:new('Light', self.max_lights, tdengine.gpus.find_resource(GpuResourceKind.StorageBuffer, StorageBuffer.Lights))
+  self.lights = BackedGpuBuffer:new('Light', self.max_lights, tdengine.gpus.find(StorageBuffer.Lights))
   self.lights.gpu_buffer:zero()
 
   self.light_scene = ConfiguredPostProcess:new(
-    tdengine.gpus.find_resource(GpuResourceKind.GraphicsPipeline,  RenderPass.LightScene),
-    tdengine.gpus.find_resource(GpuResourceKind.DrawConfiguration, DrawConfiguration.LightScene)
+    tdengine.gpus.find( RenderPass.LightScene),
+    tdengine.gpus.find(DrawConfiguration.LightScene)
   )
   self.visualize_light_map = ConfiguredPostProcess:new(
-    tdengine.gpus.find_resource(GpuResourceKind.GraphicsPipeline,  RenderPass.VisualizeLightMap),
-    tdengine.gpus.find_resource(GpuResourceKind.DrawConfiguration, DrawConfiguration.VisualizeLightMap)
+    tdengine.gpus.find( RenderPass.VisualizeLightMap),
+    tdengine.gpus.find(DrawConfiguration.VisualizeLightMap)
   )
 
   -- local command_buffers = {}

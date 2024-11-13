@@ -364,6 +364,7 @@ void                 gpu_swap_buffers();
 GpuCommandBuffer*    gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
 void                 gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
 GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
+void                 gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline);
 void                 gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
 void                 gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
 GpuRenderPass*       gpu_create_pass(GpuRenderPassDescriptor descriptor);

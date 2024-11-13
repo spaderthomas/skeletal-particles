@@ -697,6 +697,13 @@ GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor 
 	return pipeline;
 }
 
+void gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline) {
+	auto& color_attachment = pipeline->color_attachment;
+	if (color_attachment.load_op == GpuLoadOp::Clear) {
+		gpu_clear_target(color_attachment.write);
+	}
+}
+
 void gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline) {
 	render.pipeline = pipeline;
 }
