@@ -75,7 +75,6 @@ void create_window(const char* title, u32 x, u32 y, WindowFlags flags) {
 	init_noise();
 	init_imgui();
 	init_render();
-	init_shaders(); // Invert control
 	init_texture_atlas(); // Invert control
 	init_backgrounds(); // Invert control
 	init_screenshots(); // Use the asset loader

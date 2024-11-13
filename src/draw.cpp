@@ -271,7 +271,7 @@ void set_blend_mode(i32 source, i32 dest) {
 
 
 void set_active_shader(const char* name) {
-	auto shader = find_shader(name);
+	auto shader = gpu_shader_find(name);
 	set_active_shader_ex(shader);
 }
 
@@ -393,7 +393,7 @@ void set_shader_immediate_ex(GpuShader* shader) {
 }
 
 void set_shader_immediate(const char* name) {
-	auto shader = find_shader(name);
+	auto shader = gpu_shader_find(name);
 	set_shader_immediate_ex(shader);
 }
 
@@ -565,11 +565,20 @@ u32 vertex_buffer_byte_size(VertexBuffer* buffer) {
 ////////////////
 // GPU SHADER //
 ////////////////
-GpuShader* gpu_create_shader(GpuShaderDescriptor descriptor) {
-	auto shader = arr_push(&shaders);
+GpuShader* gpu_shader_create(GpuShaderDescriptor descriptor) {
+	auto shader = arr_push(&render.shaders);
 	shader->init(descriptor);
 	return shader;
 }
+
+GpuShader* gpu_shader_find(const char* name) {
+	arr_for(render.shaders, shader) {
+		if (!strncmp(shader->name, name, MAX_PATH_LEN)) return shader;
+	}
+
+	return nullptr;
+}
+
 
 ///////////////////
 // RENDER TARGET //
@@ -879,11 +888,22 @@ void init_render() {
 	arr_init(&render.targets);
 	arr_init(&render.gpu_buffers);
 	arr_init(&render.graphics_pipelines);
+	arr_init(&render.shaders);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;
 	swapchain->color_buffer = 0;
 	swapchain->size = window.content_area;
+
+	auto reload_all_shaders = [](FileMonitor* file_monitor, FileChange* event, void* userdata) {
+		tdns_log.write("SHADER_RELOAD");
+		arr_for(render.shaders, shader) {
+			shader->reload();
+		}
+	};
+	render.shader_monitor = arr_push(&file_monitors);
+	render.shader_monitor->init(reload_all_shaders, FileChangeEvent::Modified, nullptr);
+	render.shader_monitor->add_directory(resolve_named_path("shaders"));
 }
 
 // RENDERER
@@ -1112,7 +1132,7 @@ u32 convert_gl_id(GlId id) {
 	if (id == GlId::Framebuffer) {
 		return GL_FRAMEBUFFER;
 	}
-	else if (id == GlId::Shader) {
+	else if (id == GlId::GpuShader) {
 		return GL_SHADER;
 	}
 	else if (id == GlId::Program) {

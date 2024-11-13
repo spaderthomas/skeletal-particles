@@ -59,7 +59,7 @@ struct GpuShaderDescriptor {
 	GpuShaderKind kind;
 };
 
-struct Shader {
+struct GpuShader {
 	enum class Kind : i32 {
 		Graphics,
 		Compute
@@ -87,28 +87,6 @@ struct Shader {
 	void init_graphics_ex(const char* name, const char* vertex_path, const char* fragment_path);
 	void init_compute(const char* name);
 	void init_compute_ex(const char* name, const char* compute_path);
-	void reload();
-	
-	unsigned int get_uniform_loc(const char* name);
-
-	void set(const Uniform& uniform);
-
-	void begin();
-	void end();
-
+	void reload();	
 };
-int Shader::active = -1;
-typedef Shader GpuShader;
-
-Array<Shader> shaders;
-
-void init_shaders();
-Shader* find_shader(const char* name);
-void add_shader(const char* name);
-void on_shader_change(FileMonitor* monitor, FileChange* event, void* userdata);
-
-struct ShaderManager {
-	FileMonitor* file_monitor;
-	FileMonitor* compute_monitor;
-};
-ShaderManager shader_manager;
+int GpuShader::active = -1;

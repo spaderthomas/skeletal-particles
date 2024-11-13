@@ -1,3 +1,6 @@
+////////////////////
+// SHADER LOADING //
+////////////////////
 tstring build_shader_source(const char* file_path) {
 	auto shader_file = copy_string(file_path, &bump_allocator);
 	auto shader_directory = resolve_named_path("shaders");
@@ -43,7 +46,11 @@ void check_shader_linkage(u32 shader, const char* file_path) {
 	}
 }
 
-void Shader::init(GpuShaderDescriptor descriptor) {
+
+////////////////
+// GPU SHADER //
+////////////////
+void GpuShader::init(GpuShaderDescriptor descriptor) {
 	if (descriptor.kind == GpuShaderKind::Compute) {
 		auto compute_path = resolve_format_path_ex("compute_shader", descriptor.compute_shader, &bump_allocator);
 		init_compute_ex(descriptor.name, compute_path);
@@ -55,14 +62,14 @@ void Shader::init(GpuShaderDescriptor descriptor) {
 	}
 }
 
-void Shader::init_graphics(const char* name) {
+void GpuShader::init_graphics(const char* name) {
 	auto vertex_path = resolve_format_path_ex("vertex_shader", name, &bump_allocator);
 	auto fragment_path = resolve_format_path_ex("fragment_shader", name, &bump_allocator);
 	init_graphics_ex(name, vertex_path, fragment_path);
 }
 
-void Shader::init_graphics_ex(const char* name, const char* vertex_shader, const char* fragment_shader) {
-	kind = Shader::Kind::Graphics;
+void GpuShader::init_graphics_ex(const char* name, const char* vertex_shader, const char* fragment_shader) {
+	kind = GpuShader::Kind::Graphics;
 	this->name = copy_string(name);
 	this->vertex_path = copy_string(vertex_shader);
 	this->fragment_path = copy_string(fragment_shader);
@@ -102,20 +109,19 @@ void Shader::init_graphics_ex(const char* name, const char* vertex_shader, const
 	glLinkProgram(shader_program);
 	check_shader_compilation(shader_program, vertex_path);
 
-	// Push the data into the shader. If anything fails, the shader won't get
-	// the new GL handles
+	// Push the data into the shader. If anything fails, the shader won't get the new GL handles
 	program = shader_program;
 	glGetProgramiv(shader_program, GL_ACTIVE_UNIFORMS, (int*)&num_uniforms);
 
 	set_gl_name(static_cast<u32>(GlId::Program), program, strlen(name), name);
 }
 
-void Shader::init_compute(const char* name) {
+void GpuShader::init_compute(const char* name) {
 	init_compute_ex(name, resolve_format_path_ex("compute_shader", name, &bump_allocator));
 }
 
-void Shader::init_compute_ex(const char* name, const char* compute_path) {
-	this->kind = Shader::Kind::Compute;
+void GpuShader::init_compute_ex(const char* name, const char* compute_path) {
+	this->kind = GpuShader::Kind::Compute;
 	this->name = copy_string(name);
 	this->compute_path = copy_string(compute_path);
 	auto source = build_shader_source(this->compute_path);
@@ -132,38 +138,28 @@ void Shader::init_compute_ex(const char* name, const char* compute_path) {
 	check_shader_compilation(this->program, this->compute_path);
 }
 
-void Shader::reload() {
+void GpuShader::reload() {
 	//tdns_log.write("Reloading shader %s (%s)", name, kind == Shader::Kind::Graphics ? "Graphics" : "Compute");
 
 	glDeleteProgram(program);
 
-	if (kind == Shader::Kind::Graphics) {
+	if (kind == GpuShader::Kind::Graphics) {
 		glDeleteShader(vertex);
 		glDeleteShader(fragment);
 		
 		init_graphics_ex(this->name, copy_string(this->vertex_path, &bump_allocator), copy_string(this->fragment_path, &bump_allocator));
 	}
-	else if (kind == Shader::Kind::Compute) {
+	else if (kind == GpuShader::Kind::Compute) {
 		glDeleteShader(compute);
 		
 		init_compute_ex(this->name, copy_string(this->compute_path, &bump_allocator));
 	}
 }
 
-Shader* find_shader(const char* name) {
-	arr_for(shaders, shader) {
-		if (!strncmp(shader->name, name, MAX_PATH_LEN)) return shader;
-	}
 
-	return nullptr;
-}
-
-ShaderManager& get_shader_manager() {
-	static ShaderManager manager;
-	return manager;
-}
-
-
+/////////////
+// UNIFORM //
+/////////////
 Uniform::Uniform() : kind(UniformKind::I32), as_i32(0) {}
 Uniform::Uniform(const char* name) : kind(UniformKind::I32), as_i32(0) {
 	strncpy(this->name, name, max_name_len);
@@ -191,79 +187,28 @@ Uniform::Uniform(const char* name, float32 f) : kind(UniformKind::F32), f32(f) {
 }
 
 bool are_uniforms_equal(Uniform& a, Uniform& b) {
-    if (a.kind != b.kind) return false;
-    if (std::strncmp(a.name, b.name, Uniform::max_name_len) != 0) return false;
+	if (a.kind != b.kind) return false;
+	if (std::strncmp(a.name, b.name, Uniform::max_name_len) != 0) return false;
 
-    // Then, compare the union members based on `kind`
-    switch (a.kind) {
-        case UniformKind::Matrix4:
+	// Then, compare the union members based on `kind`
+	switch (a.kind) {
+		case UniformKind::Matrix4:
 			return !std::memcmp(&a.mat4, &b.mat4, sizeof(HMM_Mat4));
 		case UniformKind::Matrix3:
 			return std::memcmp(&a.mat3, &b.mat3, sizeof(HMM_Mat3));
-        case UniformKind::Vector4:
-            return a.vec4 == b.vec4;
-        case UniformKind::Vector3:
-            return a.vec3 == b.vec3;
-        case UniformKind::Vector2:
-            return v2_equal(a.vec2, b.vec2);
-        case UniformKind::I32:
-            return a.as_i32 == b.as_i32;
-        case UniformKind::F32:
-            return a.f32 == b.f32;
-        case UniformKind::Texture:
-            return a.texture == b.texture;
-        default:
-            return true;
-    }
-}
-
-
-void on_shader_change(FileMonitor* monitor, FileChange* event, void* userdata) {
-	tdns_log.write("SHADER_RELOAD");
-	arr_for(shaders, shader) {
-		shader->reload();
+		case UniformKind::Vector4:
+			return a.vec4 == b.vec4;
+		case UniformKind::Vector3:
+			return a.vec3 == b.vec3;
+		case UniformKind::Vector2:
+			return v2_equal(a.vec2, b.vec2);
+		case UniformKind::I32:
+			return a.as_i32 == b.as_i32;
+		case UniformKind::F32:
+			return a.f32 == b.f32;
+		case UniformKind::Texture:
+			return a.texture == b.texture;
+		default:
+			return true;
 	}
-}
-
-void init_shaders() {
-	shader_manager.file_monitor = arr_push(&file_monitors);
-	shader_manager.file_monitor->init(on_shader_change, FileChangeEvent::Modified, nullptr);
-	
-	auto shader_dir = resolve_named_path("shaders");
-	shader_manager.file_monitor->add_directory(shader_dir);
-	
-	arr_init(&shaders, 32);
-	
-	// auto add_compute_shader = [](const char* name) {
-	// 	auto shader = arr_push(&shaders);
-	// 	shader->init_compute(name);
-	// };
-
-	// add_compute_shader("fluid_init");
-	// add_compute_shader("fluid_update");
-	// add_compute_shader("fluid_eulerian_init");
-	// add_compute_shader("fluid_eulerian_update");
-
-	// auto add_graphics_shader = [](const char* name) {
-	// 	auto shader = arr_push(&shaders);
-	// 	shader->init_graphics(name);
-	// };
-
-	// add_graphics_shader("shape");
-	// add_graphics_shader("sdf");
-	// add_graphics_shader("sdf_normal");
-	// add_graphics_shader("light_map");
-	// add_graphics_shader("apply_lighting");
-	// add_graphics_shader("solid");
-	// add_graphics_shader("sprite");
-	// add_graphics_shader("text");
-	// add_graphics_shader("post_process");
-	// add_graphics_shader("blit");
-	// add_graphics_shader("particle");
-	// add_graphics_shader("fluid");
-	// add_graphics_shader("fluid_eulerian");
-	// add_graphics_shader("scanline");
-	// add_graphics_shader("bloom");
-	// add_graphics_shader("chromatic_aberration");
-
 }

@@ -36,7 +36,7 @@ u32 convert_draw_mode(DrawMode mode);
 
 enum class GlId : u32 {
 	Framebuffer = 0,
-	Shader = 1,
+	GpuShader = 1,
 	Program = 2,
 };
 u32 convert_gl_id(GlId id);
@@ -83,7 +83,7 @@ struct GpuRenderTarget;
 struct GlState {
 	bool scissor = false;
 	Rect scissor_region = {};
-	Shader* shader = nullptr;
+	GpuShader* shader = nullptr;
 	i32 layer = 0;
 	bool world_space = false;
 	bool blend_enabled = true;
@@ -285,16 +285,21 @@ struct RenderEngine {
 
 	u8* screenshot;
 
-	Array<GpuCommandBuffer,    32> command_buffers;
-	Array<GpuRenderPass,       32> render_passes;
-	Array<GpuRenderTarget,     32> targets;
-	Array<GpuGraphicsPipeline, 32> graphics_pipelines;
-	Array<GpuBuffer,           32> gpu_buffers;
+	Array<GpuCommandBuffer,    32>  command_buffers;
+	Array<GpuRenderPass,       32>  render_passes;
+	Array<GpuRenderTarget,     32>  targets;
+	Array<GpuGraphicsPipeline, 32>  graphics_pipelines;
+	Array<GpuBuffer,           32>  gpu_buffers;
+	Array<GpuShader,           128> shaders;
 
 	GpuRenderPass* render_pass;
 	GpuCommandBuffer* command_buffer;
 	
 	GpuGraphicsPipeline* pipeline;
+
+
+	FileMonitor* shader_monitor;
+
 
 
 	DrawCall* find_draw_call();
@@ -306,7 +311,8 @@ RenderEngine render;
 /////////
 // GPU //
 /////////
-FM_LUA_EXPORT GpuShader*           gpu_create_shader(GpuShaderDescriptor descriptor);
+FM_LUA_EXPORT GpuShader*           gpu_shader_create(GpuShaderDescriptor descriptor);
+FM_LUA_EXPORT GpuShader*           gpu_shader_find(const char* name);
 FM_LUA_EXPORT GpuRenderTarget*     gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
 FM_LUA_EXPORT GpuRenderTarget*     gpu_create_target(float x, float y);
 FM_LUA_EXPORT GpuRenderTarget*     gpu_acquire_swapchain();

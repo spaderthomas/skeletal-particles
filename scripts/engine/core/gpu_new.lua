@@ -176,11 +176,6 @@ function ConfiguredPostProcess:render()
 end
 
 local todo = [[
-- UniformBinding is still a mess of unimplemented and messy uniforms; fix those up
-  - Can I just move all the union-uniform stuff into Lua? I think that'd mean moving all of your current draw stuff into Lua, which 
-  isn't necessarily a problem. It's more that your whole immediate mode API doesn't make as much sense here. Or does it...? That's
-  something else. What is actually my bottleneck in drawing? I definitely want, for example, all the grid draw calls to get batched
-  together. I want *some* kind of auto-batching.
 - Rename Shader
 - Rename ConfiguredPostProcess
 - Rename RenderPass enum -> GraphicsPipeline
@@ -202,6 +197,11 @@ local done = [[
 - Make sure the old draw API works and mawe sure the GPU setup for that is included in the base engine
   - Why is the grid totally filling up the vertex buffer? Are the sizes correct?
 - What is a store op?
+- UniformBinding is still a mess of unimplemented and messy uniforms; fix those up
+  - Can I just move all the union-uniform stuff into Lua? I think that'd mean moving all of your current draw stuff into Lua, which 
+  isn't necessarily a problem. It's more that your whole immediate mode API doesn't make as much sense here. Or does it...? That's
+  something else. What is actually my bottleneck in drawing? I definitely want, for example, all the grid draw calls to get batched
+  together. I want *some* kind of auto-batching.
 
 ]]
 
@@ -375,7 +375,7 @@ end
 -- SHADER --
 ------------
 function tdengine.gpus.add_shader(id, descriptor)
-  self.shaders[id:to_string()] = tdengine.ffi.gpu_create_shader(descriptor)
+  self.shaders[id:to_string()] = tdengine.ffi.gpu_shader_create(descriptor)
 end
 
 function tdengine.gpus.add_shaders(shaders)

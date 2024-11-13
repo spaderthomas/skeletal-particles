@@ -354,7 +354,7 @@ typedef struct {
 
 
 
-GpuShader*           gpu_create_shader(GpuShaderDescriptor descriptor);
+GpuShader*           gpu_shader_create(GpuShaderDescriptor descriptor);
 GpuRenderTarget*     gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
 GpuRenderTarget*     gpu_create_target(float x, float y);
 GpuRenderTarget*     gpu_acquire_swapchain();
