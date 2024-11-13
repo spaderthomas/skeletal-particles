@@ -94,9 +94,9 @@ function EditorUtility:draw_grid()
   tdengine.ffi.set_layer(tdengine.editor.layers.grid)
 
   local grid_size = self.style.grid.size
-  local line_thickness = 1
+  local line_thickness = 2
 
-  local nx, ny = tdengine.window.get_native_resolution():unpack()
+  local size = tdengine.gpus.find(RenderTarget.Editor).size
   local camera = tdengine.editor.find('EditorCamera')
   if tdengine.tick then
     local game_camera = tdengine.entity.find('Camera')
@@ -112,8 +112,8 @@ function EditorUtility:draw_grid()
   min.y = min.y - tdengine.math.fmod(min.y, grid_size)
 
   local max = tdengine.vec2(
-    camera.offset.x + nx + tdengine.math.fmod(nx, grid_size) + slop,
-    camera.offset.y + ny + tdengine.math.fmod(ny, grid_size) + slop
+    camera.offset.x + size.x + tdengine.math.fmod(size.x, grid_size) + slop,
+    camera.offset.y + size.y + tdengine.math.fmod(size.y, grid_size) + slop
   )
 
   if self.style.grid.draw_body then
@@ -121,7 +121,7 @@ function EditorUtility:draw_grid()
     -- Draw vertical lines
     for x = min.x, max.x, grid_size do  
       i = i + 1
-      --tdengine.ffi.draw_line(x, min.y, x, max.y, line_thickness, self.colors.grid:to_vec4())
+      tdengine.ffi.draw_line(x, min.y, x, max.y, line_thickness, self.colors.grid:to_vec4())
     end
 
     -- Draw horizontal lines

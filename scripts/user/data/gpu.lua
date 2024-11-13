@@ -66,7 +66,7 @@ return {
 		{
 			id = RenderTarget.Editor,
 			descriptor = {
-				resolution = Resolution.Native,
+				resolution = Resolution.Upscaled,
 			}
 		},
 

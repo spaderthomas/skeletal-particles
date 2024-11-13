@@ -6,19 +6,15 @@ Vertex* push_vertex(float px, float py, Vector4 color) {
 }
 
 Vertex* push_vertex(float px, float py, Vector2 uv, Vector4 color) {
-	auto vertex = alloc_vertices(1);
+	assert(render.pipeline);
+
+	auto vertex = (Vertex*)gpu_command_buffer_alloc_vertex_data(render.pipeline->command_buffer, 1);
 	vertex->position.x = px;
 	vertex->position.y = py;
 	vertex->uv = uv;
 	vertex->color = color;
 
 	return vertex;
-}
-
-Vertex* alloc_vertices(u32 count) {
-	auto draw_call = render.find_draw_call();
-	draw_call->count += count;
-	return (Vertex*)vertex_buffer_reserve(&render.pipeline->command_buffer->vertex_buffer, count);
 }
 
 void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity) {
@@ -29,9 +25,11 @@ void push_quad(float px, float py, float dx, float dy, Vector2* uv, Vector4 colo
 	static Vector2 default_uvs [6] = fm_quad(1, 0, 0, 1);
 	if (!uv) uv = default_uvs;
 
+	assert(render.pipeline);
+
 	Vector2 vx [6] = fm_quad(py, py - dy, px, px + dx);
 	for (i32 i = 0; i < 6; i++) {
-		auto vertex = alloc_vertices(1);
+		auto vertex = (Vertex*)gpu_command_buffer_alloc_vertex_data(render.pipeline->command_buffer, 1);
 		vertex->position.x = vx[i].x;
 		vertex->position.y = vx[i].y;
 		vertex->color = color;
@@ -688,19 +686,68 @@ GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descripto
 	return buffer;
 }
 
-void gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count) {
+DrawCall* gpu_command_buffer_alloc_draw_call(GpuCommandBuffer* command_buffer) {
 	assert(command_buffer);
-	vertex_buffer_push(&command_buffer->vertex_buffer, data, count);
+
+	DrawCall draw_call;
+	fill_memory_u8(&draw_call, sizeof(DrawCall), 0);
+	draw_call.offset = command_buffer->vertex_buffer.size;
+	draw_call.count = 0;
+	draw_call.state = GlState();
+
+	if (command_buffer->draw_calls.size) {
+		draw_call.copy_from(arr_back(&command_buffer->draw_calls));
+	}
+
+	return arr_push(&command_buffer->draw_calls, draw_call);
 }
 
-void gpu_bind_commands(GpuCommandBuffer* command_buffer) {
+DrawCall* gpu_command_buffer_find_draw_call(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
+
+	if (!command_buffer->draw_calls.size) gpu_command_buffer_alloc_draw_call(command_buffer);
+	return arr_back(&command_buffer->draw_calls);
+}
+
+DrawCall* gpu_command_buffer_flush_draw_call(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
+
+	// Look at the current draw call to determine if it's empty; some operations want to always flush the draw call (i.e. changing
+	// shaders -- there's no way to batch those). However, if some operation just before that flushed the draw call, you end up
+	// with these empty draw calls sprinkled through the command buffer.
+	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
+	if (!draw_call->count) return draw_call;
+	if (!draw_call->state.shader) return draw_call;
+
+	return gpu_command_buffer_alloc_draw_call(command_buffer);
+}
+
+u8* gpu_command_buffer_alloc_vertex_data(GpuCommandBuffer* command_buffer, u32 count) {
+	assert(command_buffer);
+
+	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
+	draw_call->count += count;
+
+	return vertex_buffer_reserve(&command_buffer->vertex_buffer, count);
+}
+
+u8* gpu_command_buffer_push_vertex_data(GpuCommandBuffer* command_buffer, void* data, u32 count) {
+	assert(command_buffer);
+
+	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
+	draw_call->count += count;
+
+	return vertex_buffer_push(&command_buffer->vertex_buffer, data, count);
+}
+
+void gpu_command_buffer_bind(GpuCommandBuffer* command_buffer) {
 	assert(command_buffer);
 	glBindVertexArray(command_buffer->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, command_buffer->vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_byte_size(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW); // @VERTEX
 }
 
-void gpu_preprocess_commands(GpuCommandBuffer* command_buffer) {
+void gpu_command_buffer_preprocess(GpuCommandBuffer* command_buffer) {
 	// @VERTEX
 	// arr_for(command_buffer->draw_calls, draw_call) {
 	// 	if (!draw_call->count) continue;
@@ -716,7 +763,7 @@ void gpu_preprocess_commands(GpuCommandBuffer* command_buffer) {
 	// qsort(command_buffer->draw_calls.data, command_buffer->draw_calls.size, sizeof(DrawCall), &DrawCall::compare);
 }
 
-void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
+void gpu_command_buffer_render(GpuCommandBuffer* command_buffer) {
 	GlStateDiff state_diff;
 	arr_for(command_buffer->draw_calls, draw_call) {
 		if (!draw_call->count) continue;
@@ -730,10 +777,16 @@ void gpu_draw_commands(GpuCommandBuffer* command_buffer) {
 	vertex_buffer_clear(&command_buffer->vertex_buffer); // @VERTEX
 }
 
+void gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
+	gpu_command_buffer_bind(command_buffer);
+	gpu_command_buffer_preprocess(command_buffer);
+	gpu_command_buffer_render(command_buffer);	
+}
 
-/////////////////
-// RENDER PASS //
-/////////////////
+
+///////////////////////
+// GRAPHICS PIPELINE //
+///////////////////////
 GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor) {
 	auto pipeline = arr_push(&render.graphics_pipelines);
 	pipeline->color_attachment = descriptor.color_attachment;
@@ -742,6 +795,7 @@ GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor 
 }
 
 void gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline) {
+	assert(pipeline);
 	auto& color_attachment = pipeline->color_attachment;
 	if (color_attachment.load_op == GpuLoadOp::Clear) {
 		gpu_clear_target(color_attachment.write);
@@ -749,26 +803,29 @@ void gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline) {
 }
 
 void gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline) {
+	assert(pipeline);
 	render.pipeline = pipeline;
+
+	gpu_graphics_pipeline_alloc_draw_call(pipeline);
 }
 
 void gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline) {
-	gpu_submit_commands(pipeline->command_buffer);
+	assert(pipeline);
+	gpu_command_buffer_submit(pipeline->command_buffer);
+}
+
+DrawCall* gpu_graphics_pipeline_alloc_draw_call(GpuGraphicsPipeline* pipeline) {
+	assert(pipeline);
+	auto draw_call = gpu_command_buffer_alloc_draw_call(pipeline->command_buffer);
+	draw_call->state.render_target = pipeline->color_attachment.write;
+	return draw_call;
 }
 
 
-GpuRenderPass* gpu_create_pass(GpuRenderPassDescriptor descriptor) { return nullptr; }
-void gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer) {}
-void gpu_end_pass() {}
 
-void gpu_submit_commands(GpuCommandBuffer* command_buffer) {
-	gpu_bind_commands(command_buffer);
-	gpu_preprocess_commands(command_buffer);
-	gpu_draw_commands(command_buffer);	
-}
-
-
-// BUFFERS
+/////////////////////
+// STORAGE BUFFERS //
+/////////////////////
 GpuBuffer* gpu_create_buffer() {
 	auto buffer = arr_push(&render.gpu_buffers);
 	glGenBuffers(1, &buffer->handle);
@@ -831,39 +888,19 @@ void init_render() {
 
 // RENDERER
 DrawCall* RenderEngine::add_draw_call() {
-	if (!this->pipeline) return nullptr;
-	
-	DrawCall draw_call;
-	memset(&draw_call, 0, sizeof(DrawCall));
-	draw_call.offset = this->pipeline->command_buffer->vertex_buffer.size; // @VERTEX
-	draw_call.count = 0;
+	assert(this->pipeline);
 
-	if (this->pipeline->command_buffer->draw_calls.size) {
-		auto previous = find_draw_call();
-		draw_call.copy_from(previous);
-	}
-	else {
-		draw_call.state = GlState();
-	}
-	
-	draw_call.state.render_target = this->pipeline->color_attachment.write;
-
-	return arr_push(&this->pipeline->command_buffer->draw_calls, draw_call);
+	return gpu_graphics_pipeline_alloc_draw_call(this->pipeline);
 }
 	
 DrawCall* RenderEngine::flush_draw_call() {
-	auto draw_call = find_draw_call();
-	if (!draw_call->count) return draw_call;
-	if (!draw_call->state.shader) return draw_call;
-	
-	return add_draw_call();
+	assert(this->pipeline);
+	return gpu_command_buffer_flush_draw_call(this->pipeline->command_buffer);
 }
 
 DrawCall* RenderEngine::find_draw_call() {
-	if (!this->pipeline) return nullptr;
-
-	if (!this->pipeline->command_buffer->draw_calls.size) add_draw_call();
-	return arr_back(&this->pipeline->command_buffer->draw_calls);
+	assert(this->pipeline);
+	return gpu_command_buffer_find_draw_call(this->pipeline->command_buffer);
 }
 
 void DrawCall::copy_from(DrawCall* other) {

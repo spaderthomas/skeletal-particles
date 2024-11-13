@@ -284,6 +284,7 @@ typedef enum {
 typedef struct GpuShader GpuShader;
 typedef struct GpuBuffer GpuBuffer;
 typedef struct GpuCommandBuffer GpuCommandBuffer;
+typedef struct DrawCall DrawCall;
 
 typedef struct {
   const char* name;
@@ -362,15 +363,20 @@ void                 gpu_clear_target(GpuRenderTarget* target);
 void                 gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination);
 void                 gpu_swap_buffers();
 GpuCommandBuffer*    gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
-void                 gpu_push_vertex(GpuCommandBuffer* command_buffer, void* data, u32 count);
+DrawCall*            gpu_command_buffer_alloc_draw_call(GpuCommandBuffer* command_buffer);
+DrawCall*            gpu_command_buffer_find_draw_call(GpuCommandBuffer* command_buffer);
+DrawCall*            gpu_command_buffer_flush_draw_call(GpuCommandBuffer* command_buffer);
+u8*                  gpu_command_buffer_alloc_vertex_data(GpuCommandBuffer* command_buffer, u32 count);
+u8*                  gpu_command_buffer_push_vertex_data(GpuCommandBuffer* command_buffer, void* data, u32 count);
+void                 gpu_command_buffer_bind(GpuCommandBuffer* command_buffer);
+void                 gpu_command_buffer_preprocess(GpuCommandBuffer* command_buffer);
+void                 gpu_command_buffer_render(GpuCommandBuffer* command_buffer);
+void                 gpu_command_buffer_submit(GpuCommandBuffer* command_buffer);
 GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
 void                 gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline);
 void                 gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
 void                 gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
-GpuRenderPass*       gpu_create_pass(GpuRenderPassDescriptor descriptor);
-void                 gpu_begin_pass(GpuRenderPass* render_pass, GpuCommandBuffer* command_buffer);
-void                 gpu_end_pass();
-void                 gpu_submit_commands(GpuCommandBuffer* command_buffer);
+DrawCall*            gpu_graphics_pipeline_alloc_draw_call(GpuGraphicsPipeline* pipeline);
 GpuBuffer*           gpu_create_buffer();
 void                 gpu_memory_barrier(u32 barrier);
 void                 gpu_bind_buffer(GpuBuffer* buffer);
@@ -922,7 +928,6 @@ function tdengine.init_phase_1()
   tdengine.paths.init()
   tdengine.time_metric.init()
   tdengine.input.init()
-  tdengine.gpu.init()
   tdengine.gpus.init()
   tdengine.state.init()
   tdengine.animation.load()
