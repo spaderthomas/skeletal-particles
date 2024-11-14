@@ -32,8 +32,8 @@ Shader = tdengine.enum.define(
 	}
 )
 
-RenderPass = tdengine.enum.define(
-  'RenderPass',
+GraphicsPipeline = tdengine.enum.define(
+  'GraphicsPipeline',
   {
     ChromaticAberration = 0,
     BloomBlur = 1,
@@ -46,6 +46,7 @@ RenderPass = tdengine.enum.define(
 		UpscaleLitScene = 8,
     Normals = 9,
     Editor = 10,
+    Shape = 11,
   }
 )
 
@@ -80,6 +81,7 @@ CommandBuffer = tdengine.enum.define(
 		Upscale = 2,
 		LightMap = 3,
     Editor = 4,
+    Shape = 5,
 	}
 )
 

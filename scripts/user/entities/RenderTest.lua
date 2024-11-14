@@ -7,9 +7,10 @@ function RenderTest:update()
 end
 
 function RenderTest:draw()
-  local pipeline = tdengine.gpus.find(RenderPass.Color)
+  local pipeline = tdengine.gpus.find(GraphicsPipeline.Color)
   tdengine.ffi.gpu_graphics_pipeline_bind(pipeline)
-  tdengine.ffi.draw_quad(0, 0, 100, 100, tdengine.colors.white:to_vec4())
+  tdengine.ffi.set_world_space(true)
+  tdengine.ffi.draw_quad(0, 16, 16, 16, tdengine.colors.white:to_vec4())
   tdengine.ffi.gpu_graphics_pipeline_submit(pipeline)
 end
 

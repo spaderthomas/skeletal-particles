@@ -18,12 +18,12 @@ function DeferredRenderer:on_start_game()
   self.lights = BackedGpuBuffer:new('Light', self.max_lights, tdengine.gpus.find(StorageBuffer.Lights))
   self.lights.gpu_buffer:zero()
 
-  self.light_scene = ConfiguredPostProcess:new(
-    tdengine.gpus.find( RenderPass.LightScene),
+  self.light_scene = PreconfiguredPostProcess:new(
+    tdengine.gpus.find( GraphicsPipeline.LightScene),
     tdengine.gpus.find(DrawConfiguration.LightScene)
   )
-  self.visualize_light_map = ConfiguredPostProcess:new(
-    tdengine.gpus.find( RenderPass.VisualizeLightMap),
+  self.visualize_light_map = PreconfiguredPostProcess:new(
+    tdengine.gpus.find( GraphicsPipeline.VisualizeLightMap),
     tdengine.gpus.find(DrawConfiguration.VisualizeLightMap)
   )
 

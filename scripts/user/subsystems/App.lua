@@ -17,47 +17,7 @@ function App:on_init_game()
 	tdengine.ffi.set_window_icon(tdengine.ffi.resolve_format_path('image', 'logo/icon.png'):to_interned())
 	tdengine.ffi.set_target_fps(144)
 
-	-- self:build_renderer()
 	tdengine.gpus.build(tdengine.module.read_from_named_path('gpu_info'))
-end
-
-function App:build_renderer()
-	local render_targets = {
-		scene          = tdengine.gpu.add_render_target('scene',          self.native_resolution.x, self.native_resolution.y),
-		ping_pong      = tdengine.gpu.add_render_target('ping_pong',      self.native_resolution.x, self.native_resolution.y),
-		post_process_a = tdengine.gpu.add_render_target('post_process_a', self.output_resolution.x, self.output_resolution.y),
-		post_process_b = tdengine.gpu.add_render_target('post_process_b', self.output_resolution.x, self.output_resolution.y),
-		bloom_a        = tdengine.gpu.add_render_target('bloom_a',        self.output_resolution.x, self.output_resolution.y),
-		bloom_b        = tdengine.gpu.add_render_target('bloom_b',        self.output_resolution.x, self.output_resolution.y),
-		output         = tdengine.gpu.add_render_target('output',         self.gbuffer_resolution.x, self.gbuffer_resolution.y),
-	}
-
-	local command_buffers = {}
-
-	local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
-	buffer_descriptor.num_vertex_attributes = 3
-	buffer_descriptor.max_vertices = 64 * 1024
-	buffer_descriptor.max_draw_calls = 256
-	buffer_descriptor.vertex_attributes = ffi.new('VertexAttribute[3]')
-	buffer_descriptor.vertex_attributes[0].count = 3
-	buffer_descriptor.vertex_attributes[0].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	buffer_descriptor.vertex_attributes[1].count = 4
-	buffer_descriptor.vertex_attributes[1].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	buffer_descriptor.vertex_attributes[2].count = 2
-	buffer_descriptor.vertex_attributes[2].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	command_buffers.scene = tdengine.gpu.add_command_buffer('scene', buffer_descriptor)
-
-	buffer_descriptor.max_vertices = 600
-	buffer_descriptor.max_draw_calls = 10
-	command_buffers.post_process = tdengine.gpu.add_command_buffer('post_process', buffer_descriptor)
-	command_buffers.fluid = tdengine.gpu.add_command_buffer('fluid', buffer_descriptor)
-
-	tdengine.gpu.add_render_pass('scene',         command_buffers.scene,        render_targets.scene,          render_targets.ping_pong, tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('output',        command_buffers.post_process, render_targets.output,         nil,                      tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('fluid',         command_buffers.scene,        render_targets.scene,          render_targets.ping_pong)
-	tdengine.gpu.add_render_pass('post_process',  command_buffers.post_process, render_targets.post_process_a, render_targets.post_process_b)
-	tdengine.gpu.add_render_pass('bloom_filter',  command_buffers.post_process, render_targets.bloom_a,        nil,                      tdengine.enums.GpuLoadOp.Clear)
-	tdengine.gpu.add_render_pass('bloom_blur',    command_buffers.post_process, render_targets.bloom_b,        render_targets.bloom_a)
 end
 
 function App:on_start_game()

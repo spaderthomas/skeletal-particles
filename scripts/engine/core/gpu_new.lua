@@ -142,26 +142,15 @@ function GpuDrawConfiguration:bind()
 end
 
 
-ConfiguredPostProcess = tdengine.class.define('ConfiguredPostProcess')
-function ConfiguredPostProcess:init(pipeline, draw_configuration)
+PreconfiguredPostProcess = tdengine.class.define('PreconfiguredPostProcess')
+function PreconfiguredPostProcess:init(pipeline, draw_configuration)
   self.pipeline = pipeline
   self.draw_configuration = draw_configuration
 end
 
-function ConfiguredPostProcess:render()
+function PreconfiguredPostProcess:render()
   tdengine.ffi.gpu_graphics_pipeline_bind(self.pipeline)
   self.draw_configuration:bind()
-
-  -- local binding = UniformBinding:new('u_float', .5, UniformKind.F32)
-  -- local binding = UniformBinding:new('u_int', 1, UniformKind.I32)
-  -- local binding = UniformBinding:new('u_vec2', ffi.new('Vector2', 1.0, 2.0), UniformKind.Vector2)
-  -- local binding = UniformBinding:new('u_vec3', ffi.new('Vector3', 1.0, 2.0, 6.0), UniformKind.Vector3)
-  -- local binding = UniformBinding:new('u_vec4', ffi.new('Vector4', 1.0, 2.0, 3.0, 10.0), UniformKind.Vector4)
-  -- local binding = UniformBinding:new('u_mat3', Matrix3:Identity(), UniformKind.Matrix3)
-  local m = Matrix4:new()
-  local binding = UniformBinding:new('u_mat4', m, UniformKind.Matrix4)
-  -- local binding = UniformBinding:new('u_render_target', RenderTarget.Editor, UniformKind.RenderTarget)
-  binding:bind()
 
   local size = self.pipeline.color_attachment.write.size
   ffi.C.push_quad(
@@ -176,9 +165,6 @@ function ConfiguredPostProcess:render()
 end
 
 local todo = [[
-- Rename Shader
-- Rename ConfiguredPostProcess
-- Rename RenderPass enum -> GraphicsPipeline
 - Draw an SDF circle using the other buffer
 - Render component should draw to the correct pipeline
 - Reimplement all of the post processing stuff
@@ -202,6 +188,7 @@ local done = [[
   isn't necessarily a problem. It's more that your whole immediate mode API doesn't make as much sense here. Or does it...? That's
   something else. What is actually my bottleneck in drawing? I definitely want, for example, all the grid draw calls to get batched
   together. I want *some* kind of auto-batching.
+- Rename GraphicsPipeline enum -> GraphicsPipeline
 
 ]]
 
@@ -255,7 +242,7 @@ function tdengine.gpus.render()
 end
 
 function tdengine.gpus.bind_entity(entity)
-  local pipeline = self.find(RenderPass.Editor)
+  local pipeline = self.find(GraphicsPipeline.Editor)
 
   local render = entity:find_component('Render')
   if render then
@@ -285,7 +272,7 @@ function tdengine.gpus.find(id)
   local resource_map
   if tdengine.enums.RenderTarget:match(id) then
     resource_map = self.render_targets
-  elseif tdengine.enums.RenderPass:match(id) then
+  elseif tdengine.enums.GraphicsPipeline:match(id) then
     resource_map = self.graphics_pipelines
   elseif tdengine.enums.CommandBuffer:match(id) then
     resource_map = self.command_buffers

@@ -6,27 +6,7 @@ in vec2 f_uv;
 
 out vec4 color;
 
-uniform float u_float;
-uniform int u_int;
-uniform vec2 u_vec2;
-uniform vec3 u_vec3;
-uniform vec4 u_vec4;
-uniform mat3 u_mat3;
-uniform mat4 u_mat4;
-uniform sampler2D u_render_target;
-uniform sampler2D u_pipeline_output;
-
 void main () {
-    DBG_FLOAT(u_mat4[0][0]);
-    DBG_FLOAT(u_mat3[0][0]);
-    DBG_FLOAT((u_vec4.x + u_vec4.y + u_vec4.z) / u_vec4.w);
-    DBG_FLOAT((u_vec3.x + u_vec3.y) / u_vec3.z);
-    DBG_FLOAT(u_vec2.x / u_vec2.y);
-    DBG_FLOAT(float(u_int) / 2.0);
-    DBG_FLOAT(u_float);
-    DBG_TEX(u_render_target);
-
-    DBG(indian_red);
     vec2 position = gl_FragCoord.xy + camera;
 
     vec4 sample_color = black;

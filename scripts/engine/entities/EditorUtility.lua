@@ -94,7 +94,7 @@ function EditorUtility:draw_grid()
   tdengine.ffi.set_layer(tdengine.editor.layers.grid)
 
   local grid_size = self.style.grid.size
-  local line_thickness = 2
+  local line_thickness = 1
 
   local size = tdengine.gpus.find(RenderTarget.Editor).size
   local camera = tdengine.editor.find('EditorCamera')

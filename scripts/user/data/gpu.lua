@@ -66,7 +66,7 @@ return {
 		{
 			id = RenderTarget.Editor,
 			descriptor = {
-				resolution = Resolution.Upscaled,
+				resolution = Resolution.Native,
 			}
 		},
 
@@ -177,11 +177,43 @@ return {
 				}
 			}
 		},
-
+		{
+			id = CommandBuffer.Shape,
+			descriptor = {
+				max_vertices = 1024,
+				max_draw_calls = 64,
+				vertex_attributes = {
+					{
+						count = 2,
+						kind = tdengine.enums.VertexAttributeKind.Float
+					},
+					{
+						count = 2,
+						kind = tdengine.enums.VertexAttributeKind.Float
+					},
+					{
+						count = 3,
+						kind = tdengine.enums.VertexAttributeKind.Float
+					},
+					{
+						count = 3,
+						kind = tdengine.enums.VertexAttributeKind.Float
+					},
+					{
+						count = 1,
+						kind = tdengine.enums.VertexAttributeKind.Float
+					},
+					{
+						count = 1,
+						kind = tdengine.enums.VertexAttributeKind.U32
+					}
+				}
+			}
+		},
 	},
 	graphics_pipelines = {
 		{
-			id = RenderPass.Color,
+			id = GraphicsPipeline.Color,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -192,7 +224,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.Normals,
+			id = GraphicsPipeline.Normals,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -203,7 +235,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.VisualizeLightMap,
+			id = GraphicsPipeline.VisualizeLightMap,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -214,7 +246,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.LightScene,
+			id = GraphicsPipeline.LightScene,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -225,7 +257,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.UpscaleColor,
+			id = GraphicsPipeline.UpscaleColor,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -236,7 +268,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.UpscaleNormals,
+			id = GraphicsPipeline.UpscaleNormals,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -247,7 +279,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.UpscaleLitScene,
+			id = GraphicsPipeline.UpscaleLitScene,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -258,7 +290,7 @@ return {
 			}
 		},
 		{
-			id = RenderPass.Editor,
+			id = GraphicsPipeline.Editor,
 			descriptor = {
 				color_attachment = {
 					read = nil,
@@ -266,6 +298,17 @@ return {
 					load_op = tdengine.enums.GpuLoadOp.Clear
 				},
 				command_buffer = CommandBuffer.Editor
+			}
+		},
+		{
+			id = GraphicsPipeline.Shape,
+			descriptor = {
+				color_attachment = {
+					read = nil,
+					write = RenderTarget.Color,
+					load_op = tdengine.enums.GpuLoadOp.Clear
+				},
+				command_buffer = CommandBuffer.Shape
 			}
 		},
 	},
@@ -310,7 +353,7 @@ return {
 		},
 		{
 			id = DrawConfiguration.VisualizeLightMap,
-			pipeline = RenderPass.VisualizeLightMap,
+			pipeline = GraphicsPipeline.VisualizeLightMap,
 			shader = Shader.LightMap,
 			uniforms = {
 				{

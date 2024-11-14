@@ -183,7 +183,7 @@ function tdengine.editor.init()
 end
 
 function tdengine.editor.update()
-  local pipeline = tdengine.gpus.find(RenderPass.Editor)
+  local pipeline = tdengine.gpus.find(GraphicsPipeline.Editor)
   tdengine.ffi.gpu_graphics_pipeline_bind(pipeline)
 
   for editor in tdengine.iterator.values(tdengine.editor.entities) do

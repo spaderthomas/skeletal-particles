@@ -19,7 +19,6 @@ tdengine.enum.define(
 function PostProcess:on_start_game()
 
 
-
   -- self.bloom_filter = SimplePostProcess:new()
   -- self.bloom_filter:set_render_pass('bloom_blur')
   -- self.bloom_filter:set_shader('bloom')
@@ -85,8 +84,16 @@ function PostProcess:on_start_game()
   
 end
 
+function PostProcess:on_scene_rendered()
+  tdengine.ffi.gpu_blit_target(
+    tdengine.gpus.find(CommandBuffer.Upscale),
+    tdengine.gpus.find(RenderTarget.Color),
+    tdengine.gpus.find(RenderTarget.UpscaledColor)
+)
+end
+
 function PostProcess:upscale()
-  -- self.upscale_color:render()
+    -- self.upscale_color:render()
   -- self.upscale_normals:render()
   -- self.upscale_lit_scene:render()
   -- self.upscale_scene:render()

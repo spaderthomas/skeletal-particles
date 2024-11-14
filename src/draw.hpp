@@ -85,7 +85,7 @@ struct GlState {
 	Rect scissor_region = {};
 	GpuShader* shader = nullptr;
 	i32 layer = 0;
-	bool world_space = false;
+	bool world_space = true;
 	bool blend_enabled = true;
 	i32 blend_source = GL_SRC_ALPHA;
 	i32 blend_dest = GL_ONE_MINUS_SRC_ALPHA;
@@ -231,7 +231,6 @@ struct GpuRenderTarget {
 };
 
 
-
 struct GpuCommandBufferDescriptor {
 	VertexAttribute* vertex_attributes;
 	u32 num_vertex_attributes = 0;
@@ -244,21 +243,6 @@ struct GpuCommandBuffer {
 
 	u32 vao;
 	u32 vbo;
-};
-
-
-struct GpuRenderPassDescriptor {
-	GpuRenderTarget* target = nullptr;
-	GpuRenderTarget* ping_pong = nullptr;
-	
-	bool clear_render_target = true;
-};
-struct GpuRenderPass {
-	GpuRenderTarget* render_target = nullptr;
-	GpuRenderTarget* ping_pong = nullptr;
-
-	bool clear_render_target = false;
-	bool dirty = false;
 };
 
 

@@ -334,24 +334,6 @@ typedef struct {
   u32 max_draw_calls;
 } GpuCommandBufferDescriptor;
 
-typedef struct {
-	GpuRenderTarget* target;
-	GpuRenderTarget* ping_pong; 
-	
-	bool clear_render_target;
-} GpuRenderPassDescriptor;
-
-typedef struct {
-	GpuRenderTarget* render_target;
-	GpuRenderTarget* ping_pong;
-
-	bool clear_render_target;
-  bool dirty;
-} GpuRenderPass;
-
-
-
-
 
 
 GpuShader*           gpu_shader_create(GpuShaderDescriptor descriptor);
@@ -405,7 +387,6 @@ void                 set_draw_mode(u32 mode);
 void                 set_orthographic_projection(float l, float r, float b, float t, float n, float f);
 void                 begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
 void                 end_scissor();
-
 
 void                 set_shader_immediate(const char* name);
 void                 set_shader_immediate_ex(GpuShader* shader);
