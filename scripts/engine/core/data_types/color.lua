@@ -46,6 +46,9 @@ function tdengine.color(r, g, b, a)
 			to_vec4 = function(self)
 				return ffi.new('Vector4', self.r, self.g, self.b, self.a)
 			end,
+			to_vec3 = function(self)
+				return Vector3:new(self.r, self.g, self.b)
+			end,
 			to_imvec4 = function(self)
 				return ffi.new('ImVec4', self.r, self.g, self.b, self.a)
 			end,
