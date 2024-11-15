@@ -166,7 +166,7 @@ end
 
 function GpuDrawConfiguration:bind()
   tdengine.ffi.set_active_shader_ex(self.shader)
-  tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
+  tdengine.ffi.set_draw_primitive(tdengine.enums.DrawPrimitive.Triangles)
 
   for uniform in self.uniforms:iterate_values() do
     uniform:bind()

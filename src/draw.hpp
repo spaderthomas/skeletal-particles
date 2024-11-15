@@ -29,7 +29,7 @@ enum class BlendMode : i32 {
 };
 
 
-enum class DrawMode : u32 {
+enum class DrawPrimitive : u32 {
 	Triangles,
 };
 
@@ -63,7 +63,7 @@ enum class GpuBufferUsage : u32 {
 };
 
 i32 convert_blend_mode(BlendMode mode);
-u32 convert_draw_mode(DrawMode mode);
+u32 convert_draw_primitive(DrawPrimitive mode);
 u32 convert_gl_id(GlId id);
 u32 convert_memory_barrier(GpuMemoryBarrier barrier);
 u32 convert_buffer_kind(GpuBufferKind kind);
@@ -147,15 +147,27 @@ struct GlStateDiff {
 	bool need_apply_scissor(GlState* state);
 };
 
-enum class DrawCallKind {
+enum class DrawMode {
 	Array,
 	Instanced
 };
 
 struct DrawCall {
+	DrawPrimitive primitive;
+
 	DrawMode mode;
-	i32 count;
-	i32 offset;
+	union {
+		struct {
+			u32 count;
+			u32 offset;
+		} array;
+
+		struct {
+			u32 offset;
+			u32 num_instances;
+		} instanced;
+	};
+
 	GlState state;
 
 	void copy_from(DrawCall* other);
@@ -411,7 +423,7 @@ FM_LUA_EXPORT void                     gpu_swap_buffers();
 //////////////////////////////////
 FM_LUA_EXPORT void    set_active_shader(const char* name);
 FM_LUA_EXPORT void    set_active_shader_ex(GpuShader* shader);
-FM_LUA_EXPORT void    set_draw_mode(DrawMode mode);
+FM_LUA_EXPORT void    set_draw_primitive(DrawPrimitive mode);
 FM_LUA_EXPORT void    set_orthographic_projection(float left, float right, float bottom, float top, float _near, float _far);
 FM_LUA_EXPORT void    set_uniform_texture(const char* name, i32 value);
 FM_LUA_EXPORT void    set_uniform_i32(const char* name, i32 value);

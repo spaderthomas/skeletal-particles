@@ -404,7 +404,7 @@ void ef_draw(ArenaHandle handle) {
 
 	// Render the fluid simulation
 	set_active_shader("fluid_eulerian");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 	set_world_space(true);
 
 	ef_bind(handle);

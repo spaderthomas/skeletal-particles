@@ -48,7 +48,7 @@ function EulerianFluidSystem:update()
   if not self.handle then return end
 
   tdengine.ffi.set_active_shader('fluid_eulerian')
-  tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles)
+  tdengine.ffi.set_draw_primitive(tdengine.enums.DrawPrimitive.Triangles)
   tdengine.ffi.set_world_space(true)
   tdengine.ffi.set_layer(10000)
   tdengine.ffi.ef_bind(self.handle)

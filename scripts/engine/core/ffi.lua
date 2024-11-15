@@ -89,9 +89,9 @@ function tdengine.ffi.init()
 	)
 
 	tdengine.enum.define(
-		'DrawMode',
+		'DrawPrimitive',
 		{
-			Triangles = tdengine.ffi.DrawMode_Triangles,
+			Triangles = tdengine.ffi.DrawPrimitive_Triangles,
 		}
 	)
 
@@ -734,8 +734,8 @@ function tdengine.ffi.get_display_mode()
 	return tdengine.enums.DisplayMode(ffi.C.get_display_mode())
 end
 
-function tdengine.ffi.set_draw_mode(mode)
-	return ffi.C.set_draw_mode(mode:to_number())
+function tdengine.ffi.set_draw_primitive(mode)
+	return ffi.C.set_draw_primitive(mode:to_number())
 end
 
 function tdengine.ffi.set_display_mode(display_mode)

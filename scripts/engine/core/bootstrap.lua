@@ -260,8 +260,8 @@ typedef enum {
 } UniformKind;
 
 typedef enum {
-    DrawMode_Triangles,
-} DrawMode;
+    DrawPrimitive_Triangles,
+} DrawPrimitive;
 
 typedef enum {
   GlId_Framebuffer,
@@ -410,7 +410,7 @@ void                     set_layer(i32 layer);
 void                     set_camera(f32 px, f32 py);
 void                     set_blend_enabled(bool enabled);
 void                     set_blend_mode(i32 source, i32 destination);
-void                     set_draw_mode(u32 mode);
+void                     set_draw_primitive(u32 mode);
 void                     set_orthographic_projection(float l, float r, float b, float t, float n, float f);
 void                     begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
 void                     end_scissor();

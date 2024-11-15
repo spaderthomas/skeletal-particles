@@ -39,7 +39,7 @@ void push_quad(float px, float py, float dx, float dy, Vector2* uv, Vector4 colo
 
 void draw_quad_ex(float px, float py, float sx, float sy, Vector4 color) {
 	set_active_shader("solid");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 		
 	Vector2 vxs [6] = fm_quad(py, py - sy, px, px + sx);
 	for (int32 i = 0; i < 6; i++) {
@@ -53,7 +53,7 @@ void draw_quad(Vector2 position, Vector2 size, Vector4 color) {
 
 void draw_circle(float32 px, float32 py, float32 radius, Vector4 color) {
 	set_active_shader("solid");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 	// GL_TRIANGLE_FAN means we can't batch draw calls; GL_TRIANGLE_STRIP would force me to figure out another algorithm
 	// for tesselating the circle, and I'm lazy, but it lets you batch with degenerate triangles.
 	
@@ -81,7 +81,7 @@ void draw_circle_sdf(float32 px, float32 py, float32 radius, Vector4 color, floa
 	gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 
 	set_active_shader("sdf");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 	
 	set_uniform_vec2("point", { px, py });
 	set_uniform_f32("edge_thickness", edge_thickness);
@@ -95,7 +95,7 @@ void draw_ring_sdf(float32 px, float32 py, float inner_radius, float radius, Vec
 	gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
 
 	set_active_shader("sdf");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 	
 	set_uniform_vec2("point", { px, py });
 	set_uniform_f32("edge_thickness", edge_thickness);
@@ -146,7 +146,7 @@ void draw_image(Sprite* sprite, float px, float py, float dx, float dy, float op
 
 void draw_image_pro(u32 texture, float px, float py, float dx, float dy, Vector2* uv, float opacity) {
 	set_active_shader("sprite");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 	set_uniform_texture("sampler", texture);
 
 	push_quad(px, py, dx, dy, uv, opacity);
@@ -169,7 +169,7 @@ void draw_prepared_text(PreparedText* prepared_text) {
 	
 	set_active_shader("text");
 	set_uniform_texture("sampler", prepared_text->font->texture);
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 
 	float baseline_offset = prepared_text->baseline_offset;
 	if (!prepared_text->precise) baseline_offset = prepared_text->baseline_offset_imprecise;
@@ -220,7 +220,7 @@ void draw_prepared_text(PreparedText* prepared_text) {
 
 void draw_line(Vector2 start, Vector2 end, float thickness, Vector4 color) {
 	set_active_shader("solid");
-	set_draw_mode(DrawMode::Triangles);
+	set_draw_primitive(DrawPrimitive::Triangles);
 
 	auto line = v2_subtract(end, start);
 	auto length = v2_length(line);
@@ -242,12 +242,12 @@ void draw_line(Vector2 start, Vector2 end, float thickness, Vector4 color) {
 //////////////////////////////////
 // BATCHED OPENGL CONFIGURATION //
 //////////////////////////////////
-void set_draw_mode(DrawMode mode) {
+void set_draw_primitive(DrawPrimitive primitive) {
 	auto draw_call = gpu_command_buffer_find_draw_call(render.pipeline->command_buffer);
-	if (draw_call->mode == mode) return;
+	if (draw_call->primitive == primitive) return;
 	
 	draw_call = gpu_command_buffer_flush_draw_call(render.pipeline->command_buffer);
-	draw_call->mode = mode;
+	draw_call->primitive = primitive;
 }
 
 void set_blend_enabled(bool enabled) {
@@ -881,8 +881,8 @@ void gpu_command_buffer_render(GpuCommandBufferBatched* command_buffer) {
 		if (!draw_call->count) continue;
 			
 		state_diff.apply(&draw_call->state);
-		auto mode = convert_draw_mode(draw_call->mode);
-		glDrawArrays(mode, draw_call->offset, draw_call->count);
+		auto primitive = convert_draw_primitive(draw_call->primitive);
+		glDrawArrays(primitive, draw_call->offset, draw_call->count);
 	}
 		
 	arr_clear(&command_buffer->draw_calls);
@@ -1158,7 +1158,7 @@ void init_render() {
 
 
 void DrawCall::copy_from(DrawCall* other) {
-	this->mode = other->mode;
+	this->primitive = other->primitive;
 	this->state = other->state;
 	this->state.uniforms.clear();
 }
@@ -1339,8 +1339,8 @@ i32 convert_blend_mode(BlendMode blend_mode) {
 	return GL_SRC_ALPHA;
 };
 
-u32 convert_draw_mode(DrawMode mode) {
-	if (mode == DrawMode::Triangles) {
+u32 convert_draw_primitive(DrawPrimitive primitive) {
+	if (primitive == DrawPrimitive::Triangles) {
 		return GL_TRIANGLES;
 	}
 

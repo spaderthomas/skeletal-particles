@@ -30,7 +30,7 @@ function SdfShape:draw_to(render_pass, shader)
   tdengine.gpu.bind_render_pass(render_pass)
   tdengine.ffi.set_active_shader(shader)
   tdengine.ffi.set_world_space(true)
-	tdengine.ffi.set_draw_mode(tdengine.enums.DrawMode.Triangles);
+	tdengine.ffi.set_draw_primitive(tdengine.enums.DrawPrimitive.Triangles);
   tdengine.ffi.set_uniform_f32('edge_thickness', self.edge_thickness)
 	tdengine.ffi.set_uniform_enum("shape", self.shape);
 
