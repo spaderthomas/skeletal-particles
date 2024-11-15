@@ -13,15 +13,15 @@ function RenderTest:draw()
   tdengine.ffi.draw_quad(0, 16, 16, 16, tdengine.colors.white:to_vec4())
   tdengine.ffi.gpu_graphics_pipeline_submit(pipeline)
 
-  local pipeline = tdengine.gpus.find(GraphicsPipeline.Shape)
-  tdengine.ffi.gpu_graphics_pipeline_bind(pipeline)
-  tdengine.ffi.set_world_space(true)
-  tdengine.ffi.set_active_shader_ex(tdengine.gpus.find(Shader.Shape))
+  -- local pipeline = tdengine.gpus.find(GraphicsPipeline.Shape)
+  -- tdengine.ffi.gpu_graphics_pipeline_bind(pipeline)
+  -- tdengine.ffi.set_world_space(true)
+  -- tdengine.ffi.set_active_shader_ex(tdengine.gpus.find(Shader.Shape))
 
-  local vertex = ffi.cast('SdfVertex*', tdengine.ffi.gpu_command_buffer_alloc_vertex_data(pipeline.command_buffer, 1))
-  vertex[0].position = Vector2:new(0, 0)
-  vertex[0].color = tdengine.colors.zomp:to_vec3()
-  tdengine.ffi.gpu_graphics_pipeline_submit(pipeline)
+  -- local vertex = ffi.cast('SdfVertex*', tdengine.ffi.gpu_command_buffer_alloc_vertex_data(pipeline.command_buffer, 1))
+  -- vertex[0].position = Vector2:new(0, 0)
+  -- vertex[0].color = tdengine.colors.zomp:to_vec3()
+  -- tdengine.ffi.gpu_graphics_pipeline_submit(pipeline)
 end
 
 local PointLight = tdengine.entity.define('PointLight') 

@@ -33,15 +33,15 @@ void check_shader_compilation(u32 shader, const char* file_path) {
 	}
 }
 
-void check_shader_linkage(u32 shader, const char* file_path) {
+void check_shader_linkage(u32 program, const char* file_path) {
 	i32 success;
 	
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	glGetProgramiv(program, GL_LINK_STATUS, &success);
 	if (!success) {
 		static constexpr u32 error_size = 512;
 		auto compilation_status = bump_allocator.alloc<char>(error_size);
 		
-		glGetShaderInfoLog(shader, error_size, NULL, compilation_status);
+		glGetProgramInfoLog(program, error_size, NULL, compilation_status);
 		tdns_log.write("shader link error; shader = %s, err = %s", file_path, compilation_status);
 	}
 }
@@ -107,7 +107,7 @@ void GpuShader::init_graphics_ex(const char* name, const char* vertex_shader, co
 		
 	// Link into a shader program
 	glLinkProgram(shader_program);
-	check_shader_compilation(shader_program, vertex_path);
+	check_shader_linkage(shader_program, vertex_path);
 
 	// Push the data into the shader. If anything fails, the shader won't get the new GL handles
 	program = shader_program;
@@ -135,7 +135,7 @@ void GpuShader::init_compute_ex(const char* name, const char* compute_path) {
 	this->program = glCreateProgram();
 	glAttachShader(this->program, this->compute);
 	glLinkProgram(this->program);
-	check_shader_compilation(this->program, this->compute_path);
+	check_shader_linkage(this->program, vertex_path);
 }
 
 void GpuShader::reload() {

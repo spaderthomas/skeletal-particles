@@ -241,18 +241,9 @@ typedef enum {
 } VertexAttributeKind;
 
 typedef enum {
-    DrawMode_Triangles,
-} DrawMode;
-
-typedef enum {
-    GlId_Framebuffer,
-    GlId_Shader,
-    GlId_Program,
-} GlId;
-
-typedef enum {
-	GpuMemoryBarrier_ShaderStorage,
-} GpuMemoryBarrier;
+	GpuShaderKind_Graphics,
+	GpuShaderKind_Compute,
+} GpuShaderKind;
 
 typedef enum {
 	UniformKind_None = 0,
@@ -269,21 +260,40 @@ typedef enum {
 } UniformKind;
 
 typedef enum {
+    DrawMode_Triangles,
+} DrawMode;
+
+typedef enum {
+  GlId_Framebuffer,
+  GlId_Shader,
+  GlId_Program,
+} GlId;
+
+typedef enum {
   GpuLoadOp_None,
   GpuLoadOp_Clear,
 } GpuLoadOp;
 
 typedef enum {
-	GpuShaderKind_Graphics,
-	GpuShaderKind_Compute,
-} GpuShaderKind;
+	GpuMemoryBarrier_ShaderStorage,
+} GpuMemoryBarrier;
 
+typedef enum {
+	GpuBufferKind_Storage = 0,
+	GpuBufferKind_Array = 1,
+} GpuBufferKind;
 
+typedef enum {
+	GpuBufferUsage_Static = 0,
+	GpuBufferUsage_Dynamic = 1,
+	GpuBufferUsage_Stream = 2,
+} GpuBufferUsage;
 
 
 typedef struct GpuShader GpuShader;
 typedef struct GpuBuffer GpuBuffer;
-typedef struct GpuCommandBuffer GpuCommandBuffer;
+typedef struct GpuVertexLayout GpuVertexLayout;
+typedef struct GpuCommandBufferBatched GpuCommandBufferBatched;
 typedef struct DrawCall DrawCall;
 
 typedef struct {
@@ -312,98 +322,115 @@ typedef struct {
 } GpuColorAttachment;
 
 typedef struct {
-	GpuColorAttachment color_attachment;
-	GpuCommandBuffer* command_buffer;
-} GpuGraphicsPipelineDescriptor;
-
-typedef struct {
-	GpuColorAttachment color_attachment;
-	GpuCommandBuffer* command_buffer;
-} GpuGraphicsPipeline;
-
-
-typedef struct {
 	u32 count;
 	u32 kind;
+  u32 divisor;
 } VertexAttribute;
+
+
+typedef struct {
+	GpuColorAttachment color_attachment;
+	GpuCommandBufferBatched* command_buffer;
+} GpuGraphicsPipelineDescriptor;
+typedef struct {
+	GpuColorAttachment color_attachment;
+	GpuCommandBufferBatched* command_buffer;
+} GpuGraphicsPipeline;
+
 
 typedef struct {
 	VertexAttribute* vertex_attributes;
 	u32 num_vertex_attributes;
   u32 max_vertices;
   u32 max_draw_calls;
-} GpuCommandBufferDescriptor;
+} GpuCommandBufferBatchedDescriptor;
+
+typedef struct {
+  GpuBufferKind kind;
+  GpuBufferUsage usage;
+  u32 size;
+} GpuBufferDescriptor;
 
 
+typedef struct {
+	VertexAttribute* vertex_attributes;
+	u32 num_vertex_attributes;
+	GpuBuffer* buffer;
+} GpuBufferLayout;
+typedef struct {
+	GpuBufferLayout* buffer_layouts;
+	u32 num_buffer_layouts;
+} GpuVertexLayoutDescriptor;
 
-GpuShader*           gpu_shader_create(GpuShaderDescriptor descriptor);
-GpuRenderTarget*     gpu_create_target_ex(GpuRenderTargetDescriptor descriptor);
-GpuRenderTarget*     gpu_create_target(float x, float y);
-GpuRenderTarget*     gpu_acquire_swapchain();
-void                 gpu_bind_target(GpuRenderTarget* target);
-void                 gpu_clear_target(GpuRenderTarget* target);
-void                 gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination);
-void                 gpu_swap_buffers();
-GpuCommandBuffer*    gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor);
-DrawCall*            gpu_command_buffer_alloc_draw_call(GpuCommandBuffer* command_buffer);
-DrawCall*            gpu_command_buffer_find_draw_call(GpuCommandBuffer* command_buffer);
-DrawCall*            gpu_command_buffer_flush_draw_call(GpuCommandBuffer* command_buffer);
-u8*                  gpu_command_buffer_alloc_vertex_data(GpuCommandBuffer* command_buffer, u32 count);
-u8*                  gpu_command_buffer_push_vertex_data(GpuCommandBuffer* command_buffer, void* data, u32 count);
-void                 gpu_command_buffer_bind(GpuCommandBuffer* command_buffer);
-void                 gpu_command_buffer_preprocess(GpuCommandBuffer* command_buffer);
-void                 gpu_command_buffer_render(GpuCommandBuffer* command_buffer);
-void                 gpu_command_buffer_submit(GpuCommandBuffer* command_buffer);
-GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
-void                 gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline);
-void                 gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
-void                 gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
-DrawCall*            gpu_graphics_pipeline_alloc_draw_call(GpuGraphicsPipeline* pipeline);
-GpuBuffer*           gpu_create_buffer();
-void                 gpu_memory_barrier(u32 barrier);
-void                 gpu_bind_buffer(GpuBuffer* buffer);
-void                 gpu_bind_buffer_base(GpuBuffer* buffer, u32 base);
-void                 gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size);
-void                 gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
-void                 gpu_zero_buffer(GpuBuffer* buffer, u32 size);
-void                 gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
+GpuShader*               gpu_shader_create(GpuShaderDescriptor descriptor);
+GpuRenderTarget*         gpu_render_target_create(GpuRenderTargetDescriptor descriptor);
+GpuRenderTarget*         gpu_acquire_swapchain();
+void                     gpu_render_target_bind(GpuRenderTarget* target);
+void                     gpu_render_target_clear(GpuRenderTarget* target);
+void                     gpu_render_target_blit(GpuRenderTarget* source, GpuRenderTarget* destination);
+void                     gpu_swap_buffers();
+GpuCommandBufferBatched* gpu_create_command_buffer(GpuCommandBufferBatchedDescriptor descriptor);
+DrawCall*                gpu_command_buffer_alloc_draw_call(GpuCommandBufferBatched* command_buffer);
+DrawCall*                gpu_command_buffer_find_draw_call(GpuCommandBufferBatched* command_buffer);
+DrawCall*                gpu_command_buffer_flush_draw_call(GpuCommandBufferBatched* command_buffer);
+u8*                      gpu_command_buffer_alloc_vertex_data(GpuCommandBufferBatched* command_buffer, u32 count);
+u8*                      gpu_command_buffer_push_vertex_data(GpuCommandBufferBatched* command_buffer, void* data, u32 count);
+void                     gpu_command_buffer_bind(GpuCommandBufferBatched* command_buffer);
+void                     gpu_command_buffer_preprocess(GpuCommandBufferBatched* command_buffer);
+void                     gpu_command_buffer_render(GpuCommandBufferBatched* command_buffer);
+void                     gpu_command_buffer_submit(GpuCommandBufferBatched* command_buffer);
+GpuGraphicsPipeline*     gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor descriptor);
+void                     gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline);
+void                     gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
+void                     gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
+DrawCall*                gpu_graphics_pipeline_alloc_draw_call(GpuGraphicsPipeline* pipeline);
+GpuBuffer*               gpu_buffer_create(GpuBufferDescriptor descriptor);
+void                     gpu_memory_barrier(u32 barrier);
+void                     gpu_buffer_bind(GpuBuffer* buffer);
+void                     gpu_buffer_bind_base(GpuBuffer* buffer, u32 base);
+void                     gpu_buffer_sync(GpuBuffer* buffer, void* data, u32 size);
+void                     gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
+void                     gpu_buffer_zero(GpuBuffer* buffer, u32 size);
+GpuVertexLayout*         gpu_vertex_layout_create(GpuVertexLayoutDescriptor descriptor);
 
-void                 set_active_shader(const char* name);
-void                 set_active_shader_ex(GpuShader* shader);
-void                 set_uniform_texture(const char* name, i32 value);
-void                 set_uniform_i32(const char* name, i32 value);
-void                 set_uniform_f32(const char* name, float value);
-void                 set_uniform_vec2(const char* name, Vector2 value);
-void                 set_uniform_vec3(const char* name, Vector3 value);
-void                 set_uniform_vec4(const char* name, Vector4 value);
-void                 set_uniform_mat3(const char* name, Matrix3 value);
-void                 set_uniform_mat4(const char* name, Matrix4 value);
-void                 set_world_space(bool world_space);
-void                 set_layer(i32 layer);
-void                 set_camera(f32 px, f32 py);
-void                 set_blend_enabled(bool enabled);
-void                 set_blend_mode(i32 source, i32 destination);
-void                 set_draw_mode(u32 mode);
-void                 set_orthographic_projection(float l, float r, float b, float t, float n, float f);
-void                 begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
-void                 end_scissor();
-
-void                 set_shader_immediate(const char* name);
-void                 set_shader_immediate_ex(GpuShader* shader);
-void                 set_uniform_immediate_vec2(const char* name, Vector2 value);
-void                 set_uniform_immediate_i32(const char* name, i32 value);
-void                 set_uniform_immediate_f32(const char* name, float value);
-void                 set_uniform_immediate_texture(const char* name, i32 value);
-void                 set_uniform_immediate_mat4(const char* name, Matrix4 value);
-void                 set_uniform_immediate_mat3(const char* name, Matrix3 value);
-void                 set_uniform_immediate_vec4(const char* name, Vector4 value);
-void                 set_uniform_immediate_vec3(const char* name, Vector3 value);
-void                 set_uniform_immediate_vec2(const char* name, Vector2 value);
-void                 set_uniform_immediate_i32(const char* name, i32 value);
-void                 set_uniform_immediate_f32(const char* name, float value);
-void                 set_uniform_immediate_texture(const char* name, i32 value);
-void                 push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity);
-i32                  find_uniform_index(const char* name);
+void                     gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
+    
+void                     set_active_shader(const char* name);
+void                     set_active_shader_ex(GpuShader* shader);
+void                     set_uniform_texture(const char* name, i32 value);
+void                     set_uniform_i32(const char* name, i32 value);
+void                     set_uniform_f32(const char* name, float value);
+void                     set_uniform_vec2(const char* name, Vector2 value);
+void                     set_uniform_vec3(const char* name, Vector3 value);
+void                     set_uniform_vec4(const char* name, Vector4 value);
+void                     set_uniform_mat3(const char* name, Matrix3 value);
+void                     set_uniform_mat4(const char* name, Matrix4 value);
+void                     set_world_space(bool world_space);
+void                     set_layer(i32 layer);
+void                     set_camera(f32 px, f32 py);
+void                     set_blend_enabled(bool enabled);
+void                     set_blend_mode(i32 source, i32 destination);
+void                     set_draw_mode(u32 mode);
+void                     set_orthographic_projection(float l, float r, float b, float t, float n, float f);
+void                     begin_scissor(f32 px, f32 py, f32 dx, f32 dy);
+void                     end_scissor();
+    
+void                     set_shader_immediate(const char* name);
+void                     set_shader_immediate_ex(GpuShader* shader);
+void                     set_uniform_immediate_vec2(const char* name, Vector2 value);
+void                     set_uniform_immediate_i32(const char* name, i32 value);
+void                     set_uniform_immediate_f32(const char* name, float value);
+void                     set_uniform_immediate_texture(const char* name, i32 value);
+void                     set_uniform_immediate_mat4(const char* name, Matrix4 value);
+void                     set_uniform_immediate_mat3(const char* name, Matrix3 value);
+void                     set_uniform_immediate_vec4(const char* name, Vector4 value);
+void                     set_uniform_immediate_vec3(const char* name, Vector3 value);
+void                     set_uniform_immediate_vec2(const char* name, Vector2 value);
+void                     set_uniform_immediate_i32(const char* name, i32 value);
+void                     set_uniform_immediate_f32(const char* name, float value);
+void                     set_uniform_immediate_texture(const char* name, i32 value);
+void                     push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity);
+i32                      find_uniform_index(const char* name);
 
 //
 // DRAW
@@ -439,16 +466,22 @@ typedef struct {
 typedef struct {
   Vector2 position;
   Vector2 uv;
+} SdfVertex;
+
+typedef struct {
+  Vector2 position;
   Vector3 color;
   float rotation;
   u32 shape_index;
-} SdfVertex;
+} SdfInstance;
 
 typedef struct {
   Vector2 position;
   float radius;
   float edge_thickness;
 } SdfCircle;
+
+void gpu_render_sdf(GpuCommandBufferBatched* command_buffer, GpuVertexLayout* vertex_layout, u32 num_instances);
 
 
 void draw_quad(Vector2 position, Vector2 size, Vector4 color);

@@ -15,9 +15,14 @@ return {
 			}
 		},
 	},
-	storage_buffers = {
+	buffers = {
 		{
-			id = StorageBuffer.Lights
+			id = Buffer.Lights,
+			descriptor = {
+				usage = GpuBufferUsage.Static,
+				kind = GpuBufferKind.Storage,
+				size = 420
+			},
 		}
 	},
 	render_targets = {
@@ -182,32 +187,7 @@ return {
 			descriptor = {
 				max_vertices = 1024,
 				max_draw_calls = 64,
-				vertex_attributes = {
-					{
-						count = 2,
-						kind = tdengine.enums.VertexAttributeKind.Float
-					},
-					{
-						count = 2,
-						kind = tdengine.enums.VertexAttributeKind.Float
-					},
-					{
-						count = 3,
-						kind = tdengine.enums.VertexAttributeKind.Float
-					},
-					{
-						count = 3,
-						kind = tdengine.enums.VertexAttributeKind.Float
-					},
-					{
-						count = 1,
-						kind = tdengine.enums.VertexAttributeKind.Float
-					},
-					{
-						count = 1,
-						kind = tdengine.enums.VertexAttributeKind.U32
-					}
-				}
+				vertex_attributes = {}
 			}
 		},
 	},
@@ -306,7 +286,7 @@ return {
 				color_attachment = {
 					read = nil,
 					write = RenderTarget.Color,
-					load_op = tdengine.enums.GpuLoadOp.Clear
+					load_op = tdengine.enums.GpuLoadOp.None
 				},
 				command_buffer = CommandBuffer.Shape
 			}
@@ -346,7 +326,7 @@ return {
 			},
 			ssbos = {
 				{
-					id = StorageBuffer.Lights,
+					id = Buffer.Lights,
 					index = 0
 				}
 			}
@@ -364,7 +344,7 @@ return {
 			},
 			ssbos = {
 				{
-					id = StorageBuffer.Lights,
+					id = Buffer.Lights,
 					index = 0
 				}
 			}

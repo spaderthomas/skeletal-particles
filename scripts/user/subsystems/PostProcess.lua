@@ -85,8 +85,7 @@ function PostProcess:on_start_game()
 end
 
 function PostProcess:on_scene_rendered()
-  tdengine.ffi.gpu_blit_target(
-    tdengine.gpus.find(CommandBuffer.Upscale),
+  tdengine.ffi.gpu_render_target_blit(
     tdengine.gpus.find(RenderTarget.Color),
     tdengine.gpus.find(RenderTarget.UpscaledColor)
 )
@@ -105,7 +104,7 @@ end
 function PostProcess:post_process()
   -- self.chromatic_aberration:render()
 
-  -- tdengine.ffi.gpu_clear_target(tdengine.gpu.find_read_target('bloom_blur'))
+  -- tdengine.ffi.gpu_render_target_clear(tdengine.gpu.find_read_target('bloom_blur'))
   -- self.bloom_filter:render()
   -- for bloom_index = 1, 2 do
   --   self.bloom_blur:render()

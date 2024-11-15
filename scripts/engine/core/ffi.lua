@@ -89,14 +89,6 @@ function tdengine.ffi.init()
 	)
 
 	tdengine.enum.define(
-		'VertexAttributeKind',
-		{
-			Float = tdengine.ffi.VertexAttributeKind_Float,
-			U32 = tdengine.ffi.VertexAttributeKind_U32,
-		}
-	)
-
-	tdengine.enum.define(
 		'DrawMode',
 		{
 			Triangles = tdengine.ffi.DrawMode_Triangles,
@@ -113,19 +105,16 @@ function tdengine.ffi.init()
 	)
 
 	tdengine.enum.define(
-		'GpuMemoryBarrier',
-		{
-			ShaderStorage = tdengine.ffi.GpuMemoryBarrier_ShaderStorage,
-		}
-	)
-
-	tdengine.enum.define(
 		'GpuShaderKind',
 		{
 			Graphics = tdengine.ffi.GpuShaderKind_Graphics,
 			Compute = tdengine.ffi.GpuShaderKind_Compute,
 		}
 	)
+
+	VertexAttributeKind = tdengine.enum.define_from_ctype('VertexAttributeKind')
+	GpuBufferKind = tdengine.enum.define_from_ctype('GpuBufferKind')
+	GpuBufferUsage = tdengine.enum.define_from_ctype('GpuBufferUsage')
 
 	UniformKind = tdengine.enum.define(
 		'UniformKind',
@@ -144,7 +133,13 @@ function tdengine.ffi.init()
 		}
 	)
 
-
+	tdengine.enum.define(
+		'GpuMemoryBarrier',
+		{
+			ShaderStorage = tdengine.ffi.GpuMemoryBarrier_ShaderStorage,
+			BufferUpdate = tdengine.ffi.GpuMemoryBarrier_BufferUpdate,
+		}
+	)
 
 	tdengine.enum.define(
 		'DisplayMode',
@@ -176,7 +171,7 @@ function tdengine.ffi.init()
 			OrientedBox = 3,
 			}
 	)
-	
+
 	imgui.internal.init_c_api()
 	imgui.internal.init_lua_api()
 	imgui.internal.init_lua_api_overwrites()
@@ -628,8 +623,11 @@ function CpuBuffer:push(element)
     dbg()
   end
 
-  self.data[self.size] = element
+	local slot = self.data + self.size
+	if element then slot[0] = element end
   self.size = self.size + 1
+
+	return slot
 end
 
 function CpuBuffer:fast_clear()
@@ -645,7 +643,7 @@ function BackedGpuBuffer:init(ctype, capacity, gpu_buffer)
 end
 
 function BackedGpuBuffer:sync()
-  tdengine.ffi.gpu_sync_buffer_subdata(
+  tdengine.ffi.gpu_buffer_sync_subdata(
   self.gpu_buffer.ssbo, self.cpu_buffer.data,
   ffi.sizeof(self.ctype) * self.cpu_buffer.size,
   0)
@@ -658,15 +656,19 @@ GpuBuffer = tdengine.class.define('GpuBuffer')
 function GpuBuffer:init(ctype, capacity, gpu_buffer)
   self.ctype = ctype
   self.capacity = capacity
-  self.ssbo = gpu_buffer or tdengine.ffi.gpu_create_buffer()
+  self.ssbo = gpu_buffer or tdengine.ffi.gpu_buffer_create(GpuBufferDescriptor:new({
+		kind = GpuBufferKind.Storage,
+		usage = GpuBufferUsage.Static,
+		size = ffi.sizeof(ctype) * capacity
+	}))
 end
 
 function GpuBuffer:zero()
-  tdengine.ffi.gpu_zero_buffer(self.ssbo, self.capacity * ffi.sizeof(self.ctype))
+  tdengine.ffi.gpu_buffer_zero(self.ssbo, self.capacity * ffi.sizeof(self.ctype))
 end
 
 function GpuBuffer:bind_base(base)
-  tdengine.ffi.gpu_bind_buffer_base(self.ssbo, base)
+  tdengine.ffi.gpu_buffer_bind_base(self.ssbo, base)
 end
 
 
@@ -740,8 +742,8 @@ function tdengine.ffi.set_display_mode(display_mode)
 	return ffi.C.set_display_mode(display_mode:to_number())
 end
 
-function tdengine.ffi.gpu_clear_target(target)
-	ffi.C.gpu_clear_target(target)
+function tdengine.ffi.gpu_render_target_clear(target)
+	ffi.C.gpu_render_target_clear(target)
 end
 
 function tdengine.ffi.push_fullscreen_quad()

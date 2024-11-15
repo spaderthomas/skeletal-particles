@@ -85,8 +85,8 @@ CommandBuffer = tdengine.enum.define(
 	}
 )
 
-StorageBuffer = tdengine.enum.define(
-	'StorageBuffer',
+Buffer = tdengine.enum.define(
+	'Buffer',
 	{
 		Lights = 0,
 	}

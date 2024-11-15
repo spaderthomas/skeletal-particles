@@ -58,6 +58,9 @@ void create_window(const char* title, u32 x, u32 y, WindowFlags flags) {
 		tdns_log.write("Failed to get OpenGL version");
     }
 
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glDebugMessageCallback(on_opengl_message, 0);
+
 	// This has to be done after context creation
 	if (enum_any(flags & WindowFlags::Vsync)) {
 		glfwSwapInterval(1);

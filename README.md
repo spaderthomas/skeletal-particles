@@ -95,7 +95,7 @@ function App:on_init_game()
 
 	local render_target = tdengine.gpu.add_render_target('scene', self.native_resolution.x, self.native_resolution.y)
 
-	local buffer_descriptor = ffi.new('GpuCommandBufferDescriptor')
+	local buffer_descriptor = ffi.new('GpuCommandBufferBatchedDescriptor')
 	buffer_descriptor.num_vertex_attributes = 3
 	buffer_descriptor.max_vertices = 64 * 1024
 	buffer_descriptor.max_draw_calls = 256

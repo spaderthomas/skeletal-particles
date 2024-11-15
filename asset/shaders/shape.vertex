@@ -1,10 +1,11 @@
 #include "common.glsl"
 
-layout (location = 0) in vec2 position;
-layout (location = 1) in vec2 uv;
-layout (location = 2) in vec3 color;
-layout (location = 3) in float rotation;
-layout (location = 4) in uint shape;
+layout (location = 0) in vec2  vertex_position;
+layout (location = 1) in vec2  vertex_uv;
+layout (location = 2) in vec2  position;
+layout (location = 3) in vec3  color;
+layout (location = 4) in float rotation;
+layout (location = 5) in uint  shape;
 
 out vec3 f_color;
 out vec2 f_uv;
@@ -13,7 +14,7 @@ uniform mat4 projection;
 uniform mat4 view;
 
 void main() {
-	gl_Position = projection * view * vec4(position.xy, 1.0, 1.0);
+	gl_Position = projection * view * vec4(vertex_position, 1.0, 1.0);
 	f_color = color;
-	f_uv = uv;
+	f_uv = vertex_uv;
 }

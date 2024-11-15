@@ -1,12 +1,33 @@
 -------------
 -- STRUCTS --
 -------------
+VertexAttribute = tdengine.class.metatype('VertexAttribute')
+function VertexAttribute:init(params)
+  self.count = params.count
+  self.kind = tdengine.enum.load(params.kind):to_number()
+  self.divisor = params.divisor or 0
+end
+
+GpuBufferLayout = tdengine.class.metatype('GpuBufferLayout')
+function GpuBufferLayout:init(params)
+  local allocator = tdengine.ffi.ma_find('bump')
+
+  self.num_vertex_attributes = #params.vertex_attributes
+  self.vertex_attributes = allocator:alloc_array('VertexAttribute', self.num_vertex_attributes)
+  for i = 1, self.num_vertex_attributes, 1 do
+    self.vertex_attributes[i - 1] = VertexAttribute:new(params.vertex_attributes[i])
+  end
+
+  self.buffer = params.buffer
+end
+
 GpuColorAttachment = tdengine.class.metatype('GpuColorAttachment')
 function GpuColorAttachment:init(params)
   self.read = params.read and tdengine.gpus.find(params.read) or nil
   self.write = tdengine.gpus.find(params.write)
   self.load_op = tdengine.enum.load(params.load_op):to_number()
 end
+
 
 GpuShaderDescriptor = tdengine.class.metatype('GpuShaderDescriptor')
 function GpuShaderDescriptor:init(params)
@@ -37,8 +58,8 @@ function GpuGraphicsPipelineDescriptor:init(params)
   self.command_buffer = tdengine.gpus.find(params.command_buffer)
 end
 
-GpuCommandBufferDescriptor = tdengine.class.metatype('GpuCommandBufferDescriptor')
-function GpuCommandBufferDescriptor:init(params) 
+GpuCommandBufferBatchedDescriptor = tdengine.class.metatype('GpuCommandBufferBatchedDescriptor')
+function GpuCommandBufferBatchedDescriptor:init(params) 
   local allocator = tdengine.ffi.ma_find('bump')
 
   self.max_vertices = params.max_vertices
@@ -47,10 +68,25 @@ function GpuCommandBufferDescriptor:init(params)
   self.num_vertex_attributes = #params.vertex_attributes
   self.vertex_attributes = allocator:alloc_array('VertexAttribute', self.num_vertex_attributes)
   for i = 1, self.num_vertex_attributes, 1 do
-    local attribute = self.vertex_attributes[i - 1]
-    local data = params.vertex_attributes[i]
-    attribute.count = data.count
-    attribute.kind = tdengine.enum.load(data.kind):to_number()
+    self.vertex_attributes[i - 1] = VertexAttribute:new(params.vertex_attributes[i])
+  end
+end
+
+GpuBufferDescriptor = tdengine.class.metatype('GpuBufferDescriptor')
+function GpuBufferDescriptor:init(params)
+  self.kind = tdengine.enum.load(params.kind):to_number()
+  self.usage = tdengine.enum.load(params.usage):to_number()
+  self.size = params.size or 0
+end
+
+GpuVertexLayoutDescriptor = tdengine.class.metatype('GpuVertexLayoutDescriptor')
+function GpuVertexLayoutDescriptor:init(params)
+  local allocator = tdengine.ffi.ma_find('bump')
+
+  self.num_buffer_layouts = #params.buffer_layouts
+  self.buffer_layouts = allocator:alloc_array('GpuBufferLayout', self.num_buffer_layouts)
+  for i = 1, self.num_buffer_layouts, 1 do
+    self.buffer_layouts[i - 1] = GpuBufferLayout:new(params.buffer_layouts[i])
   end
 end
 
@@ -98,7 +134,7 @@ function SsboBinding:init(index, buffer_id)
 end
 
 function SsboBinding:bind()
-  tdengine.ffi.gpu_bind_buffer_base(self.ssbo, self.index)
+  tdengine.ffi.gpu_buffer_bind_base(self.ssbo, self.index)
 end
 
 
@@ -203,26 +239,12 @@ local done = [[
 ----------------
 -- GPU MODULE --
 ----------------
-
-GpuResourceKind = tdengine.enum.define(
-  'GpuResourceKind',
-  {
-    RenderTarget = 0,
-    GraphicsPipeline = 1,
-    CommandBuffer = 2,
-    StorageBuffer = 3,
-    Shader = 4,
-    Resolution = 5,
-    DrawConfiguration = 6,
-  }
-)
-
 local self = tdengine.gpus
 function tdengine.gpus.init()
   self.render_targets = {}
   self.graphics_pipelines = {}
   self.command_buffers = {}
-  self.storage_buffers = {}
+  self.buffers = {}
   self.shaders = {}
   self.resolutions = {}
   self.draw_configurations = {}
@@ -241,8 +263,8 @@ function tdengine.gpus.render()
   tdengine.lifecycle.run_callback(tdengine.lifecycle.callbacks.on_scene_rendered)
 
   local swapchain = tdengine.ffi.gpu_acquire_swapchain()
-  tdengine.ffi.gpu_bind_target(swapchain)
-  tdengine.ffi.gpu_clear_target(swapchain)
+  tdengine.ffi.gpu_render_target_bind(swapchain)
+  tdengine.ffi.gpu_render_target_clear(swapchain)
   tdengine.app:on_swapchain_ready()
   tdengine.ffi.gpu_swap_buffers()
 
@@ -264,7 +286,7 @@ end
 function tdengine.gpus.build(gpu_info)
   self.add_resolutions(gpu_info.resolutions)
   self.add_render_targets(gpu_info.render_targets)
-  self.add_storage_buffers(gpu_info.storage_buffers)
+  self.add_buffers(gpu_info.buffers)
   self.add_shaders(gpu_info.shaders)
   self.add_command_buffers(gpu_info.command_buffers)
   self.add_graphics_pipelines(gpu_info.graphics_pipelines)
@@ -284,8 +306,8 @@ function tdengine.gpus.find(id)
     resource_map = self.graphics_pipelines
   elseif tdengine.enums.CommandBuffer:match(id) then
     resource_map = self.command_buffers
-  elseif tdengine.enums.StorageBuffer:match(id) then
-    resource_map = self.storage_buffers
+  elseif tdengine.enums.Buffer:match(id) then
+    resource_map = self.buffers
   elseif tdengine.enums.Shader:match(id) then
     resource_map = self.shaders
   elseif tdengine.enums.Resolution:match(id) then
@@ -309,7 +331,7 @@ end
 -- RENDER TARGET -- 
 -------------------
 function tdengine.gpus.add_render_target(id, descriptor)
-  self.render_targets[id:to_string()] = tdengine.ffi.gpu_create_target_ex(descriptor)
+  self.render_targets[id:to_string()] = tdengine.ffi.gpu_render_target_create(descriptor)
 end
 
 function tdengine.gpus.add_render_targets(targets)
@@ -348,7 +370,7 @@ function tdengine.gpus.add_command_buffers(command_buffers)
   for buffer in tdengine.iterator.values(command_buffers) do
     self.add_command_buffer(
       buffer.id,
-      GpuCommandBufferDescriptor:new(buffer.descriptor)
+      GpuCommandBufferBatchedDescriptor:new(buffer.descriptor)
     )
   end
 end
@@ -356,13 +378,13 @@ end
 ----------------
 -- GPU BUFFER --
 ----------------
-function tdengine.gpus.add_storage_buffer(id)
-  self.storage_buffers[id:to_string()] = tdengine.ffi.gpu_create_buffer()
+function tdengine.gpus.add_buffer(id, descriptor)
+  self.buffers[id:to_string()] = tdengine.ffi.gpu_buffer_create(descriptor)
 end
 
-function tdengine.gpus.add_storage_buffers(storage_buffers)
-  for storage_buffer in tdengine.iterator.values(storage_buffers) do
-		self.add_storage_buffer(storage_buffer.id)
+function tdengine.gpus.add_buffers(buffers)
+  for buffer in tdengine.iterator.values(buffers) do
+		self.add_buffer(buffer.id, GpuBufferDescriptor:new(buffer.descriptor))
 	end
 end
 

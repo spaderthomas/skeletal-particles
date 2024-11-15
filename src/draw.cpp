@@ -475,20 +475,11 @@ void set_gl_name(u32 kind, u32 handle, u32 name_len, const char* name) {
 	glObjectLabel(convert_gl_id(static_cast<GlId>(kind)), handle, name_len, name);
 }
 
-
 ///////////////////
 // OPENGL ERRORS //
 ///////////////////
 void clear_gl_error() {
 	while (glGetError() != GL_NO_ERROR) {}
-
-#if defined(DEBUG_OPENGL)
-	while (true) {
-		auto error = read_gl_error();
-		if (!error) break;
-		if (!strcmp(error, "GL_NO_ERROR")) break;
-	}
-#endif
 }
 
 tstring read_gl_error() {
@@ -513,6 +504,125 @@ void log_gl_error() {
 	tdns_log.write(read_gl_error());
 }
 
+void log_gl_errors() {
+	while (true) {
+		auto error = read_gl_error();
+		if (!error) break;
+		if (!strcmp(error, "GL_NO_ERROR")) break;
+
+		tdns_log.write(error);
+	}
+}
+
+void APIENTRY on_opengl_message(
+	GLenum source, 
+	GLenum type, 
+	GLuint id,
+	GLenum severity, 
+	GLsizei length,
+	const GLchar *msg, 
+	const void *data
+) {
+	constexpr u32 GL_DEBUG_SEVERITY_NOTHING_EVER = GL_DEBUG_SEVERITY_HIGH - 1;
+	constexpr u32 minimum_severity = GL_DEBUG_SEVERITY_MEDIUM;
+	
+	if (severity > minimum_severity) return;
+
+    const char* _source;
+    const char* _type;
+    const char* _severity;
+
+    switch (severity) {
+			case GL_DEBUG_SEVERITY_HIGH: {
+				_severity = "HIGH";
+				break;
+			}
+
+			case GL_DEBUG_SEVERITY_MEDIUM: {
+				_severity = "MEDIUM";
+				break;
+			}
+
+			case GL_DEBUG_SEVERITY_LOW: {
+				_severity = "LOW";
+				break;
+			}
+
+			default: {
+				// It's a NOTIFICATION, which I will never ever care about
+				return;
+			}
+    }
+
+    switch (source) {
+        case GL_DEBUG_SOURCE_API:
+        _source = "API";
+        break;
+
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+        _source = "WINDOW SYSTEM";
+        break;
+
+        case GL_DEBUG_SOURCE_SHADER_COMPILER:
+        _source = "SHADER COMPILER";
+        break;
+
+        case GL_DEBUG_SOURCE_THIRD_PARTY:
+        _source = "THIRD PARTY";
+        break;
+
+        case GL_DEBUG_SOURCE_APPLICATION:
+        _source = "APPLICATION";
+        break;
+
+        case GL_DEBUG_SOURCE_OTHER:
+        _source = "UNKNOWN";
+        break;
+
+        default:
+        _source = "UNKNOWN";
+        break;
+    }
+
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR:
+        _type = "ERROR";
+        break;
+
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+        _type = "DEPRECATED BEHAVIOR";
+        break;
+
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+        _type = "UDEFINED BEHAVIOR";
+        break;
+
+        case GL_DEBUG_TYPE_PORTABILITY:
+        _type = "PORTABILITY";
+        break;
+
+        case GL_DEBUG_TYPE_PERFORMANCE:
+        _type = "PERFORMANCE";
+        break;
+
+        case GL_DEBUG_TYPE_OTHER:
+        _type = "OTHER";
+        break;
+
+        case GL_DEBUG_TYPE_MARKER:
+        _type = "MARKER";
+        break;
+
+        default:
+        _type = "UNKNOWN";
+        break;
+    }
+
+
+    tdns_log.write("%d: %s of %s severity, raised from %s: %s\n",
+            id, _type, _severity, _source, msg);
+	int x = 0;
+}
 
 ///////////////////
 // VERTEX BUFFER //
@@ -583,14 +693,7 @@ GpuShader* gpu_shader_find(const char* name) {
 ///////////////////
 // RENDER TARGET //
 ///////////////////
-GpuRenderTarget* gpu_create_target(float x, float y) {
-	GpuRenderTargetDescriptor descriptor;
-	descriptor.size.x = x;
-	descriptor.size.y = y;
-	return gpu_create_target_ex(descriptor);
-}
-
-GpuRenderTarget* gpu_create_target_ex(GpuRenderTargetDescriptor descriptor) {
+GpuRenderTarget* gpu_render_target_create(GpuRenderTargetDescriptor descriptor) {
 	auto target = arr_push(&render.targets);
 	target->size = descriptor.size;
 	
@@ -621,7 +724,7 @@ void gpu_destroy_target(GpuRenderTarget* target) {
 	glDeleteFramebuffers(1, &target->handle);
 }
 
-void gpu_bind_target(GpuRenderTarget* target) {
+void gpu_render_target_bind(GpuRenderTarget* target) {
 	if (!target) return;
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, target->handle);
@@ -633,15 +736,15 @@ GpuRenderTarget* gpu_acquire_swapchain() {
 	return render.targets[0];
 }
 
-void gpu_clear_target(GpuRenderTarget* target) {
+void gpu_render_target_clear(GpuRenderTarget* target) {
 	if (!target) return;
 	
-	gpu_bind_target(target);
+	gpu_render_target_bind(target);
 	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void gpu_blit_target(GpuCommandBuffer* command_buffer, GpuRenderTarget* source, GpuRenderTarget* destination) {
+void gpu_render_target_blit(GpuRenderTarget* source, GpuRenderTarget* destination) {
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, source->handle);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destination->handle);
 	glBlitFramebuffer(0, 0, source->size.x, source->size.y, 0, 0, destination->size.x, destination->size.y,  GL_COLOR_BUFFER_BIT, GL_NEAREST);
@@ -656,7 +759,7 @@ void gpu_swap_buffers() {
 ////////////////////
 // COMMAND BUFFER //
 ////////////////////
-GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descriptor) {
+GpuCommandBufferBatched* gpu_create_command_buffer(GpuCommandBufferBatchedDescriptor descriptor) {
 	auto buffer = arr_push(&render.command_buffers);
 
 	// Collect vertex attributes, so we know how much memory we need
@@ -695,7 +798,7 @@ GpuCommandBuffer* gpu_create_command_buffer(GpuCommandBufferDescriptor descripto
 	return buffer;
 }
 
-DrawCall* gpu_command_buffer_alloc_draw_call(GpuCommandBuffer* command_buffer) {
+DrawCall* gpu_command_buffer_alloc_draw_call(GpuCommandBufferBatched* command_buffer) {
 	assert(command_buffer);
 
 	DrawCall draw_call;
@@ -711,14 +814,14 @@ DrawCall* gpu_command_buffer_alloc_draw_call(GpuCommandBuffer* command_buffer) {
 	return arr_push(&command_buffer->draw_calls, draw_call);
 }
 
-DrawCall* gpu_command_buffer_find_draw_call(GpuCommandBuffer* command_buffer) {
+DrawCall* gpu_command_buffer_find_draw_call(GpuCommandBufferBatched* command_buffer) {
 	assert(command_buffer);
 
 	if (!command_buffer->draw_calls.size) gpu_command_buffer_alloc_draw_call(command_buffer);
 	return arr_back(&command_buffer->draw_calls);
 }
 
-DrawCall* gpu_command_buffer_flush_draw_call(GpuCommandBuffer* command_buffer) {
+DrawCall* gpu_command_buffer_flush_draw_call(GpuCommandBufferBatched* command_buffer) {
 	assert(command_buffer);
 
 	// Look at the current draw call to determine if it's empty; some operations want to always flush the draw call (i.e. changing
@@ -731,7 +834,7 @@ DrawCall* gpu_command_buffer_flush_draw_call(GpuCommandBuffer* command_buffer) {
 	return gpu_command_buffer_alloc_draw_call(command_buffer);
 }
 
-u8* gpu_command_buffer_alloc_vertex_data(GpuCommandBuffer* command_buffer, u32 count) {
+u8* gpu_command_buffer_alloc_vertex_data(GpuCommandBufferBatched* command_buffer, u32 count) {
 	assert(command_buffer);
 
 	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
@@ -740,7 +843,7 @@ u8* gpu_command_buffer_alloc_vertex_data(GpuCommandBuffer* command_buffer, u32 c
 	return vertex_buffer_reserve(&command_buffer->vertex_buffer, count);
 }
 
-u8* gpu_command_buffer_push_vertex_data(GpuCommandBuffer* command_buffer, void* data, u32 count) {
+u8* gpu_command_buffer_push_vertex_data(GpuCommandBufferBatched* command_buffer, void* data, u32 count) {
 	assert(command_buffer);
 
 	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
@@ -749,14 +852,14 @@ u8* gpu_command_buffer_push_vertex_data(GpuCommandBuffer* command_buffer, void* 
 	return vertex_buffer_push(&command_buffer->vertex_buffer, data, count);
 }
 
-void gpu_command_buffer_bind(GpuCommandBuffer* command_buffer) {
+void gpu_command_buffer_bind(GpuCommandBufferBatched* command_buffer) {
 	assert(command_buffer);
 	glBindVertexArray(command_buffer->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, command_buffer->vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_byte_size(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW); // @VERTEX
 }
 
-void gpu_command_buffer_preprocess(GpuCommandBuffer* command_buffer) {
+void gpu_command_buffer_preprocess(GpuCommandBufferBatched* command_buffer) {
 	// @VERTEX
 	// arr_for(command_buffer->draw_calls, draw_call) {
 	// 	if (!draw_call->count) continue;
@@ -772,7 +875,7 @@ void gpu_command_buffer_preprocess(GpuCommandBuffer* command_buffer) {
 	// qsort(command_buffer->draw_calls.data, command_buffer->draw_calls.size, sizeof(DrawCall), &DrawCall::compare);
 }
 
-void gpu_command_buffer_render(GpuCommandBuffer* command_buffer) {
+void gpu_command_buffer_render(GpuCommandBufferBatched* command_buffer) {
 	GlStateDiff state_diff;
 	arr_for(command_buffer->draw_calls, draw_call) {
 		if (!draw_call->count) continue;
@@ -786,10 +889,86 @@ void gpu_command_buffer_render(GpuCommandBuffer* command_buffer) {
 	vertex_buffer_clear(&command_buffer->vertex_buffer); // @VERTEX
 }
 
-void gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
+void gpu_command_buffer_submit(GpuCommandBufferBatched* command_buffer) {
 	gpu_command_buffer_bind(command_buffer);
 	gpu_command_buffer_preprocess(command_buffer);
 	gpu_command_buffer_render(command_buffer);	
+}
+
+///////////////////////////
+// BETTER COMMAND BUFFER //
+///////////////////////////
+/*
+struct GpuCommandBufferDescriptor {
+	GpuVertexLayout* vertex_layout;
+	GpuBuffer* vertex_buffer;
+	u32 max_draw_calls;
+};
+struct GpuCommandBuffer {
+	Array<DrawCall> draw_calls;
+	GpuVertexLayout* vertex_layout;
+	GpuBuffer* vertex_buffer;
+};
+*/
+GpuCommandBuffer* gpu_commands_create(GpuCommandBufferDescriptor descriptor) {
+	auto command_buffer = arr_push(&render.commands);
+	command_buffer->vertex_layout = descriptor.vertex_layout;
+	command_buffer->vertex_buffer = descriptor.vertex_buffer;
+	arr_init(&command_buffer->draw_calls, descriptor.max_draw_calls);
+
+	return command_buffer;
+}
+
+DrawCall* gpu_commands_alloc_draw_call(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
+
+	DrawCall draw_call;
+	fill_memory_u8(&draw_call, sizeof(DrawCall), 0);
+	draw_call.offset = command_buffer->vertex_buffer.size;
+	draw_call.count = 0;
+	draw_call.state = GlState();
+
+	if (command_buffer->draw_calls.size) {
+		draw_call.copy_from(arr_back(&command_buffer->draw_calls));
+	}
+
+	return arr_push(&command_buffer->draw_calls, draw_call);
+}
+
+DrawCall* gpu_commands_find_draw_call(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
+
+	if (!command_buffer->draw_calls.size) gpu_commands_alloc_draw_call(command_buffer);
+	return arr_back(&command_buffer->draw_calls);
+}
+
+DrawCall* gpu_commands_flush_draw_call(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
+
+	// Look at the current draw call to determine if it's empty; some operations want to always flush the draw call (i.e. changing
+	// shaders -- there's no way to batch those). However, if some operation just before that flushed the draw call, you end up
+	// with these empty draw calls sprinkled through the command buffer.
+	auto draw_call = gpu_commands_find_draw_call(command_buffer);
+	if (!draw_call->count) return draw_call;
+	if (!draw_call->state.shader) return draw_call;
+
+	return gpu_commands_alloc_draw_call(command_buffer);
+}
+
+void gpu_commands_bind(GpuCommandBuffer* command_buffer) {
+	assert(command_buffer);
+
+	gpu_vertex_layout_bind(command_buffer->vertex_layout);
+}
+
+void gpu_commands_preprocess(GpuCommandBuffer* command_buffer) {
+	
+}
+void gpu_commands_render(GpuCommandBuffer* command_buffer) {
+	
+}
+void gpu_commands_submit(GpuCommandBuffer* command_buffer) {
+	
 }
 
 
@@ -807,7 +986,7 @@ void gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline) {
 	assert(pipeline);
 	auto& color_attachment = pipeline->color_attachment;
 	if (color_attachment.load_op == GpuLoadOp::Clear) {
-		gpu_clear_target(color_attachment.write);
+		gpu_render_target_clear(color_attachment.write);
 	}
 }
 
@@ -835,47 +1014,117 @@ DrawCall* gpu_graphics_pipeline_alloc_draw_call(GpuGraphicsPipeline* pipeline) {
 /////////////////////
 // STORAGE BUFFERS //
 /////////////////////
-GpuBuffer* gpu_create_buffer() {
+GpuBuffer* gpu_buffer_create(GpuBufferDescriptor descriptor) {
 	auto buffer = arr_push(&render.gpu_buffers);
+	buffer->kind = descriptor.kind;
+	buffer->usage = descriptor.usage;
+	buffer->size = descriptor.size;
 	glGenBuffers(1, &buffer->handle);
+	
+	gpu_buffer_sync(buffer, nullptr, buffer->size);
 
 	return buffer;
 }
 
 void gpu_memory_barrier(GpuMemoryBarrier barrier) {
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	glMemoryBarrier(convert_memory_barrier(barrier));
 }
 
-void gpu_bind_buffer(GpuBuffer* buffer) {
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer->handle);
+void gpu_buffer_bind(GpuBuffer* buffer) {
+	glBindBuffer(convert_buffer_kind(buffer->kind), buffer->handle);
 }
 
-void gpu_bind_buffer_base(GpuBuffer* buffer, u32 base) {
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, base, buffer->handle);
+void gpu_buffer_bind_base(GpuBuffer* buffer, u32 base) {
+	glBindBufferBase(convert_buffer_kind(buffer->kind), base, buffer->handle);
 }
 
-void gpu_sync_buffer(GpuBuffer* buffer, void* data, u32 size) {
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer->handle);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, size, data, GL_STATIC_DRAW);
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+void gpu_buffer_sync(GpuBuffer* buffer, void* data, u32 size) {
+	gpu_buffer_bind(buffer);
+	glBufferData(convert_buffer_kind(buffer->kind), size, data, convert_buffer_usage(buffer->usage));
+	glMemoryBarrier(buffer_kind_to_barrier(buffer->kind));
 }
 
-void gpu_sync_buffer_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset) {
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, buffer->handle);
-	glBufferSubData(GL_SHADER_STORAGE_BUFFER, byte_offset, byte_size, data);
-	glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+void gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset) {
+	gpu_buffer_bind(buffer);
+	glBufferSubData(convert_buffer_kind(buffer->kind), byte_offset, byte_size, data);
+	glMemoryBarrier(buffer_kind_to_barrier(buffer->kind));
 }
 
 
-void gpu_zero_buffer(GpuBuffer* buffer, u32 size) {
+void gpu_buffer_zero(GpuBuffer* buffer, u32 size) {
 	auto data = bump_allocator.alloc<u8>(size);
-	gpu_sync_buffer(buffer, data, size);
+	gpu_buffer_sync(buffer, data, size);
 }
 
 void gpu_dispatch_compute(GpuBuffer* buffer, u32 size) {
 
 }
 
+///////////////////
+// VERTEX LAYOUT //
+///////////////////
+GpuVertexLayout* gpu_vertex_layout_create(GpuVertexLayoutDescriptor descriptor) {
+	auto layout = arr_push(&render.vertex_layouts);
+
+	glGenVertexArrays(1, &layout->vao);
+	glBindVertexArray(layout->vao);
+
+	u32 attribute_index = 0;
+	for (u32 i = 0; i < descriptor.num_buffer_layouts; i++) {
+		auto buffer_layout = descriptor.buffer_layouts[i];
+
+		u32 stride = 0;
+		for (u32 i = 0; i < buffer_layout.num_vertex_attributes; i++) {
+			auto attribute = buffer_layout.vertex_attributes[i];
+			auto type_info = GlTypeInfo::from_attribute(attribute.kind);
+			stride += attribute.count * type_info.size;
+		}
+		
+		gpu_buffer_bind(buffer_layout.buffer);
+
+		u64 offset = 0;
+		for (u32 i = 0; i < buffer_layout.num_vertex_attributes; i++) {
+			auto attribute = buffer_layout.vertex_attributes[i];
+			auto type_info = GlTypeInfo::from_attribute(attribute.kind);
+			
+			if (type_info.floating_point) {
+				glVertexAttribPointer(attribute_index, attribute.count, type_info.value, GL_FALSE, stride, (void*)offset);
+			}
+			else if (type_info.integral) {
+				glVertexAttribIPointer(attribute_index, attribute.count, type_info.value, stride, (void*)offset);
+			}
+			else {
+				assert(false);
+			}
+			glEnableVertexAttribArray(attribute_index);
+			glVertexAttribDivisor(attribute_index, attribute.divisor);
+
+			offset += attribute.count * type_info.size;
+			attribute_index++;
+		}
+	}
+	
+	glBindVertexArray(0);
+
+	return layout;
+}
+
+void gpu_vertex_layout_bind(GpuVertexLayout* layout) {
+	glBindVertexArray(layout->vao);
+}
+
+
+FM_LUA_EXPORT void gpu_render_sdf(GpuCommandBufferBatched* command_buffer, GpuVertexLayout* vertex_layout, u32 num_instances) {
+	auto draw_call = arr_back(&command_buffer->draw_calls);
+
+	GlStateDiff diff;
+	diff.apply(&draw_call->state);
+
+	glBindVertexArray(vertex_layout->vao);
+	glDrawArraysInstanced(GL_TRIANGLES, 0, 6, num_instances);
+
+	arr_clear(&command_buffer->draw_calls);
+}
 
 ////////////////////////
 // RENDERER INTERNALS //
@@ -884,10 +1133,12 @@ void init_render() {
 	render.screenshot = standard_allocator.alloc<u8>(window.native_resolution.x * window.native_resolution.y * 4);
 
 	arr_init(&render.command_buffers);
+	arr_init(&render.commands);
 	arr_init(&render.targets);
-	arr_init(&render.gpu_buffers);
 	arr_init(&render.graphics_pipelines);
+	arr_init(&render.gpu_buffers);
 	arr_init(&render.shaders);
+	arr_init(&render.vertex_layouts);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;
@@ -910,21 +1161,6 @@ void DrawCall::copy_from(DrawCall* other) {
 	this->mode = other->mode;
 	this->state = other->state;
 	this->state.uniforms.clear();
-}
-
-int DrawCall::compare(const void* a, const void* b) {
-	auto da = (DrawCall*)a;
-	auto db = (DrawCall*)b;
-
-	// If A is in a lower layer than B, A is drawn first, and we return a positive integer, & vice v.
-	if (da->state.layer > db->state.layer) return 1;
-	if (da->state.layer < db->state.layer) return -1;
-
-	if (da->average_y > db->average_y) return -1;
-	if (da->average_y < db->average_y) return 1;
-
-	// Otherwise, use the offset as a proxy for the order submitted to keep the sort stable.
-	return da->offset > db->offset ? -1 : 1;
 }
 
 void GlStateDiff::apply(GlState* state) {
@@ -977,7 +1213,7 @@ void GlStateDiff::apply(GlState* state) {
 	}
 
 	if (!current || current->render_target != state->render_target) {
-		gpu_bind_target(state->render_target);
+		gpu_render_target_bind(state->render_target);
 	}
 	set_uniform_immediate_mat4("projection", render.projection);
 	set_uniform_immediate_vec2("output_resolution", state->render_target->size);
@@ -1108,6 +1344,7 @@ u32 convert_draw_mode(DrawMode mode) {
 		return GL_TRIANGLES;
 	}
 
+	assert(false);
 	return GL_TRIANGLES;
 }
 
@@ -1123,5 +1360,57 @@ u32 convert_gl_id(GlId id) {
 	}
 
 
+	assert(false);
 	return GL_BUFFER;
+}
+
+u32 convert_memory_barrier(GpuMemoryBarrier barrier) {
+	if (barrier == GpuMemoryBarrier::ShaderStorage) {
+		return GL_SHADER_STORAGE_BARRIER_BIT;
+	}
+	else if (barrier == GpuMemoryBarrier::BufferUpdate) {
+		return GL_BUFFER_UPDATE_BARRIER_BIT;
+	}
+
+	assert(false);
+	return 0;
+}
+
+u32 convert_buffer_kind(GpuBufferKind kind) {
+	if (kind == GpuBufferKind::Storage) {
+		return GL_SHADER_STORAGE_BUFFER;
+	}
+	else if (kind == GpuBufferKind::Array) {
+		return GL_ARRAY_BUFFER;
+	}
+
+	assert(false);
+	return 0;
+}
+
+u32 convert_buffer_usage(GpuBufferUsage usage) {
+	if (usage == GpuBufferUsage::Static) {
+			return GL_STATIC_DRAW;
+	}
+	else if (usage == GpuBufferUsage::Dynamic) {
+			return GL_DYNAMIC_DRAW;
+	}
+	else if (usage == GpuBufferUsage::Stream) {
+			return GL_STREAM_DRAW;
+	}
+
+	assert(false);
+	return 0;
+}
+
+u32 buffer_kind_to_barrier(GpuBufferKind kind) {
+	if (kind == GpuBufferKind::Storage) {
+		return GL_SHADER_STORAGE_BARRIER_BIT;
+	}
+	else if (kind == GpuBufferKind::Array) {
+		return GL_BUFFER_UPDATE_BARRIER_BIT;
+	}
+
+	assert(false);
+	return 0;
 }

@@ -96,7 +96,18 @@ function tdengine.enum.define(enum_name, values)
 	return tdengine.enums[enum_name]
 end
 
+function tdengine.enum.define_from_ctype(ctype)
+	local type_info = tdengine.ffi.typeof(ctype)
 
+	local prefix = string.format('%s_', ctype)
+	local values = {}
+	for value in type_info:values() do
+		local cleaned_name = value.name:gsub(prefix, '')
+		values[cleaned_name] = value.value
+	end
+
+	return tdengine.enum.define(ctype, values)
+end
 
 function tdengine.enum.is_enum(v)
 	if type(v) ~= 'table' then return false end
