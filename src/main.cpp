@@ -48,6 +48,7 @@
 #include "steam.hpp"
 #include "asset.hpp"
 #include "named_path.hpp"
+#include "graphics.hpp"
 
 #include "action.cpp" // HALF
 #include "api.cpp"

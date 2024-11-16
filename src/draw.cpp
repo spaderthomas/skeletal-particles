@@ -910,66 +910,66 @@ struct GpuCommandBuffer {
 	GpuBuffer* vertex_buffer;
 };
 */
-GpuCommandBuffer* gpu_commands_create(GpuCommandBufferDescriptor descriptor) {
-	auto command_buffer = arr_push(&render.commands);
-	command_buffer->vertex_layout = descriptor.vertex_layout;
-	command_buffer->vertex_buffer = descriptor.vertex_buffer;
-	arr_init(&command_buffer->draw_calls, descriptor.max_draw_calls);
+// GpuCommandBuffer* gpu_commands_create(GpuCommandBufferDescriptor descriptor) {
+// 	auto command_buffer = arr_push(&render.commands);
+// 	command_buffer->vertex_layout = descriptor.vertex_layout;
+// 	command_buffer->vertex_buffer = descriptor.vertex_buffer;
+// 	arr_init(&command_buffer->draw_calls, descriptor.max_draw_calls);
 
-	return command_buffer;
-}
+// 	return command_buffer;
+// }
 
-DrawCall* gpu_commands_alloc_draw_call(GpuCommandBuffer* command_buffer) {
-	assert(command_buffer);
+// DrawCall* gpu_commands_alloc_draw_call(GpuCommandBuffer* command_buffer) {
+// 	assert(command_buffer);
 
-	DrawCall draw_call;
-	fill_memory_u8(&draw_call, sizeof(DrawCall), 0);
-	draw_call.offset = command_buffer->vertex_buffer.size;
-	draw_call.count = 0;
-	draw_call.state = GlState();
+// 	DrawCall draw_call;
+// 	fill_memory_u8(&draw_call, sizeof(DrawCall), 0);
+// 	draw_call.offset = command_buffer->vertex_buffer->size;
+// 	draw_call.count = 0;
+// 	draw_call.state = GlState();
 
-	if (command_buffer->draw_calls.size) {
-		draw_call.copy_from(arr_back(&command_buffer->draw_calls));
-	}
+// 	if (command_buffer->draw_calls.size) {
+// 		draw_call.copy_from(arr_back(&command_buffer->draw_calls));
+// 	}
 
-	return arr_push(&command_buffer->draw_calls, draw_call);
-}
+// 	return arr_push(&command_buffer->draw_calls, draw_call);
+// }
 
-DrawCall* gpu_commands_find_draw_call(GpuCommandBuffer* command_buffer) {
-	assert(command_buffer);
+// DrawCall* gpu_commands_find_draw_call(GpuCommandBuffer* command_buffer) {
+// 	assert(command_buffer);
 
-	if (!command_buffer->draw_calls.size) gpu_commands_alloc_draw_call(command_buffer);
-	return arr_back(&command_buffer->draw_calls);
-}
+// 	if (!command_buffer->draw_calls.size) gpu_commands_alloc_draw_call(command_buffer);
+// 	return arr_back(&command_buffer->draw_calls);
+// }
 
-DrawCall* gpu_commands_flush_draw_call(GpuCommandBuffer* command_buffer) {
-	assert(command_buffer);
+// DrawCall* gpu_commands_flush_draw_call(GpuCommandBuffer* command_buffer) {
+// 	assert(command_buffer);
 
-	// Look at the current draw call to determine if it's empty; some operations want to always flush the draw call (i.e. changing
-	// shaders -- there's no way to batch those). However, if some operation just before that flushed the draw call, you end up
-	// with these empty draw calls sprinkled through the command buffer.
-	auto draw_call = gpu_commands_find_draw_call(command_buffer);
-	if (!draw_call->count) return draw_call;
-	if (!draw_call->state.shader) return draw_call;
+// 	// Look at the current draw call to determine if it's empty; some operations want to always flush the draw call (i.e. changing
+// 	// shaders -- there's no way to batch those). However, if some operation just before that flushed the draw call, you end up
+// 	// with these empty draw calls sprinkled through the command buffer.
+// 	auto draw_call = gpu_commands_find_draw_call(command_buffer);
+// 	if (!draw_call->count) return draw_call;
+// 	if (!draw_call->state.shader) return draw_call;
 
-	return gpu_commands_alloc_draw_call(command_buffer);
-}
+// 	return gpu_commands_alloc_draw_call(command_buffer);
+// }
 
-void gpu_commands_bind(GpuCommandBuffer* command_buffer) {
-	assert(command_buffer);
+// void gpu_commands_bind(GpuCommandBuffer* command_buffer) {
+// 	assert(command_buffer);
 
-	gpu_vertex_layout_bind(command_buffer->vertex_layout);
-}
+// 	gpu_vertex_layout_bind(command_buffer->vertex_layout);
+// }
 
-void gpu_commands_preprocess(GpuCommandBuffer* command_buffer) {
+// void gpu_commands_preprocess(GpuCommandBuffer* command_buffer) {
 	
-}
-void gpu_commands_render(GpuCommandBuffer* command_buffer) {
+// }
+// void gpu_commands_render(GpuCommandBuffer* command_buffer) {
 	
-}
-void gpu_commands_submit(GpuCommandBuffer* command_buffer) {
+// }
+// void gpu_commands_submit(GpuCommandBuffer* command_buffer) {
 	
-}
+// }
 
 
 ///////////////////////
@@ -1133,7 +1133,7 @@ void init_render() {
 	render.screenshot = standard_allocator.alloc<u8>(window.native_resolution.x * window.native_resolution.y * 4);
 
 	arr_init(&render.command_buffers);
-	arr_init(&render.commands);
+	// arr_init(&render.commands);
 	arr_init(&render.targets);
 	arr_init(&render.graphics_pipelines);
 	arr_init(&render.gpu_buffers);
@@ -1154,6 +1154,9 @@ void init_render() {
 	render.shader_monitor = arr_push(&file_monitors);
 	render.shader_monitor->init(reload_all_shaders, FileChangeEvent::Modified, nullptr);
 	render.shader_monitor->add_directory(resolve_named_path("shaders"));
+
+	init_command_renderer();
+	test_command_renderer();
 }
 
 

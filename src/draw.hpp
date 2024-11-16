@@ -313,34 +313,34 @@ struct GpuVertexLayout {
 };
 
 
-struct GpuCommandBufferDescriptor {
-	GpuVertexLayout* vertex_layout;
-	GpuBuffer* vertex_buffer;
-	u32 max_vertices;
-	u32 max_draw_calls;
-};
-struct GpuCommandBuffer {
-	Array<DrawCall> draw_calls;
-	GpuVertexLayout* vertex_layout;
-	GpuBuffer* vertex_buffer;
-	GpuBuffer* instance_buffer;
-};
-
-
-struct DefaultRenderer {
-	GpuGraphicsPipeline* pipeline;
-	GpuCommandBuffer* command_buffer;
-	GpuRenderTarget* render_target;
-	VertexBuffer vertex_buffer;
-
-	static constexpr u32 max_vertices = 64 * 1024;
-	static constexpr u32 max_draw_calls = 1024;
-};
-DefaultRenderer default_renderer;
+// struct GpuCommandBufferDescriptor {
+// 	GpuVertexLayout* vertex_layout;
+// 	GpuBuffer* vertex_buffer;
+// 	u32 max_vertices;
+// 	u32 max_draw_calls;
+// };
+// struct GpuCommandBuffer {
+// 	Array<DrawCall> draw_calls;
+// 	GpuVertexLayout* vertex_layout;
+// 	GpuBuffer* vertex_buffer;
+// 	GpuBuffer* instance_buffer;
+// };
+//
+//
+//struct DefaultRenderer {
+//	GpuGraphicsPipeline* pipeline;
+//	GpuCommandBuffer* command_buffer;
+//	GpuRenderTarget* render_target;
+//	VertexBuffer vertex_buffer;
+//
+//	static constexpr u32 max_vertices = 64 * 1024;
+//	static constexpr u32 max_draw_calls = 1024;
+//};
+//DefaultRenderer default_renderer;
 
 struct RenderEngine {
 	Array<GpuCommandBufferBatched, 32>  command_buffers;
-	Array<GpuCommandBuffer,        32>  commands;
+	// Array<GpuCommandBuffer,        32>  commands;
 	Array<GpuRenderTarget,         32>  targets;
 	Array<GpuGraphicsPipeline,     32>  graphics_pipelines;
 	Array<GpuBuffer,               32>  gpu_buffers;
@@ -359,14 +359,14 @@ struct RenderEngine {
 };
 RenderEngine render;
 
-FM_LUA_EXPORT GpuCommandBuffer* gpu_commands_create(GpuCommandBufferDescriptor descriptor);
-FM_LUA_EXPORT DrawCall*         gpu_commands_alloc_draw_call(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT DrawCall*         gpu_commands_find_draw_call(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT DrawCall*         gpu_commands_flush_draw_call(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void              gpu_commands_bind(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void              gpu_commands_preprocess(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void              gpu_commands_render(GpuCommandBuffer* command_buffer);
-FM_LUA_EXPORT void              gpu_commands_submit(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT GpuCommandBuffer* gpu_commands_create(GpuCommandBufferDescriptor descriptor);
+// FM_LUA_EXPORT DrawCall*         gpu_commands_alloc_draw_call(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT DrawCall*         gpu_commands_find_draw_call(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT DrawCall*         gpu_commands_flush_draw_call(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT void              gpu_commands_bind(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT void              gpu_commands_preprocess(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT void              gpu_commands_render(GpuCommandBuffer* command_buffer);
+// FM_LUA_EXPORT void              gpu_commands_submit(GpuCommandBuffer* command_buffer);
 
 /////////
 // GPU //

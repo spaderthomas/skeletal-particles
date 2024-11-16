@@ -10,8 +10,8 @@ FM_LUA_EXPORT void copy_string(const_string str, string buffer, u32 buffer_lengt
 FM_LUA_EXPORT void copy_string_n(const_string str, u32 length, string buffer, u32 buffer_length);
 void copy_string_std(const std::string& str, string buffer);
 
-bool compare_bytes(void* b0, void* b1, size_t len) {
-    return 0 == memcmp(b0, b1, len);
+bool is_memory_equal(void* a, void* b, size_t len) {
+    return 0 == memcmp(a, b, len);
 }
 
 void copy_memory(void* source, void* dest, u32 num_bytes) {
