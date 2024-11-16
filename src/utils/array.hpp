@@ -122,6 +122,7 @@ template<typename T, u64 N>
 i32 arr_bytes_used(Array<T, N>* array);
 
 #define arr_for(array, it) for (auto (it) = (array).data; (it) != ((array).data + (array).size); (it)++)
+#define arr_for_ref(array, it, ref) for (auto (it) = (array).data; (it) != ((array).data + (array).size); (it)++)
 #define arr_rfor(array, it) for (auto (it) = (array).data + array.size - 1; (it) >= ((array).data); (it)--)
 
 

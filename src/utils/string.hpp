@@ -32,3 +32,7 @@ void fill_memory(void* buffer, u32 buffer_size, void* fill, u32 fill_size) {
 void fill_memory_u8(void* buffer, u32 buffer_size, u8 fill) {
 	fill_memory(buffer, buffer_size, &fill, sizeof(u8));
 }
+
+void zero_memory(void* buffer, u32 buffer_size) {
+	fill_memory_u8(buffer, buffer_size, 0);
+}

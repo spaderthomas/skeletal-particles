@@ -1,21 +1,54 @@
+#ifndef GRAPHICS_H
+#define GRAPHICS_H
+
 typedef enum {
-  GPU_COMMAND_SET_SCISSOR_STATE = 0,
-  GPU_COMMAND_SET_RASTER_STATE = 1,
-  GPU_COMMAND_SET_RENDER_STATE = 2,
-  GPU_COMMAND_SET_RENDER_ATTACHMENT = 3,
-  GPU_COMMAND_SET_BUFFER_BINDINGS = 4,
-  GPU_COMMAND_DRAW = 5,
-} GpuCommandKind;
+  GPU_COMMAND_OP_INITIALIZE = 0,
+  GPU_COMMAND_OP_BIND_BUFFERS = 10,
+  GPU_COMMAND_OP_BEGIN_RENDER_PASS = 20,
+  GPU_COMMAND_OP_END_RENDER_PASS = 21,
+  GPU_COMMAND_OP_BIND_PIPELINE = 30,
+  GPU_COMMAND_OP_SET_CAMERA = 40,
+  GPU_COMMAND_OP_SET_LAYER = 41,
+  GPU_COMMAND_OP_SET_WORLD_SPACE = 42,
+  GPU_COMMAND_OP_SET_SCISSOR = 43,
+  GPU_COMMAND_OP_DRAW = 70,
+} GpuCommandOp;
 
 typedef enum {
   GPU_PRIMITIVE_TRIANGLES = 0
 } GpuDrawPrimitive;
 
 typedef enum {
-  GPU_MODE_ARRAYS = 0,
-  GPU_MODE_INSTANCE = 1,
+  GPU_DRAW_MODE_ARRAYS = 0,
+  GPU_DRAW_MODE_INSTANCE = 1,
 } GpuDrawMode;
 
+typedef enum {
+	GPU_VERTEX_ATTRIBUTE_FLOAT = 0,
+	GPU_VERTEX_ATTRIBUTE_U32 = 1,
+} GpuVertexAttributeKind;
+
+
+////////////////////////
+// BINDABLE RESOURCES //
+////////////////////////
+typedef struct {
+  GpuRenderTarget* color;
+} GpuRenderPass;
+
+typedef struct {
+  struct {
+    GpuBuffer** buffers;
+    u32 count;
+  } vertex;
+  // Uniform
+  // SSBO
+} GpuBufferBinding;
+
+
+//////////////////
+// GPU PIPELINE //
+//////////////////
 typedef struct {
   GpuShader* shader;
   GpuDrawPrimitive primitive;
@@ -34,280 +67,385 @@ typedef struct {
 } GpuRendererState;
 
 typedef struct {
+	GpuVertexAttributeKind kind;
+	u32 count;
+	u32 divisor;
+} GpuVertexAttribute;
+
+typedef struct {
+	GpuVertexAttribute* vertex_attributes;
+	u32 num_vertex_attributes;
+} GpuBufferLayout;
+
+typedef struct {
+  GpuRasterState raster;
+	GpuBufferLayout* buffer_layouts;
+	u32 num_buffer_layouts;
+} GpuPipeline;
+
+
+////////////////////////
+// GPU COMMAND BUFFER //
+////////////////////////
+typedef struct {
   GpuDrawMode mode;
   u32 vertex_offset;
   u32 num_vertices;
   u32 num_instances;
 } GpuDrawCall;
 
-
 typedef struct {
-  GpuVertexLayout* vertex;
-} GpuBufferBinding;
-
-typedef struct {
-  GpuRenderTarget* color;
-} GpuRenderAttachment;
-
-
-typedef struct {
-  GpuRasterState       raster;
-  GpuScissorState      scissor;
-  GpuRendererState     render;
-  GpuRenderAttachment  attachment;
-  GpuBufferBinding     buffers;
-} GpuState;
-
-typedef struct {
-  GpuCommandKind kind;
+  GpuCommandOp kind;
   union {
-    GpuRasterState       raster;
-    GpuScissorState      scissor;
-    GpuRendererState     render;
-    GpuRenderAttachment  attachment;
-    GpuBufferBinding     buffers;
+    GpuPipeline       pipeline;
+    GpuBufferBinding  buffers;
+    GpuRenderPass     render_pass;
+    GpuRendererState  render;
+    GpuScissorState   scissor;
+    GpuDrawCall       draw;
   };
 } GpuCommand;
 
 typedef struct {
   u32 max_commands;
-} _GpuCommandBufferDescriptor;
+} GpuCommandBufferDescriptor;
 
 typedef struct {
-  GpuState state;
+  GpuPipeline pipeline;
+  GpuBufferBinding buffers;
+  GpuRendererState render;
+  GpuScissorState scissor;
+
   Array<GpuCommand> commands;
+  u32 vao;
 } GpuCommandBuffer;
 
+
+FM_LUA_EXPORT GpuCommandBuffer* _gpu_command_buffer_create(GpuCommandBufferDescriptor descriptor);
+FM_LUA_EXPORT void              _gpu_command_buffer_draw(GpuCommandBuffer* command_buffer, GpuDrawCall draw_call);
+FM_LUA_EXPORT void              _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT void              _gpu_bind_pipeline(GpuCommandBuffer* command_buffer, GpuPipeline pipeline);
+FM_LUA_EXPORT void              _gpu_begin_render_pass(GpuCommandBuffer* command_buffer, GpuRenderPass render_pass);
+FM_LUA_EXPORT void              _gpu_end_render_pass(GpuCommandBuffer* command_buffer);
+FM_LUA_EXPORT void              _gpu_bind_buffers(GpuCommandBuffer* command_buffer, GpuBufferBinding buffers);
+FM_LUA_EXPORT void              _gpu_bind_render_state(GpuCommandBuffer* command_buffer, GpuRendererState render);
+FM_LUA_EXPORT void              _gpu_set_layer(GpuCommandBuffer* command_buffer, u32 layer);
+FM_LUA_EXPORT void              _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space);
+FM_LUA_EXPORT void              _gpu_set_camera(GpuCommandBuffer* command_buffer, Vector2 camera);
+
+void _gpu_command_buffer_process_command(GpuCommandBuffer* command_buffer, GpuCommand command);
+void _gpu_command_buffer_clear_cached_state(GpuCommandBuffer* command_buffer);
+u32 _gpu_vertex_layout_calculate_stride(GpuBufferLayout* layout);
+u32 gpu_draw_primitive_to_gl_draw_primitive(GpuDrawPrimitive primitive);
+GlTypeInfo gl_type_info_from_vertex_attribute_kind(GpuVertexAttributeKind kind);
+void* gl_u32_to_void_pointer(u32 value);
+
+//////////////
+// INTERNAL //
+//////////////
 typedef struct {
   Array<GpuCommandBuffer, 32> command_buffers;
 } CommandRenderer;
 CommandRenderer command_renderer;
 
-void init_command_renderer() {
-  arr_init(&command_renderer.command_buffers);
-}
+void init_command_renderer();
+void test_command_renderer();
+#endif // GRAPHICS_H
 
 
 
-GpuCommandBuffer* _gpu_command_buffer_create(_GpuCommandBufferDescriptor descriptor);
-void _gpu_command_buffer_process_command(GpuCommandBuffer* command_buffer, GpuCommand command);
-void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer);
+////////////////////
+// IMPLEMENTATION //
+////////////////////
+#ifdef GRAPHICS_IMPLEMENTATION
 
-GpuCommandBuffer* _gpu_command_buffer_create(_GpuCommandBufferDescriptor descriptor) {
+
+////////////////////
+// COMMAND BUFFER //
+////////////////////
+GpuCommandBuffer* _gpu_command_buffer_create(GpuCommandBufferDescriptor descriptor) {
   auto command_buffer = arr_push(&command_renderer.command_buffers);
   arr_init(&command_buffer->commands, descriptor.max_commands);
-  
+  glGenVertexArrays(1, &command_buffer->vao);
+  glBindVertexArray(command_buffer->vao);
+
   return command_buffer;
 }
 
-void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
-  _gpu_command_buffer_process_command(command_buffer, {
-    .kind = GPU_COMMAND_SET_RASTER_STATE,
-    .raster = {
-      .shader = NULL,
-      .primitive = GPU_PRIMITIVE_TRIANGLES
-    }
-  });
-  _gpu_command_buffer_process_command(command_buffer, {
-    .kind = GPU_COMMAND_SET_SCISSOR_STATE,
-    .scissor = {
-      .enabled = false
-    }
-  });
-  _gpu_command_buffer_process_command(command_buffer, {
-    .kind = GPU_COMMAND_SET_RENDER_STATE,
-    .render = {
-      .layer = 0,
-      .world_space = true,
-      .camera = Vector2(),
-    }
-  });
-  _gpu_command_buffer_process_command(command_buffer, {
-    .kind = GPU_COMMAND_SET_RENDER_ATTACHMENT,
-    .attachment = {
-      .color = NULL
-    }
-  });
-  _gpu_command_buffer_process_command(command_buffer, {
-    .kind = GPU_COMMAND_SET_BUFFER_BINDINGS,
-    .buffers = {
-      .vertex = NULL,
-    }
-  });
+void _gpu_command_buffer_clear_cached_state(GpuCommandBuffer* command_buffer) {
+  zero_memory(&command_buffer->pipeline, sizeof(GpuPipeline));
+  zero_memory(&command_buffer->buffers, sizeof(GpuBufferBinding));
+  zero_memory(&command_buffer->render, sizeof(GpuRendererState));
+  zero_memory(&command_buffer->scissor, sizeof(GpuScissorState));
+}
 
-  arr_for(command_buffer->commands, command) {
-    _gpu_command_buffer_process_command(command_buffer, *command);
+void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
+  _gpu_command_buffer_clear_cached_state(command_buffer);
+
+  arr_for(command_buffer->commands, it) {
+    auto& command = *it;
+    auto& pipeline = command_buffer->pipeline;
+
+    switch (command.kind) {
+      case GPU_COMMAND_OP_INITIALIZE: {
+      } break;
+
+      case GPU_COMMAND_OP_BEGIN_RENDER_PASS: {
+        gpu_render_target_bind(command.render_pass.color);
+      } break;
+
+      case GPU_COMMAND_OP_END_RENDER_PASS: {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDisable(GL_SCISSOR_TEST);
+      } break;
+
+      case GPU_COMMAND_OP_BIND_PIPELINE: {
+        glUseProgram(command.pipeline.raster.shader->program);
+        command_buffer->pipeline = command.pipeline;
+      } break;
+
+      case GPU_COMMAND_OP_BIND_BUFFERS: {
+        auto& vertex_buffers = command.buffers.vertex;
+        auto& pipeline = command_buffer->pipeline;
+
+        assert(vertex_buffers.count <= pipeline.num_buffer_layouts);
+
+        u32 attribute_index = 0;
+        for (u32 buffer_index = 0; buffer_index < vertex_buffers.count; buffer_index++) {
+          auto buffer_layout = pipeline.buffer_layouts[buffer_index];
+          auto buffer = vertex_buffers.buffers[buffer_index];
+
+          gpu_buffer_bind(buffer);
+
+          u32 stride = _gpu_vertex_layout_calculate_stride(&buffer_layout);
+
+          u64 offset = 0;
+          for (u32 i = 0; i < buffer_layout.num_vertex_attributes; i++) {
+            glEnableVertexAttribArray(attribute_index);
+
+            auto attribute = buffer_layout.vertex_attributes[attribute_index];
+            
+            switch(attribute.kind) {
+              case GPU_VERTEX_ATTRIBUTE_FLOAT: glVertexAttribPointer( attribute_index, 1, GL_FLOAT,        GL_FALSE, stride, gl_u32_to_void_pointer(offset)); break;
+              case GPU_VERTEX_ATTRIBUTE_U32:   glVertexAttribIPointer(attribute_index, 1, GL_UNSIGNED_INT,           stride, gl_u32_to_void_pointer(offset)); break;
+              default: {
+                assert(false);
+              } break;
+            }
+
+            glVertexAttribDivisor(attribute_index, attribute.divisor);
+
+            auto type_info = gl_type_info_from_vertex_attribute_kind(attribute.kind);
+            offset += attribute.count * type_info.size;
+            attribute_index++;
+          }
+        }
+
+        command_buffer->buffers = command.buffers;
+      } break;
+
+      case GPU_COMMAND_OP_SET_SCISSOR: {
+        if (command.scissor.enabled != command_buffer->scissor.enabled) {
+          if (command.scissor.enabled) {
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(
+              command.scissor.position.x, command.scissor.position.y, 
+              command.scissor.size.x, command.scissor.size.y);
+          }
+          else {
+            glDisable(GL_SCISSOR_TEST);
+          }
+        }
+
+        command_buffer->scissor = command.scissor;
+      } break;
+
+      case GPU_COMMAND_OP_SET_WORLD_SPACE:
+      case GPU_COMMAND_OP_SET_CAMERA: {
+        if (command.render.world_space) {
+          auto view_transform = HMM_Translate(HMM_V3(-command.render.camera.x, -command.render.camera.y, 0.f));
+          set_uniform_immediate_mat4("view", view_transform);
+        }
+        else {
+          auto view_transform = HMM_M4D(1.0);
+          set_uniform_immediate_mat4("view", view_transform);
+        }
+
+        command_buffer->render = command.render;
+      } break;
+
+      case GPU_COMMAND_OP_SET_LAYER: {
+        command_buffer->render.layer = command.render.layer;
+      } break;
+
+      case GPU_COMMAND_OP_DRAW: {        
+        switch (command.draw.mode) {
+          case GPU_DRAW_MODE_ARRAYS: {
+            auto primitive = gpu_draw_primitive_to_gl_draw_primitive(pipeline.raster.primitive);
+            glDrawArrays(primitive, command.draw.vertex_offset, command.draw.num_vertices);
+          } break;
+
+          case GPU_DRAW_MODE_INSTANCE: {
+            auto primitive = gpu_draw_primitive_to_gl_draw_primitive(pipeline.raster.primitive);
+            glDrawArraysInstanced(primitive, command.draw.vertex_offset, command.draw.num_vertices, command.draw.num_instances);
+          } break;
+
+        }
+      } break;
+    }
   }
+
+  arr_clear(&command_buffer->commands);
 }
 
 void _gpu_command_buffer_process_command(GpuCommandBuffer* command_buffer, GpuCommand command) {
-  auto& state = command_buffer->state;
-
-  switch (command.kind) {
-    case GPU_COMMAND_SET_RASTER_STATE: {
-      if (command.raster.shader != state.raster.shader) {
-        set_shader_immediate_ex(command.raster.shader);
-      }
-
-      state.raster = command.raster;
-    } break;
-
-
-    case GPU_COMMAND_SET_SCISSOR_STATE: {
-      if (command.scissor.enabled != state.scissor.enabled) {
-        if (command.scissor.enabled) {
-          glEnable(GL_SCISSOR_TEST);
-          glScissor(
-            command.scissor.position.x, command.scissor.position.y, 
-            command.scissor.size.x, command.scissor.size.y);
-        }
-        else {
-          glDisable(GL_SCISSOR_TEST);
-        }
-      }
-
-      state.scissor = command.scissor;
-    } break;
-
-
-    case GPU_COMMAND_SET_RENDER_ATTACHMENT: {
-      if (command.attachment.color != state.attachment.color) {
-        gpu_render_target_bind(command.attachment.color);
-      }
-
-      state.attachment = command.attachment;
-    } break;
-
-
-    case GPU_COMMAND_SET_RENDER_STATE: {
-      if (command.render.world_space) {
-        auto view_transform = HMM_Translate(HMM_V3(-command.render.camera.x, -command.render.camera.y, 0.f));
-        set_uniform_immediate_mat4("view", view_transform);
-      }
-      else {
-        auto view_transform = HMM_M4D(1.0);
-        set_uniform_immediate_mat4("view", view_transform);
-      }
-
-      state.render = command.render;
-    } break;
-
-
-    case GPU_COMMAND_SET_BUFFER_BINDINGS: {
-      if (command.buffers.vertex != state.buffers.vertex) {
-        glBindVertexArray(command.buffers.vertex->vao);
-      }
-
-      state.buffers = command.buffers;
-    } break;
-  }
-
 }
 
-///////////////////////
-// RENDER ATTACHMENT //
-///////////////////////
-void _gpu_bind_render_attachment(GpuCommandBuffer* command_buffer, GpuRenderAttachment attachment) {
-  if (is_memory_equal(&command_buffer->state.attachment, &attachment, sizeof(GpuRenderAttachment))) return;
 
+void _gpu_command_buffer_draw(GpuCommandBuffer* command_buffer, GpuDrawCall draw_call) {
   arr_push(&command_buffer->commands, {
-    .kind = GPU_COMMAND_SET_RENDER_ATTACHMENT,
-    .attachment = attachment
-  });
-
-}
-
-void _gpu_bind_color_attachment(GpuCommandBuffer* command_buffer, GpuRenderTarget* render_target) {
-  auto attachment = command_buffer->state.attachment;
-  attachment.color = render_target;
-  _gpu_bind_render_attachment(command_buffer, attachment);
-}
-
-/////////////////
-// RASTER STATE //
-/////////////////
-void _gpu_bind_raster_state(GpuCommandBuffer* command_buffer, GpuRasterState raster) {
-  if (is_memory_equal(&command_buffer->state.raster, &raster, sizeof(GpuRasterState))) return;
-
-  arr_push(&command_buffer->commands, {
-    .kind = GPU_COMMAND_SET_RASTER_STATE,
-    .raster = raster
+    .kind = GPU_COMMAND_OP_DRAW,
+    .draw = draw_call
   });
 }
 
-void _gpu_bind_shader(GpuCommandBuffer* command_buffer, GpuShader* shader) {
-  auto raster = command_buffer->state.raster;
-  raster.shader = shader;
-  _gpu_bind_raster_state(command_buffer, raster);
+/////////////
+// BINDING //
+/////////////
+void _gpu_bind_pipeline(GpuCommandBuffer* command_buffer, GpuPipeline pipeline) {
+  arr_push(&command_buffer->commands, {
+    .kind = GPU_COMMAND_OP_BIND_PIPELINE,
+    .pipeline = pipeline
+  });
 }
 
-void _gpu_set_primitive(GpuCommandBuffer* command_buffer, GpuDrawPrimitive primitive) {
-  auto raster = command_buffer->state.raster;
-  raster.primitive = primitive;
-  _gpu_bind_raster_state(command_buffer, raster);
+void _gpu_begin_render_pass(GpuCommandBuffer* command_buffer, GpuRenderPass render_pass) {
+  arr_push(&command_buffer->commands, {
+    .kind = GPU_COMMAND_OP_BEGIN_RENDER_PASS,
+    .render_pass = render_pass
+  });
+}
+
+void _gpu_end_render_pass(GpuCommandBuffer* command_buffer) {
+  arr_push(&command_buffer->commands, {
+    .kind = GPU_COMMAND_OP_END_RENDER_PASS,
+  });
+}
+
+void _gpu_bind_buffers(GpuCommandBuffer* command_buffer, GpuBufferBinding buffers) {
+  if (is_memory_equal(&command_buffer->buffers, &buffers, sizeof(GpuBufferBinding))) return;
+
+  arr_push(&command_buffer->commands, {
+    .kind = GPU_COMMAND_OP_BIND_BUFFERS,
+    .buffers = buffers
+  });
 }
 
 //////////////////
 // RENDER STATE //
 //////////////////
-void _gpu_bind_render_state(GpuCommandBuffer* command_buffer, GpuRendererState render) {
-  if (is_memory_equal(&command_buffer->state.render, &render, sizeof(GpuRendererState))) return;
+void _gpu_set_layer(GpuCommandBuffer* command_buffer, u32 layer) {
+  if (command_buffer->render.layer == layer) return;
 
   arr_push(&command_buffer->commands, {
-    .kind = GPU_COMMAND_SET_RENDER_STATE,
-    .render = render
+    .kind = GPU_COMMAND_OP_SET_LAYER,
+    .render = {
+      .layer = layer
+    }
   });
-}
-
-void _gpu_set_layer(GpuCommandBuffer* command_buffer, u32 layer) {
-  auto render = command_buffer->state.render;
-  render.layer = layer;
-  _gpu_bind_render_state(command_buffer, render);
 }
 
 void _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space) {
-  auto render = command_buffer->state.render;
-  render.world_space = world_space;
-  _gpu_bind_render_state(command_buffer, render);
+  if (command_buffer->render.world_space == world_space) return;
+
+  arr_push(&command_buffer->commands, {
+    .kind = GPU_COMMAND_OP_SET_LAYER,
+    .render = {
+      .world_space = world_space
+    }
+  });
 }
 
 void _gpu_set_camera(GpuCommandBuffer* command_buffer, Vector2 camera) {
-  auto render = command_buffer->state.render;
-  render.camera = camera;
-  _gpu_bind_render_state(command_buffer, render);
-}
-
-/////////////
-// BUFFERS //
-/////////////
-void _gpu_bind_buffers(GpuCommandBuffer* command_buffer, GpuBufferBinding buffers) {
-  if (is_memory_equal(&command_buffer->state.buffers, &buffers, sizeof(GpuBufferBinding))) return;
+  if (!is_memory_equal(&command_buffer->render.camera,  &camera, sizeof(Vector2))) return;
 
   arr_push(&command_buffer->commands, {
-    .kind = GPU_COMMAND_SET_BUFFER_BINDINGS,
-    .buffers = buffers
+    .kind = GPU_COMMAND_OP_SET_LAYER,
+    .render = {
+      .camera = camera
+    }
   });
 }
 
-void _gpu_set_vertex_layout(GpuCommandBuffer* command_buffer, GpuVertexLayout* layout) {
-  auto render = command_buffer->state.render;
-  render.camera = camera;
-  _gpu_bind_render_state(command_buffer, render);
+void _gpu_bind_render_state(GpuCommandBuffer* command_buffer, GpuRendererState render) {
+  _gpu_set_layer(command_buffer, render.layer);
+  _gpu_set_camera(command_buffer, render.camera);
+  _gpu_set_world_space(command_buffer, render.world_space);
 }
 
+
+/////////////////////
+// ENUM CONVERSION //
+/////////////////////
+u32 gpu_draw_primitive_to_gl_draw_primitive(GpuDrawPrimitive primitive) {
+  switch (primitive) {
+    case GPU_PRIMITIVE_TRIANGLES: return GL_TRIANGLES;
+  }
+
+  assert(false);
+  return 0;
+}
+
+GlTypeInfo gl_type_info_from_vertex_attribute_kind(GpuVertexAttributeKind kind) {
+  GlTypeInfo info;
+
+  if (kind  == GPU_VERTEX_ATTRIBUTE_FLOAT) {
+    info.value = GL_FLOAT;
+    info.size = sizeof(GLfloat);
+    info.floating_point = true;
+    info.integral = false;
+  }
+  else if (kind == GPU_VERTEX_ATTRIBUTE_U32) {
+    info.value = GL_UNSIGNED_INT;
+    info.size = sizeof(GLuint);
+    info.floating_point = false;
+    info.integral = true;		
+  }
+  else {
+    assert(false);
+  }
+
+  return info;
+}
+
+void* gl_u32_to_void_pointer(u32 value) {
+  return (void*)(uintptr_t)value;
+}
+
+u32 _gpu_vertex_layout_calculate_stride(GpuBufferLayout* layout) {
+  assert(layout);
+
+  u32 stride = 0;
+
+  for (u32 i = 0; i < layout->num_vertex_attributes; i++) {
+    auto attribute = layout->vertex_attributes[i];
+    auto type_info = gl_type_info_from_vertex_attribute_kind(attribute.kind);
+    stride += attribute.count * type_info.size;
+  }
+
+  return stride;
+}
+
+
+/////////////
+// TESTING //
+/////////////
+void init_command_renderer() {
+  arr_init(&command_renderer.command_buffers);
+
+}
 
 void test_command_renderer() {
-  auto command_buffer = _gpu_command_buffer_create({
-    .max_commands = 1024
-  });
-
-  auto render_target = gpu_acquire_swapchain();
-  auto shader = gpu_shader_find("solid");
- 
-  _gpu_bind_color_attachment(command_buffer, render_target);
-  _gpu_bind_shader(command_buffer, shader);
-  _gpu_set_primitive(command_buffer, GPU_PRIMITIVE_TRIANGLES);
-  _gpu_set_layer(command_buffer, 69);
-  _gpu_set_world_space(command_buffer, true);
-  _gpu_set_camera(command_buffer, { .x = 69, .y = 420 });
 }
+#endif // GRAPHICS_IMPL

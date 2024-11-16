@@ -6,6 +6,16 @@ function tdengine.ffi.namespaced_metatype(namespace, struct_name)
 	})
 end
 
+function tdengine.ffi.namespace(prefix)
+	local namespace = {}
+	setmetatable(namespace, {
+		__index = function(__namespace, fn_name)
+			return ffi.C[prefix .. '_' .. fn_name]
+		end
+	})
+	return namespace
+end
+
 
 function tdengine.ffi.init()
 	setmetatable(
@@ -31,7 +41,7 @@ function tdengine.ffi.init()
 	ffi.metatype('tstring', string_metatable)
 	ffi.metatype('string', string_metatable)
 
-
+	tdengine.gpu = tdengine.ffi.namespace('_gpu')
 
 	tdengine.enum.define(
 		'CoordinateSystem',
@@ -104,11 +114,34 @@ function tdengine.ffi.init()
 		}
 	)
 
-	tdengine.enum.define(
+	GpuShaderKind = tdengine.enum.define(
 		'GpuShaderKind',
 		{
 			Graphics = tdengine.ffi.GpuShaderKind_Graphics,
 			Compute = tdengine.ffi.GpuShaderKind_Compute,
+		}
+	)
+
+	GpuDrawMode = tdengine.enum.define(
+		'GpuDrawMode',
+		{
+			Arrays = tdengine.ffi.GPU_DRAW_MODE_ARRAYS,
+			Instance = tdengine.ffi.GPU_DRAW_MODE_INSTANCE,
+		}
+	)
+
+	GpuDrawPrimitive = tdengine.enum.define(
+		'GpuDrawPrimitive',
+		{
+			Triangles = tdengine.ffi.GPU_PRIMITIVE_TRIANGLES,
+		}
+	)
+
+	GpuVertexAttributeKind = tdengine.enum.define(
+		'GpuVertexAttributeKind',
+		{
+			Float = tdengine.ffi.GPU_VERTEX_ATTRIBUTE_FLOAT,
+			U32 = tdengine.ffi.GPU_VERTEX_ATTRIBUTE_U32,
 		}
 	)
 

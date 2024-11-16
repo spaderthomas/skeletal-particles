@@ -18,14 +18,6 @@ function DeferredRenderer:on_start_game()
   self.lights = BackedGpuBuffer:new('Light', self.max_lights, tdengine.gpus.find(Buffer.Lights))
   self.lights.gpu_buffer:zero()
 
-  self.light_scene = PreconfiguredPostProcess:new(
-    tdengine.gpus.find(GraphicsPipeline.LightScene),
-    tdengine.gpus.find(DrawConfiguration.LightScene)
-  )
-  self.visualize_light_map = PreconfiguredPostProcess:new(
-    tdengine.gpus.find(GraphicsPipeline.VisualizeLightMap),
-    tdengine.gpus.find(DrawConfiguration.VisualizeLightMap)
-  )
 
   local vertex_buffer = tdengine.ffi.gpu_buffer_create(GpuBufferDescriptor:new({
     kind = GpuBufferKind.Array,
@@ -38,50 +30,50 @@ function DeferredRenderer:on_start_game()
     size = ffi.sizeof('SdfInstance') * 1024
   }))
 
-  local vertex_layout_descriptor = {
-    buffer_layouts = {
-      {
-        buffer = vertex_buffer,
-        vertex_attributes = {
-          {
-            count = 2,
-            kind = tdengine.enums.VertexAttributeKind.Float
-          },
-          {
-            count = 2,
-            kind = tdengine.enums.VertexAttributeKind.Float
-          }
-        }
-      },
-      {
-        buffer = instance_buffer,
-        vertex_attributes = {
-          {
-            count = 2,
-            kind = tdengine.enums.VertexAttributeKind.Float,
-            divisor = 1
-          },
-          {
-            count = 3,
-            kind = tdengine.enums.VertexAttributeKind.Float,
-            divisor = 1
-          },
-          {
-            count = 1,
-            kind = tdengine.enums.VertexAttributeKind.Float,
-            divisor = 1
-          },
-          {
-            count = 1,
-            kind = tdengine.enums.VertexAttributeKind.U32,
-            divisor = 1
-          }
-        }
-      }
-    }
-  }
+  -- local vertex_layout_descriptor = {
+  --   buffer_layouts = {
+  --     {
+  --       buffer = vertex_buffer,
+  --       vertex_attributes = {
+  --         {
+  --           count = 2,
+  --           kind = tdengine.enums.VertexAttributeKind.Float
+  --         },
+  --         {
+  --           count = 2,
+  --           kind = tdengine.enums.VertexAttributeKind.Float
+  --         }
+  --       }
+  --     },
+  --     {
+  --       buffer = instance_buffer,
+  --       vertex_attributes = {
+  --         {
+  --           count = 2,
+  --           kind = tdengine.enums.VertexAttributeKind.Float,
+  --           divisor = 1
+  --         },
+  --         {
+  --           count = 3,
+  --           kind = tdengine.enums.VertexAttributeKind.Float,
+  --           divisor = 1
+  --         },
+  --         {
+  --           count = 1,
+  --           kind = tdengine.enums.VertexAttributeKind.Float,
+  --           divisor = 1
+  --         },
+  --         {
+  --           count = 1,
+  --           kind = tdengine.enums.VertexAttributeKind.U32,
+  --           divisor = 1
+  --         }
+  --       }
+  --     }
+  --   }
+  -- }
 
-  self.vertex_layout = tdengine.ffi.gpu_vertex_layout_create(GpuVertexLayoutDescriptor:new(vertex_layout_descriptor))
+  -- self.vertex_layout = tdengine.ffi.gpu_vertex_layout_create(GpuVertexLayoutDescriptor:new(vertex_layout_descriptor))
 
   self.sdf_vertices = BackedGpuBuffer:new('SdfVertex', 1024, vertex_buffer)
   self.sdf_instances = BackedGpuBuffer:new('SdfInstance', 1024, instance_buffer)
@@ -107,42 +99,41 @@ function DeferredRenderer:on_start_game()
   }))
   self.sdf_instances:sync()
 
-  -- local vao = alloc_vao()
 
-  -- local vertex_buffer = alloc_array_buffer();
-  -- fill_buffer(vertex_buffer, quad_verts)
-  -- setup_vertex_attributes(vertex_buffer, attributes)
+  self.command_buffer = tdengine.gpu.command_buffer_create(GpuCommandBufferDescriptor:new({
+    max_commands = 1024
+  }))
 
-  -- local instance_buffer = alloc_array_buffer()
-  -- fill_buffer(instance_buffer, some_bullshit_data)
-  -- setup_vertex_attributes(instan)
+  self.render_pass = GpuRenderPass:new({
+    color = RenderTarget.Color
+  })
 
+  self.pipeline = GpuPipeline:new({
+    raster = {
+      shader = Shader.Shape,
+      primitive = GpuDrawPrimitive.Triangles
+    },
+    buffer_layouts = {
+      {
+        vertex_attributes = {
+          {
+            count = 2,
+            kind = tdengine.enums.GpuVertexAttributeKind.Float
+          },
+          {
+            count = 2,
+            kind = tdengine.enums.GpuVertexAttributeKind.Float
+          }
+        }
+      }
+   }
+  })
 
-  -- local command_buffers = {}
-
-  -- local buffer_descriptor = ffi.new('GpuCommandBufferBatchedDescriptor')
-	-- buffer_descriptor.num_vertex_attributes = 5
-	-- buffer_descriptor.max_vertices = 64 * 1024
-	-- buffer_descriptor.max_draw_calls = 256
-	-- buffer_descriptor.vertex_attributes = ffi.new('VertexAttribute[5]')
-	-- buffer_descriptor.vertex_attributes[0].count = 2 -- Position
-	-- buffer_descriptor.vertex_attributes[0].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	-- buffer_descriptor.vertex_attributes[1].count = 2 -- UV
-	-- buffer_descriptor.vertex_attributes[1].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	-- buffer_descriptor.vertex_attributes[2].count = 3 -- Color
-	-- buffer_descriptor.vertex_attributes[2].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-  -- buffer_descriptor.vertex_attributes[3].count = 1 -- Rotation
-	-- buffer_descriptor.vertex_attributes[3].kind = tdengine.enums.VertexAttributeKind.Float:to_number()
-	-- buffer_descriptor.vertex_attributes[4].count = 1 -- Rotation
-	-- buffer_descriptor.vertex_attributes[4].kind = tdengine.enums.VertexAttributeKind.U32:to_number()
-  -- command_buffers.shapes = tdengine.gpu.add_command_buffer('shapes', buffer_descriptor)
-
-	-- tdengine.gpu.add_render_pass('shapes', command_buffers.shapes, tdengine.gpu.find_render_target('color'), nil, tdengine.enums.GpuLoadOp.Clear)
-
-  -- self.shapes = SimplePostProcess:new()
-  -- self.shapes:set_render_pass('shapes')
-  -- self.shapes:set_shader('shape')
-
+  self.buffers = GpuBufferBinding:new({
+    vertex = {
+      vertex_buffer
+    }
+  })
 end
 
 function DeferredRenderer:on_begin_frame()
@@ -161,26 +152,38 @@ function DeferredRenderer:on_scene_rendered()
   end
   self.lights:sync()
 
-  local pipeline = tdengine.gpus.find(GraphicsPipeline.Shape)
-  tdengine.ffi.gpu_graphics_pipeline_bind(pipeline)
 
-  tdengine.ffi.set_active_shader_ex(tdengine.gpus.find(Shader.Shape))
-  tdengine.ffi.gpu_render_sdf(pipeline.command_buffer, self.vertex_layout, 1)
 
+  -- begin a render pass
+  tdengine.gpu.begin_render_pass(self.command_buffer, self.render_pass)
+  tdengine.gpu.bind_pipeline(self.command_buffer, self.pipeline)
+  tdengine.gpu.bind_buffers(self.command_buffer, self.buffers)
+  tdengine.gpu.command_buffer_draw(self.command_buffer, GpuDrawCall:new({
+    mode = GpuDrawMode.Arrays,
+    vertex_offset = 0,
+    num_vertices = 6
+  }))
+  tdengine.gpu.end_render_pass(self.command_buffer)
+  tdengine.gpu.command_buffer_submit(self.command_buffer)
+
+  -- bind the buffers
+  -- draw a triangle
+  -- end the render pass
+  -- submit the commands
 
   -- update dynamic uniforms
   -- bind
   -- draw a fullscreen quad
   -- submit
   -- self.visualize_light_map:add_uniform('num_lights', self.lights.cpu_buffer.size, tdengine.enums.UniformKind.I32)
-  self.visualize_light_map:render()
+  -- self.visualize_light_map:render()
 
   -- self.light_scene:render()
   -- self.apply_lighting:add_uniform('num_lights', self.lights.cpu_buffer.size, tdengine.enums.UniformKind.I32)
 
   -- self.shapes:render()
 
-  tdengine.subsystem.find('PostProcess'):upscale()
+  -- tdengine.subsystem.find('PostProcess'):upscale()
 end
 
 function DeferredRenderer:draw_circle(sdf_circle)

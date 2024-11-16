@@ -61,6 +61,8 @@
 #include "image.cpp" // HALF (Screenshots should be reworked, probably? I'm referencing a named path when I initialize)
 #include "input.cpp"
 #include "fluid.cpp" // GAME
+#define GRAPHICS_IMPLEMENTATION
+#include "graphics.hpp"
 #include "lua.cpp"
 #include "named_path.cpp"
 #include "particle.cpp"

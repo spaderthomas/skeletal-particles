@@ -352,15 +352,6 @@ typedef struct {
 } GpuBufferDescriptor;
 
 
-typedef struct {
-	VertexAttribute* vertex_attributes;
-	u32 num_vertex_attributes;
-	GpuBuffer* buffer;
-} GpuBufferLayout;
-typedef struct {
-	GpuBufferLayout* buffer_layouts;
-	u32 num_buffer_layouts;
-} GpuVertexLayoutDescriptor;
 
 GpuShader*               gpu_shader_create(GpuShaderDescriptor descriptor);
 GpuRenderTarget*         gpu_render_target_create(GpuRenderTargetDescriptor descriptor);
@@ -391,7 +382,6 @@ void                     gpu_buffer_bind_base(GpuBuffer* buffer, u32 base);
 void                     gpu_buffer_sync(GpuBuffer* buffer, void* data, u32 size);
 void                     gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
 void                     gpu_buffer_zero(GpuBuffer* buffer, u32 size);
-GpuVertexLayout*         gpu_vertex_layout_create(GpuVertexLayoutDescriptor descriptor);
 
 void                     gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
     
@@ -431,6 +421,123 @@ void                     set_uniform_immediate_f32(const char* name, float value
 void                     set_uniform_immediate_texture(const char* name, i32 value);
 void                     push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity);
 i32                      find_uniform_index(const char* name);
+
+
+///////////
+// ENUMS //
+///////////
+typedef enum {
+  GPU_COMMAND_OP_INITIALIZE = 0,
+  GPU_COMMAND_OP_BIND_BUFFERS = 10,
+  GPU_COMMAND_OP_BEGIN_RENDER_PASS = 20,
+  GPU_COMMAND_OP_END_RENDER_PASS = 21,
+  GPU_COMMAND_OP_BIND_PIPELINE = 30,
+  GPU_COMMAND_OP_SET_CAMERA = 40,
+  GPU_COMMAND_OP_SET_LAYER = 41,
+  GPU_COMMAND_OP_SET_WORLD_SPACE = 42,
+  GPU_COMMAND_OP_SET_SCISSOR = 43,
+  GPU_COMMAND_OP_DRAW = 70,
+} GpuCommandOp;
+
+typedef enum {
+  GPU_PRIMITIVE_TRIANGLES = 0
+} GpuDrawPrimitive;
+
+typedef enum {
+  GPU_DRAW_MODE_ARRAYS = 0,
+  GPU_DRAW_MODE_INSTANCE = 1,
+} GpuDrawMode;
+
+typedef enum {
+	GPU_VERTEX_ATTRIBUTE_FLOAT = 0,
+	GPU_VERTEX_ATTRIBUTE_U32 = 1,
+} GpuVertexAttributeKind;
+
+
+////////////////////////
+// BINDABLE RESOURCES //
+////////////////////////
+typedef struct {
+  GpuRenderTarget* color;
+} GpuRenderPass;
+
+typedef struct {
+  struct {
+    GpuBuffer** buffers;
+    u32 count;
+  } vertex;
+} GpuBufferBinding;
+
+
+//////////////////
+// GPU PIPELINE //
+//////////////////
+typedef struct {
+  GpuShader* shader;
+  GpuDrawPrimitive primitive;
+} GpuRasterState;
+
+typedef struct {
+  Vector2 position;
+  Vector2 size;
+  bool enabled;
+} GpuScissorState;
+
+typedef struct {
+  u32 layer;
+  bool world_space;
+  Vector2 camera;
+} GpuRendererState;
+
+typedef struct {
+	GpuVertexAttributeKind kind;
+	u32 count;
+	u32 divisor;
+} GpuVertexAttribute;
+
+typedef struct {
+	GpuVertexAttribute* vertex_attributes;
+	u32 num_vertex_attributes;
+} GpuBufferLayout;
+
+typedef struct {
+  GpuRasterState raster;
+
+	GpuBufferLayout* buffer_layouts;
+	u32 num_buffer_layouts;
+} GpuPipeline;
+
+
+////////////////////////
+// GPU COMMAND BUFFER //
+////////////////////////
+typedef struct {
+  GpuDrawMode mode;
+  u32 vertex_offset;
+  u32 num_vertices;
+  u32 num_instances;
+} GpuDrawCall;
+
+typedef struct GpuCommandBuffer GpuCommandBuffer;
+
+typedef struct {
+  u32 max_commands;
+} GpuCommandBufferDescriptor;
+
+
+GpuCommandBuffer* _gpu_command_buffer_create(GpuCommandBufferDescriptor descriptor);
+void              _gpu_command_buffer_draw(GpuCommandBuffer* command_buffer, GpuDrawCall draw_call);
+void              _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer);
+void              _gpu_bind_pipeline(GpuCommandBuffer* command_buffer, GpuPipeline pipeline);
+void              _gpu_begin_render_pass(GpuCommandBuffer* command_buffer, GpuRenderPass render_pass);
+void              _gpu_end_render_pass(GpuCommandBuffer* command_buffer);
+void              _gpu_bind_buffers(GpuCommandBuffer* command_buffer, GpuBufferBinding buffers);
+void              _gpu_bind_render_state(GpuCommandBuffer* command_buffer, GpuRendererState render);
+void              _gpu_set_layer(GpuCommandBuffer* command_buffer, u32 layer);
+void              _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space);
+void              _gpu_set_camera(GpuCommandBuffer* command_buffer, Vector2 camera);
+
+
 
 //
 // DRAW
@@ -480,8 +587,6 @@ typedef struct {
   float radius;
   float edge_thickness;
 } SdfCircle;
-
-void gpu_render_sdf(GpuCommandBufferBatched* command_buffer, GpuVertexLayout* vertex_layout, u32 num_instances);
 
 
 void draw_quad(Vector2 position, Vector2 size, Vector4 color);

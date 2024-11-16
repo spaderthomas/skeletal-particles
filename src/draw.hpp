@@ -298,21 +298,6 @@ struct GpuBuffer {
 	u32 handle;
 };
 
-
-struct GpuBufferLayout {
-	VertexAttribute* vertex_attributes;
-	u32 num_vertex_attributes;
-	GpuBuffer* buffer;
-};
-struct GpuVertexLayoutDescriptor {
-	GpuBufferLayout* buffer_layouts;
-	u32 num_buffer_layouts;
-};
-struct GpuVertexLayout {
-	u32 vao;
-};
-
-
 // struct GpuCommandBufferDescriptor {
 // 	GpuVertexLayout* vertex_layout;
 // 	GpuBuffer* vertex_buffer;
@@ -345,7 +330,6 @@ struct RenderEngine {
 	Array<GpuGraphicsPipeline,     32>  graphics_pipelines;
 	Array<GpuBuffer,               32>  gpu_buffers;
 	Array<GpuShader,               128> shaders;
-	Array<GpuVertexLayout,         32>  vertex_layouts;
 
 	GpuGraphicsPipeline* pipeline;
 
@@ -399,8 +383,6 @@ FM_LUA_EXPORT void                     gpu_buffer_bind_base(GpuBuffer* buffer, u
 FM_LUA_EXPORT void                     gpu_buffer_sync(GpuBuffer* buffer, void* data, u32 size);
 FM_LUA_EXPORT void                     gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
 FM_LUA_EXPORT void                     gpu_buffer_zero(GpuBuffer* buffer, u32 size);
-FM_LUA_EXPORT GpuVertexLayout*         gpu_vertex_layout_create(GpuVertexLayoutDescriptor descriptor);
-FM_LUA_EXPORT void                     gpu_vertex_layout_bind(GpuVertexLayout* layout);
 
 FM_LUA_EXPORT void                     gpu_memory_barrier(GpuMemoryBarrier barrier);
 FM_LUA_EXPORT void                     gpu_dispatch_compute(GpuBuffer* buffer, u32 size);

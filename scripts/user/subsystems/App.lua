@@ -45,7 +45,7 @@ function App:on_start_game()
 
 	game_views:add_view(GameView:new(
 		'Color Buffer',
-		tdengine.gpus.find(RenderTarget.UpscaledColor),
+		tdengine.gpus.find(RenderTarget.Color),
 		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
 		tdengine.enums.GameViewPriority.Standard))
 

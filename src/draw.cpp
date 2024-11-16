@@ -725,7 +725,10 @@ void gpu_destroy_target(GpuRenderTarget* target) {
 }
 
 void gpu_render_target_bind(GpuRenderTarget* target) {
-	if (!target) return;
+	if (!target) {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		return;
+	}
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, target->handle);
 	glViewport(0, 0, target->size.x, target->size.y);
@@ -1060,72 +1063,6 @@ void gpu_dispatch_compute(GpuBuffer* buffer, u32 size) {
 
 }
 
-///////////////////
-// VERTEX LAYOUT //
-///////////////////
-GpuVertexLayout* gpu_vertex_layout_create(GpuVertexLayoutDescriptor descriptor) {
-	auto layout = arr_push(&render.vertex_layouts);
-
-	glGenVertexArrays(1, &layout->vao);
-	glBindVertexArray(layout->vao);
-
-	u32 attribute_index = 0;
-	for (u32 i = 0; i < descriptor.num_buffer_layouts; i++) {
-		auto buffer_layout = descriptor.buffer_layouts[i];
-
-		u32 stride = 0;
-		for (u32 i = 0; i < buffer_layout.num_vertex_attributes; i++) {
-			auto attribute = buffer_layout.vertex_attributes[i];
-			auto type_info = GlTypeInfo::from_attribute(attribute.kind);
-			stride += attribute.count * type_info.size;
-		}
-		
-		gpu_buffer_bind(buffer_layout.buffer);
-
-		u64 offset = 0;
-		for (u32 i = 0; i < buffer_layout.num_vertex_attributes; i++) {
-			auto attribute = buffer_layout.vertex_attributes[i];
-			auto type_info = GlTypeInfo::from_attribute(attribute.kind);
-			
-			if (type_info.floating_point) {
-				glVertexAttribPointer(attribute_index, attribute.count, type_info.value, GL_FALSE, stride, (void*)offset);
-			}
-			else if (type_info.integral) {
-				glVertexAttribIPointer(attribute_index, attribute.count, type_info.value, stride, (void*)offset);
-			}
-			else {
-				assert(false);
-			}
-			glEnableVertexAttribArray(attribute_index);
-			glVertexAttribDivisor(attribute_index, attribute.divisor);
-
-			offset += attribute.count * type_info.size;
-			attribute_index++;
-		}
-	}
-	
-	glBindVertexArray(0);
-
-	return layout;
-}
-
-void gpu_vertex_layout_bind(GpuVertexLayout* layout) {
-	glBindVertexArray(layout->vao);
-}
-
-
-FM_LUA_EXPORT void gpu_render_sdf(GpuCommandBufferBatched* command_buffer, GpuVertexLayout* vertex_layout, u32 num_instances) {
-	auto draw_call = arr_back(&command_buffer->draw_calls);
-
-	GlStateDiff diff;
-	diff.apply(&draw_call->state);
-
-	glBindVertexArray(vertex_layout->vao);
-	glDrawArraysInstanced(GL_TRIANGLES, 0, 6, num_instances);
-
-	arr_clear(&command_buffer->draw_calls);
-}
-
 ////////////////////////
 // RENDERER INTERNALS //
 ////////////////////////
@@ -1138,7 +1075,6 @@ void init_render() {
 	arr_init(&render.graphics_pipelines);
 	arr_init(&render.gpu_buffers);
 	arr_init(&render.shaders);
-	arr_init(&render.vertex_layouts);
 
 	auto swapchain = arr_push(&render.targets);
 	swapchain->handle = 0;
