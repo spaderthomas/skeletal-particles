@@ -3,12 +3,9 @@
 
 out vec4 color;
 
-// in vec3 f_color;
+in vec3 f_color;
 in vec2 f_uv;
 
-
-
 void main() {
-	vec2 world = gl_FragCoord.xy + camera;
 	color = red;
 }

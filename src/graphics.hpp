@@ -1,8 +1,10 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
+#define GPU_NEAR_PLANE -100.0
+#define GPU_FAR_PLANE 100.0
+
 typedef enum {
-  GPU_COMMAND_OP_INITIALIZE = 0,
   GPU_COMMAND_OP_BIND_BUFFERS = 10,
   GPU_COMMAND_OP_BEGIN_RENDER_PASS = 20,
   GPU_COMMAND_OP_END_RENDER_PASS = 21,
@@ -64,6 +66,8 @@ typedef struct {
   u32 layer;
   bool world_space;
   Vector2 camera;
+  Matrix4 projection;
+  bool synced_with_gpu;
 } GpuRendererState;
 
 typedef struct {
@@ -113,6 +117,7 @@ typedef struct {
 typedef struct {
   GpuPipeline pipeline;
   GpuBufferBinding buffers;
+  GpuRenderPass render_pass;
   GpuRendererState render;
   GpuScissorState scissor;
 
@@ -175,6 +180,7 @@ GpuCommandBuffer* _gpu_command_buffer_create(GpuCommandBufferDescriptor descript
 void _gpu_command_buffer_clear_cached_state(GpuCommandBuffer* command_buffer) {
   zero_memory(&command_buffer->pipeline, sizeof(GpuPipeline));
   zero_memory(&command_buffer->buffers, sizeof(GpuBufferBinding));
+  zero_memory(&command_buffer->render_pass, sizeof(GpuRenderPass));
   zero_memory(&command_buffer->render, sizeof(GpuRendererState));
   zero_memory(&command_buffer->scissor, sizeof(GpuScissorState));
 }
@@ -187,11 +193,9 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
     auto& pipeline = command_buffer->pipeline;
 
     switch (command.kind) {
-      case GPU_COMMAND_OP_INITIALIZE: {
-      } break;
-
       case GPU_COMMAND_OP_BEGIN_RENDER_PASS: {
         gpu_render_target_bind(command.render_pass.color);
+        command_buffer->render_pass = command.render_pass;
       } break;
 
       case GPU_COMMAND_OP_END_RENDER_PASS: {
@@ -202,6 +206,12 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
 
       case GPU_COMMAND_OP_BIND_PIPELINE: {
         glUseProgram(command.pipeline.raster.shader->program);
+
+        auto target = command_buffer->render_pass.color;
+        set_uniform_immediate_f32("master_time", engine.elapsed_time);
+        set_uniform_immediate_mat4("projection", HMM_Orthographic_RH_NO(0, target->size.x, 0, target->size.y, GPU_NEAR_PLANE, GPU_FAR_PLANE));
+        set_uniform_immediate_vec2("output_resolution", target->size);
+        set_uniform_immediate_vec2("native_resolution", window.native_resolution);
         command_buffer->pipeline = command.pipeline;
       } break;
 
@@ -227,8 +237,8 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
             auto attribute = buffer_layout.vertex_attributes[attribute_index];
             
             switch(attribute.kind) {
-              case GPU_VERTEX_ATTRIBUTE_FLOAT: glVertexAttribPointer( attribute_index, 1, GL_FLOAT,        GL_FALSE, stride, gl_u32_to_void_pointer(offset)); break;
-              case GPU_VERTEX_ATTRIBUTE_U32:   glVertexAttribIPointer(attribute_index, 1, GL_UNSIGNED_INT,           stride, gl_u32_to_void_pointer(offset)); break;
+              case GPU_VERTEX_ATTRIBUTE_FLOAT: glVertexAttribPointer( attribute_index, attribute.count, GL_FLOAT,        GL_FALSE, stride, gl_u32_to_void_pointer(offset)); break;
+              case GPU_VERTEX_ATTRIBUTE_U32:   glVertexAttribIPointer(attribute_index, attribute.count, GL_UNSIGNED_INT,           stride, gl_u32_to_void_pointer(offset)); break;
               default: {
                 assert(false);
               } break;
@@ -261,36 +271,33 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
         command_buffer->scissor = command.scissor;
       } break;
 
-      case GPU_COMMAND_OP_SET_WORLD_SPACE:
-      case GPU_COMMAND_OP_SET_CAMERA: {
-        if (command.render.world_space) {
-          auto view_transform = HMM_Translate(HMM_V3(-command.render.camera.x, -command.render.camera.y, 0.f));
-          set_uniform_immediate_mat4("view", view_transform);
-        }
-        else {
-          auto view_transform = HMM_M4D(1.0);
-          set_uniform_immediate_mat4("view", view_transform);
-        }
-
-        command_buffer->render = command.render;
+      case GPU_COMMAND_OP_SET_WORLD_SPACE: {
+        command_buffer->render.world_space = command.render.world_space;
+        command_buffer->render.synced_with_gpu = false;
       } break;
-
+      case GPU_COMMAND_OP_SET_CAMERA: {
+        command_buffer->render.camera = command.render.camera;
+        command_buffer->render.synced_with_gpu = false;
+      } break;
       case GPU_COMMAND_OP_SET_LAYER: {
         command_buffer->render.layer = command.render.layer;
+        command_buffer->render.synced_with_gpu = false;
       } break;
 
-      case GPU_COMMAND_OP_DRAW: {        
+      case GPU_COMMAND_OP_DRAW: {      
+        if (!command_buffer->render.synced_with_gpu) {
+          auto view_transform = command_buffer->render.world_space ? 
+            HMM_Translate(HMM_V3(-command.render.camera.x, -command.render.camera.y, 0.f)) :
+            HMM_M4D(1.0);
+          set_uniform_immediate_mat4("view", view_transform);
+
+          command_buffer->render.synced_with_gpu = true;
+        }
+
+        auto primitive = gpu_draw_primitive_to_gl_draw_primitive(pipeline.raster.primitive);
         switch (command.draw.mode) {
-          case GPU_DRAW_MODE_ARRAYS: {
-            auto primitive = gpu_draw_primitive_to_gl_draw_primitive(pipeline.raster.primitive);
-            glDrawArrays(primitive, command.draw.vertex_offset, command.draw.num_vertices);
-          } break;
-
-          case GPU_DRAW_MODE_INSTANCE: {
-            auto primitive = gpu_draw_primitive_to_gl_draw_primitive(pipeline.raster.primitive);
-            glDrawArraysInstanced(primitive, command.draw.vertex_offset, command.draw.num_vertices, command.draw.num_instances);
-          } break;
-
+          case GPU_DRAW_MODE_ARRAYS: glDrawArrays(primitive, command.draw.vertex_offset, command.draw.num_vertices); break;
+          case GPU_DRAW_MODE_INSTANCE: glDrawArraysInstanced(primitive, command.draw.vertex_offset, command.draw.num_vertices, command.draw.num_instances); break;
         }
       } break;
     }

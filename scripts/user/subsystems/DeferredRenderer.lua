@@ -145,12 +145,12 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
-  if not self.render_enabled then return end
+  -- if not self.render_enabled then return end
 
-  for light in tdengine.entity.iterate('PointLight') do
-    self.lights.cpu_buffer:push(light:to_ctype())
-  end
-  self.lights:sync()
+  -- for light in tdengine.entity.iterate('PointLight') do
+  --   self.lights.cpu_buffer:push(light:to_ctype())
+  -- end
+  -- self.lights:sync()
 
 
 
