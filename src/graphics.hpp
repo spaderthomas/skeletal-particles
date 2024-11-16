@@ -67,7 +67,6 @@ typedef struct {
   bool world_space;
   Vector2 camera;
   Matrix4 projection;
-  bool synced_with_gpu;
 } GpuRendererState;
 
 typedef struct {
@@ -186,7 +185,7 @@ void _gpu_command_buffer_clear_cached_state(GpuCommandBuffer* command_buffer) {
 }
 
 void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
-  _gpu_command_buffer_clear_cached_state(command_buffer);
+    _gpu_command_buffer_clear_cached_state(command_buffer);
 
   arr_for(command_buffer->commands, it) {
     auto& command = *it;
@@ -273,26 +272,19 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
 
       case GPU_COMMAND_OP_SET_WORLD_SPACE: {
         command_buffer->render.world_space = command.render.world_space;
-        command_buffer->render.synced_with_gpu = false;
       } break;
       case GPU_COMMAND_OP_SET_CAMERA: {
         command_buffer->render.camera = command.render.camera;
-        command_buffer->render.synced_with_gpu = false;
       } break;
       case GPU_COMMAND_OP_SET_LAYER: {
         command_buffer->render.layer = command.render.layer;
-        command_buffer->render.synced_with_gpu = false;
       } break;
 
       case GPU_COMMAND_OP_DRAW: {      
-        if (!command_buffer->render.synced_with_gpu) {
-          auto view_transform = command_buffer->render.world_space ? 
-            HMM_Translate(HMM_V3(-command.render.camera.x, -command.render.camera.y, 0.f)) :
-            HMM_M4D(1.0);
-          set_uniform_immediate_mat4("view", view_transform);
-
-          command_buffer->render.synced_with_gpu = true;
-        }
+        auto view_transform = command_buffer->render.world_space ? 
+          HMM_Translate(HMM_V3(-command_buffer->render.camera.x, -command_buffer->render.camera.y, 0.f)) :
+          HMM_M4D(1.0);
+        set_uniform_immediate_mat4("view", view_transform);
 
         auto primitive = gpu_draw_primitive_to_gl_draw_primitive(pipeline.raster.primitive);
         switch (command.draw.mode) {
@@ -303,6 +295,7 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
     }
   }
 
+  _gpu_command_buffer_clear_cached_state(command_buffer);
   arr_clear(&command_buffer->commands);
 }
 
@@ -367,7 +360,7 @@ void _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space) {
   if (command_buffer->render.world_space == world_space) return;
 
   arr_push(&command_buffer->commands, {
-    .kind = GPU_COMMAND_OP_SET_LAYER,
+    .kind = GPU_COMMAND_OP_SET_WORLD_SPACE,
     .render = {
       .world_space = world_space
     }
@@ -375,10 +368,10 @@ void _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space) {
 }
 
 void _gpu_set_camera(GpuCommandBuffer* command_buffer, Vector2 camera) {
-  if (!is_memory_equal(&command_buffer->render.camera,  &camera, sizeof(Vector2))) return;
+  if (is_memory_equal(&command_buffer->render.camera,  &camera, sizeof(Vector2))) return;
 
   arr_push(&command_buffer->commands, {
-    .kind = GPU_COMMAND_OP_SET_LAYER,
+    .kind = GPU_COMMAND_OP_SET_CAMERA,
     .render = {
       .camera = camera
     }

@@ -158,6 +158,8 @@ function DeferredRenderer:on_scene_rendered()
   tdengine.gpu.begin_render_pass(self.command_buffer, self.render_pass)
   tdengine.gpu.bind_pipeline(self.command_buffer, self.pipeline)
   tdengine.gpu.bind_buffers(self.command_buffer, self.buffers)
+  tdengine.gpu.set_world_space(self.command_buffer, true)
+  tdengine.gpu.set_camera(self.command_buffer, tdengine.editor.find('EditorCamera').offset:to_ctype())
   tdengine.gpu.command_buffer_draw(self.command_buffer, GpuDrawCall:new({
     mode = GpuDrawMode.Arrays,
     vertex_offset = 0,
