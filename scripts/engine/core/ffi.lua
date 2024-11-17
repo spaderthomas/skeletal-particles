@@ -652,9 +652,7 @@ function CpuBuffer:init(ctype, capacity)
 end
 
 function CpuBuffer:push(element)
-  if self.size == self.capacity then
-    dbg()
-  end
+  tdengine.debug.assert(self.size < self.capacity)
 
 	local slot = self.data + self.size
 	if element then slot[0] = element end
@@ -677,9 +675,9 @@ end
 
 function BackedGpuBuffer:sync()
   tdengine.ffi.gpu_buffer_sync_subdata(
-  self.gpu_buffer.ssbo, self.cpu_buffer.data,
-  ffi.sizeof(self.ctype) * self.cpu_buffer.size,
-  0)
+  	self.gpu_buffer.ssbo, self.cpu_buffer.data,
+  	ffi.sizeof(self.ctype) * self.cpu_buffer.size,
+  	0)
 end
 
 

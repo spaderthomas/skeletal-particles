@@ -233,7 +233,7 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
           for (u32 i = 0; i < buffer_layout.num_vertex_attributes; i++) {
             glEnableVertexAttribArray(attribute_index);
 
-            auto attribute = buffer_layout.vertex_attributes[attribute_index];
+            auto attribute = buffer_layout.vertex_attributes[i];
             
             switch(attribute.kind) {
               case GPU_VERTEX_ATTRIBUTE_FLOAT: glVertexAttribPointer( attribute_index, attribute.count, GL_FLOAT,        GL_FALSE, stride, gl_u32_to_void_pointer(offset)); break;

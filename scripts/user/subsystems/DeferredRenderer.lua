@@ -125,13 +125,38 @@ function DeferredRenderer:on_start_game()
             kind = tdengine.enums.GpuVertexAttributeKind.Float
           }
         }
+      },
+      {
+        vertex_attributes = {
+          {
+            count = 2,
+            kind = tdengine.enums.VertexAttributeKind.Float,
+            divisor = 1
+          },
+          {
+            count = 3,
+            kind = tdengine.enums.VertexAttributeKind.Float,
+            divisor = 1
+          },
+          {
+            count = 1,
+            kind = tdengine.enums.VertexAttributeKind.Float,
+            divisor = 1
+          },
+          {
+            count = 1,
+            kind = tdengine.enums.VertexAttributeKind.U32,
+            divisor = 1
+          } 
+        }
       }
    }
   })
 
   self.buffers = GpuBufferBinding:new({
     vertex = {
-      vertex_buffer
+      vertex_buffer,
+      instance_buffer
     }
   })
 end
@@ -152,6 +177,23 @@ function DeferredRenderer:on_scene_rendered()
   -- end
   -- self.lights:sync()
 
+  self.timer = self.timer or Timer:new(1)
+  if self.timer:update() then
+    self.sdf_instances:fast_clear()
+
+    for i = 1, 10 do
+      self.sdf_instances.cpu_buffer:push(ffi.new('SdfInstance', {
+        {10, 10},
+        tdengine.colors.blue:to_vec3(),
+        0.0,
+        0
+      }))
+      self.sdf_instances:sync()
+    end
+
+    
+    self.timer:reset()
+  end
 
 
   -- begin a render pass
@@ -161,9 +203,10 @@ function DeferredRenderer:on_scene_rendered()
   tdengine.gpu.set_world_space(self.command_buffer, true)
   tdengine.gpu.set_camera(self.command_buffer, tdengine.editor.find('EditorCamera').offset:to_ctype())
   tdengine.gpu.command_buffer_draw(self.command_buffer, GpuDrawCall:new({
-    mode = GpuDrawMode.Arrays,
+    mode = GpuDrawMode.Instance,
     vertex_offset = 0,
-    num_vertices = 6
+    num_vertices = 6,
+    num_instances = 1,
   }))
   tdengine.gpu.end_render_pass(self.command_buffer)
   tdengine.gpu.command_buffer_submit(self.command_buffer)

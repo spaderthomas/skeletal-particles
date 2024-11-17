@@ -71,7 +71,7 @@ function tdengine.color(r, g, b, a)
 			readable_color = function(self)
 				local sum = self.r + self.g + self.b
 				return sum > .75 and tdengine.enums.ReadableTextColor.Dark or tdengine.enums.ReadableTextColor.Light
-			end
+			end,
 		}
 	}
 	setmetatable(color, mt)

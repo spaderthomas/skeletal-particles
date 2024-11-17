@@ -7,5 +7,5 @@ in vec3 f_color;
 in vec2 f_uv;
 
 void main() {
-	color = red;
+	color = vec4(f_color, 1.0);
 }

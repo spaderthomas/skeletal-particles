@@ -5,6 +5,10 @@ local do_once = {
   target = 0
 }
 
+function tdengine.debug.assert(expression)
+  if not expression then dbg() end
+end
+
 function tdengine.debug.do_once(f, ...)
   tdengine.debug.do_n_times(f, 1, ...)
 end
@@ -39,7 +43,6 @@ function tdengine.debug.do_n_times(f, n, ...)
   end
 end
 
----@diagnostic disable-next-line: lowercase-global
 function d()
   local controller = tdengine.dialogue.controller
   controller.state = 'idle'
@@ -50,5 +53,4 @@ function tdengine.debug.open_debugger(stack_depth)
   dbg(false, stack_depth + 1) -- @refactor
 end
 
----@diagnostic disable-next-line: lowercase-global
 x = true
