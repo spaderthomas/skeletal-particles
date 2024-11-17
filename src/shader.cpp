@@ -201,7 +201,7 @@ bool are_uniforms_equal(Uniform& a, Uniform& b) {
 		case UniformKind::Vector3:
 			return a.vec3 == b.vec3;
 		case UniformKind::Vector2:
-			return v2_equal(a.vec2, b.vec2);
+			return HMM_EqV2(a.vec2, b.vec2);
 		case UniformKind::I32:
 			return a.as_i32 == b.as_i32;
 		case UniformKind::F32:

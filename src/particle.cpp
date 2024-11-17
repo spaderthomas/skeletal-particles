@@ -189,7 +189,7 @@ void set_particle_color(ParticleSystemHandle handle, float r, float g, float b, 
 	auto particle_system = find_particle_system(handle);
 	if (!particle_system) return;
 
-	particle_system->color = Vector4(r, g, b, a);
+	particle_system->color = Vector4{r, g, b, a};
 }
 
 void set_particle_layer(ParticleSystemHandle handle, int32 layer) {
@@ -389,7 +389,7 @@ void ParticleSystem::update() {
 			if (!spawn_particle()) break;
 		}
 
-		float max_gravity_distance = v2_length(v2_subtract(gravity_source, position));
+		float max_gravity_distance = HMM_LenV2(HMM_SubV2(gravity_source, position));
 		float distance_threshold = 0.1f;
 		float alignment_threshold = 0.95f;
 		float deceleration = .99f;
@@ -406,24 +406,24 @@ void ParticleSystem::update() {
 			}
 			else {
 				if (gravity_enabled) {
-					auto direction = v2_subtract(gravity_source, particle->position);
-					auto direction_normal = v2_normal(direction);
+					auto direction = HMM_SubV2(gravity_source, particle->position);
+					auto direction_normal = HMM_NormV2(direction);
 					
-					auto distance = v2_length(direction);
+					auto distance = HMM_LenV2(direction);
 					auto distance_ratio = std::min(distance / max_gravity_distance, 1.f);
 
 					// Base gravity
 					auto gravity_strength = gravity_intensity / 100.f;
 					gravity_strength *= distance_ratio; // Accelerate more the farther you are from the source
-					auto gravity = v2_scale(direction_normal, gravity_strength);
+					auto gravity = HMM_MulV2F(direction_normal, gravity_strength);
 
-					particle->velocity.target = v2_add(particle->velocity.target, gravity);
+					particle->velocity.target = HMM_AddV2(particle->velocity.target, gravity);
 
 					// Deceleration
-					auto velocity_normal = v2_normal(particle->velocity.target);
-					auto alignment = v2_dot(velocity_normal, direction_normal);
+					auto velocity_normal = HMM_NormV2(particle->velocity.target);
+					auto alignment = HMM_DotV2(velocity_normal, direction_normal);
 					if (distance_ratio < distance_threshold || alignment < alignment_threshold) {
-						particle->velocity.target = v2_scale(particle->velocity.target, deceleration);
+						particle->velocity.target = HMM_MulV2F(particle->velocity.target, deceleration);
 					}
 				}
 

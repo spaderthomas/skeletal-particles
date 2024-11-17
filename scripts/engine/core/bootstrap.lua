@@ -453,6 +453,43 @@ typedef enum {
 	GPU_VERTEX_ATTRIBUTE_U32 = 1,
 } GpuVertexAttributeKind;
 
+typedef enum {
+  GPU_UNIFORM_NONE = 0,
+	GPU_UNIFORM_MATRIX4 = 1,
+	GPU_UNIFORM_MATRIX3 = 2,
+	GPU_UNIFORM_MATRIX2 = 3,
+	GPU_UNIFORM_VECTOR4 = 4,
+	GPU_UNIFORM_VECTOR3 = 5,
+	GPU_UNIFORM_VECTOR2 = 6,
+	GPU_UNIFORM_I32 = 7,
+	GPU_UNIFORM_F32 = 8,
+	GPU_UNIFORM_TEXTURE = 100,
+} GpuUniformKind;
+
+
+//////////////
+// UNIFORMS //
+//////////////
+
+typedef union {
+  i32 texture;
+  i32 i32;
+  float f32;
+  Vector2 vec2;
+  Vector3 vec3;
+  Vector4 vec4;
+  Matrix2 mat2;
+  Matrix3 mat3;
+  Matrix4 mat4;
+} GpuUniformData;
+
+typedef struct {
+  char name [64];
+  GpuUniformKind kind;
+} GpuUniformDescriptor;
+
+typedef struct GpuUniform GpuUniform;
+
 
 ////////////////////////
 // BINDABLE RESOURCES //
@@ -579,11 +616,10 @@ typedef struct {
   Vector2 position;
   Vector3 color;
   float rotation;
-  u32 shape_index;
+  float sdf_params [6];
 } SdfInstance;
 
 typedef struct {
-  Vector2 position;
   float radius;
   float edge_thickness;
 } SdfCircle;

@@ -94,7 +94,7 @@ void create_font(const char* id, const char* file_path, u32 size) {
 	auto buffer = bump_allocator.alloc<char>(tex_width * tex_height);
 
 	// Read each character's bitmap into the image buffer
-	Vector2 point;
+	Vector2 point = { 0 };
 	for (GLubyte c = 0; c < num_glyphs; c++) {
 		i32 failure = FT_Load_Char(face, c, FT_LOAD_RENDER);
 		if (failure) {

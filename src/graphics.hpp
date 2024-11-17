@@ -4,6 +4,8 @@
 #define GPU_NEAR_PLANE -100.0
 #define GPU_FAR_PLANE 100.0
 
+#define MAX_UNIFORM_NAME 64
+
 typedef enum {
   GPU_COMMAND_OP_BIND_BUFFERS = 10,
   GPU_COMMAND_OP_BEGIN_RENDER_PASS = 20,
@@ -30,20 +32,76 @@ typedef enum {
 	GPU_VERTEX_ATTRIBUTE_U32 = 1,
 } GpuVertexAttributeKind;
 
+typedef enum {
+  GPU_UNIFORM_NONE = 0,
+	GPU_UNIFORM_MATRIX4 = 1,
+	GPU_UNIFORM_MATRIX3 = 2,
+	GPU_UNIFORM_MATRIX2 = 3,
+	GPU_UNIFORM_VECTOR4 = 4,
+	GPU_UNIFORM_VECTOR3 = 5,
+	GPU_UNIFORM_VECTOR2 = 6,
+	GPU_UNIFORM_I32 = 7,
+	GPU_UNIFORM_F32 = 8,
+	GPU_UNIFORM_TEXTURE = 100,
+} GpuUniformKind;
+
+
+//////////////
+// UNIFORMS //
+//////////////
+typedef union {
+  i32 texture;
+  i32 i32;
+  float f32;
+  Vector2 vec2;
+  Vector3 vec3;
+  Vector4 vec4;
+  Matrix2 mat2;
+  Matrix3 mat3;
+  Matrix4 mat4;
+} GpuUniformData;
+
+typedef struct {
+  char name [MAX_UNIFORM_NAME];
+  GpuUniformKind kind;
+} GpuUniformDescriptor;
+
+typedef struct {
+  char name [MAX_UNIFORM_NAME];
+  GpuUniformKind kind;
+  GpuUniformData data;
+} GpuUniform;
+
+
 
 ////////////////////////
 // BINDABLE RESOURCES //
 ////////////////////////
-typedef struct {
+typedef struct { 
   GpuRenderTarget* color;
 } GpuRenderPass;
 
+struct GpuVertexBufferBinding {
+  GpuBuffer* buffer;
+};
+
+struct GpuUniformBinding {
+  GpuUniform* uniform;
+  GpuUniformData data;
+};
+
 typedef struct {
   struct {
-    GpuBuffer** buffers;
+    GpuVertexBufferBinding* bindings;
     u32 count;
   } vertex;
-  // Uniform
+
+  struct {
+    GpuUniformBinding* uniforms;
+    u32 count;
+  } uniform;
+
+  // UBO
   // SSBO
 } GpuBufferBinding;
 
@@ -136,6 +194,7 @@ FM_LUA_EXPORT void              _gpu_bind_render_state(GpuCommandBuffer* command
 FM_LUA_EXPORT void              _gpu_set_layer(GpuCommandBuffer* command_buffer, u32 layer);
 FM_LUA_EXPORT void              _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space);
 FM_LUA_EXPORT void              _gpu_set_camera(GpuCommandBuffer* command_buffer, Vector2 camera);
+FM_LUA_EXPORT GpuUniform*       _gpu_uniform_create(GpuUniformDescriptor descriptor);
 
 void _gpu_command_buffer_process_command(GpuCommandBuffer* command_buffer, GpuCommand command);
 void _gpu_command_buffer_clear_cached_state(GpuCommandBuffer* command_buffer);
@@ -149,6 +208,7 @@ void* gl_u32_to_void_pointer(u32 value);
 //////////////
 typedef struct {
   Array<GpuCommandBuffer, 32> command_buffers;
+  Array<GpuUniform, 1024> uniforms;
 } CommandRenderer;
 CommandRenderer command_renderer;
 
@@ -214,7 +274,8 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
         command_buffer->pipeline = command.pipeline;
       } break;
 
-      case GPU_COMMAND_OP_BIND_BUFFERS: {
+      case GPU_COMMAND_OP_BIND_BUFFERS: {\
+        // VERTEX BUFFERS
         auto& vertex_buffers = command.buffers.vertex;
         auto& pipeline = command_buffer->pipeline;
 
@@ -223,7 +284,7 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
         u32 attribute_index = 0;
         for (u32 buffer_index = 0; buffer_index < vertex_buffers.count; buffer_index++) {
           auto buffer_layout = pipeline.buffer_layouts[buffer_index];
-          auto buffer = vertex_buffers.buffers[buffer_index];
+          auto buffer = vertex_buffers.bindings[buffer_index].buffer;
 
           gpu_buffer_bind(buffer);
 
@@ -250,6 +311,9 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
             attribute_index++;
           }
         }
+
+        // UNIFORMS
+
 
         command_buffer->buffers = command.buffers;
       } break;
@@ -385,6 +449,18 @@ void _gpu_bind_render_state(GpuCommandBuffer* command_buffer, GpuRendererState r
 }
 
 
+//////////////
+// UNIFORMS //
+//////////////
+GpuUniform* _gpu_uniform_create(GpuUniformDescriptor descriptor) {
+  auto uniform = arr_push(&command_renderer.uniforms);
+  copy_string_n(descriptor.name, MAX_UNIFORM_NAME, uniform->name, MAX_UNIFORM_NAME);
+  uniform->kind = descriptor.kind;
+  
+  return uniform;
+}
+
+
 /////////////////////
 // ENUM CONVERSION //
 /////////////////////
@@ -443,6 +519,7 @@ u32 _gpu_vertex_layout_calculate_stride(GpuBufferLayout* layout) {
 /////////////
 void init_command_renderer() {
   arr_init(&command_renderer.command_buffers);
+  arr_init(&command_renderer.uniforms);
 
 }
 

@@ -10,6 +10,7 @@
 #include "handmade/HandmadeMath.h"
 typedef HMM_Mat4 Matrix4;
 typedef HMM_Mat3 Matrix3;
+typedef HMM_Mat2 Matrix2;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"

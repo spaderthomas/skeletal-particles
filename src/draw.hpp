@@ -217,22 +217,6 @@ u8*  vertex_buffer_at(VertexBuffer* vertex_buffer, u32 index);
 struct GpuGraphicsPipeline;
 struct GpuBuffer;
 
-struct GpuUniformBinding {
-	UniformKind kind;
-	string name;
-	union {
-		HMM_Mat4 mat4;
-		HMM_Mat3 mat3;
-		HMM_Vec4 vec4;
-		HMM_Vec3 vec3;
-		Vector2 vec2;
-		int32 i32;
-		float f32;
-		GpuGraphicsPipeline* pipeline;
-		GpuRenderTarget* render_target;
-	};
-};
-
 struct GpuSsboBinding {
 	GpuBuffer* buffer;
 	u32 index;

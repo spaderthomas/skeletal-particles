@@ -238,6 +238,12 @@ typedef union HMM_Vec2
 
     struct
     {
+        float x, y;
+    };
+
+
+    struct
+    {
         float U, V;
     };
 
@@ -264,6 +270,11 @@ typedef union HMM_Vec3
     struct
     {
         float X, Y, Z;
+    };
+
+    struct
+    {
+        float x, y, z;
     };
 
     struct
@@ -335,6 +346,16 @@ typedef union HMM_Vec4
         };
 
         float A;
+    };
+
+    struct
+    {
+        float x, y, z, w;
+    };
+
+    struct
+    {
+        float r, g, b, a;
     };
 
     struct

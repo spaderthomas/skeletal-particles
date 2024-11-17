@@ -615,6 +615,12 @@ function SdfCircle:init(px, py, radius, edge_thickness)
 	self.edge_thickness = edge_thickness
 end
 
+SdfInstance = tdengine.class.metatype('SdfInstance')
+function SdfInstance:init(params)
+	self.position = params.position
+	self.color = params.color
+	self.rotation = params.rotation
+end
 
 -------------------
 -- DYNAMIC ARRAY --

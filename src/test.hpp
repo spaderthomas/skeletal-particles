@@ -63,7 +63,6 @@ void test_convert_mag() {
 
 void test_convert_point() {
 	Vector2 point;
-	Vector2 magnitude;
 	Vector2 result;
 
 	static constexpr int32 NATIVE = 1000;

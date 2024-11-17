@@ -18,7 +18,7 @@ Vertex* push_vertex(float px, float py, Vector2 uv, Vector4 color) {
 }
 
 void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacity) {
-	push_quad(px, py, dx, dy, uv, Vector4(1.0, 1.0, 1.0, opacity));
+	push_quad(px, py, dx, dy, uv, { .r = 1.0, .g = 1.0, .b = 1.0, .a = opacity });
 }
 
 void push_quad(float px, float py, float dx, float dy, Vector2* uv, Vector4 color) {
@@ -222,8 +222,8 @@ void draw_line(Vector2 start, Vector2 end, float thickness, Vector4 color) {
 	set_active_shader("solid");
 	set_draw_mode(DrawMode::Triangles);
 
-	auto line = v2_subtract(end, start);
-	auto length = v2_length(line);
+	auto line = HMM_SubV2(end, start);
+	auto length = HMM_LenV2(line);
 	auto normal = Vector2(-1 * line.y, line.x);
 
 	auto scale = thickness / (length * 2);
@@ -1170,8 +1170,8 @@ bool GlStateDiff::is_first_draw_call() {
 bool GlStateDiff::need_apply_scissor(GlState* state) {
 	if (is_first_draw_call()) return true;
 	if (current->scissor != state->scissor) return true;
-	if (!v2_equal(current->scissor_region.position,  state->scissor_region.position)) return true;
-	if (!v2_equal(current->scissor_region.dimension, state->scissor_region.dimension)) return true;
+	if (!HMM_EqV2(current->scissor_region.position,  state->scissor_region.position)) return true;
+	if (!HMM_EqV2(current->scissor_region.dimension, state->scissor_region.dimension)) return true;
 
 	return false;
 }

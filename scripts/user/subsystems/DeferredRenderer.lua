@@ -91,13 +91,12 @@ function DeferredRenderer:on_start_game()
   end
   self.sdf_vertices:sync()
 
-  self.sdf_instances.cpu_buffer:push(ffi.new('SdfInstance', {
-    {10, 10},
-    tdengine.colors.blue:to_vec3(),
-    0.0,
-    0
+  self.sdf_instances.cpu_buffer:push(SdfInstance:new({
+    position = Vector2:new(tdengine.math.random_float(0, 100), 10),
+    color = tdengine.colors.red:to_vec3(),
+    rotation = 0.0
   }))
-  self.sdf_instances:sync()
+self.sdf_instances:sync()
 
 
   self.command_buffer = tdengine.gpu.command_buffer_create(GpuCommandBufferDescriptor:new({
@@ -179,17 +178,16 @@ function DeferredRenderer:on_scene_rendered()
 
   self.timer = self.timer or Timer:new(1)
   if self.timer:update() then
-    self.sdf_instances:fast_clear()
+    self.sdf_instances.cpu_buffer:fast_clear()
 
     for i = 1, 10 do
-      self.sdf_instances.cpu_buffer:push(ffi.new('SdfInstance', {
-        {10, 10},
-        tdengine.colors.blue:to_vec3(),
-        0.0,
-        0
+      self.sdf_instances.cpu_buffer:push(SdfInstance:new({
+        position = Vector2:new(tdengine.math.random_float(0, 100), 10),
+        color = tdengine.colors.red:to_vec3(),
+        rotation = 0.0
       }))
-      self.sdf_instances:sync()
     end
+    self.sdf_instances:sync()
 
     
     self.timer:reset()
@@ -206,7 +204,7 @@ function DeferredRenderer:on_scene_rendered()
     mode = GpuDrawMode.Instance,
     vertex_offset = 0,
     num_vertices = 6,
-    num_instances = 1,
+    num_instances = 10,
   }))
   tdengine.gpu.end_render_pass(self.command_buffer)
   tdengine.gpu.command_buffer_submit(self.command_buffer)
