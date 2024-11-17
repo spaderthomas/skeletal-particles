@@ -5,7 +5,7 @@ out vec4 color;
 in vec4 f_color;
 in vec2 f_uv;
 
-
+#if 0
 // #define USE_RADIAL_UVS 1
 #define USE_GRID_UVS 1
 
@@ -55,3 +55,6 @@ void main() {
 	// color.a = alpha;
 	// DBG_FLOAT(abs(alpha));
 }
+#endif
+
+void main() { discard; }

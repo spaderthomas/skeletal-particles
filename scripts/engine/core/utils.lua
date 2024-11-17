@@ -65,3 +65,4 @@ function KeyRepeat:check_fn(key, f, ...)
 
   return false
 end
+

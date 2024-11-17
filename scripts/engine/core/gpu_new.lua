@@ -45,7 +45,7 @@ function GpuGraphicsPipelineDescriptor:init(params)
   self.color_attachment = GpuColorAttachment:new(params.color_attachment)
   self.command_buffer = tdengine.gpus.find(params.command_buffer)
 end
-
+-- 
 GpuCommandBufferBatchedDescriptor = tdengine.class.metatype('GpuCommandBufferBatchedDescriptor')
 function GpuCommandBufferBatchedDescriptor:init(params) 
   local allocator = tdengine.ffi.ma_find('bump')
@@ -71,6 +71,11 @@ end
 
 
 
+GpuUniformDescriptor = tdengine.class.metatype('GpuUniformDescriptor')
+function GpuUniformDescriptor:init(params)
+  self.name = params.name
+  self.kind = tdengine.enum.load(params.kind):to_number()
+end
 
 GpuCommandBufferDescriptor = tdengine.class.metatype('GpuCommandBufferDescriptor')
 function GpuCommandBufferDescriptor:init(params)
@@ -128,17 +133,50 @@ function GpuRenderPass:init(params)
   self.color = tdengine.gpus.find(params.color)
 end
 
+GpuUniformBinding = tdengine.class.metatype('GpuUniformBinding')
+function GpuUniformBinding:init(params)
+  self.uniform = params.uniform
+  self.binding_index = params.binding_index or 0
+
+  if     GpuUniformKind.Matrix4:match(self.uniform.kind) then self.data.mat4 = params.value
+  elseif GpuUniformKind.Matrix3:match(self.uniform.kind) then self.data.mat3 = params.value
+  elseif GpuUniformKind.Matrix2:match(self.uniform.kind) then self.data.mat2 = params.value
+  elseif GpuUniformKind.Vector4:match(self.uniform.kind) then self.data.vec4 = params.value
+  elseif GpuUniformKind.Vector3:match(self.uniform.kind) then self.data.vec3 = params.value
+  elseif GpuUniformKind.Vector2:match(self.uniform.kind) then self.data.vec2 = params.value
+  elseif GpuUniformKind.F32:match(self.uniform.kind)     then self.data.f32 = params.value
+  elseif GpuUniformKind.I32:match(self.uniform.kind)     then self.data.i32 = params.value
+  elseif GpuUniformKind.Enum:match(self.uniform.kind)    then self.data.i32 = tdengine.enum.load(params.value):to_number()
+  elseif GpuUniformKind.Texture:match(self.uniform.kind) then self.data.texture = params.value
+  else   tdengine.debug.assert(false) end
+end
+
+GpuVertexBufferBinding = tdengine.class.metatype('GpuVertexBufferBinding')
+function GpuVertexBufferBinding:init(buffer)
+  if type(buffer) == 'cdata' then
+    self.buffer = buffer
+  else
+    self.buffer = tdengine.gpus.find(buffer)
+  end
+end
+
 GpuBufferBinding = tdengine.class.metatype('GpuBufferBinding')
 function GpuBufferBinding:init(params)
   local allocator = tdengine.ffi.ma_find('standard')
 
-  self.vertex.count = #params.vertex
-  self.vertex.buffers = allocator:alloc_array('GpuBuffer*', self.vertex.count)
-  for i = 1, self.vertex.count do
-    if type(params.vertex[i]) == 'cdata' then
-      self.vertex.buffers[i - 1] = params.vertex[i]
-    else
-      self.vertex.buffers[i - 1] = tdengine.gpus.find(params.vertex[i])
+  if params.vertex then
+    self.vertex.count = #params.vertex
+    self.vertex.bindings = allocator:alloc_array('GpuVertexBufferBinding', self.vertex.count)
+    for i = 1, self.vertex.count do
+      self.vertex.bindings[i - 1] = GpuVertexBufferBinding:new(params.vertex[i])
+    end
+  end
+
+  if params.uniforms then
+    self.uniforms.count = #params.uniforms
+    self.uniforms.bindings = allocator:alloc_array('GpuUniformBinding', self.uniforms.count)
+    for i = 1, self.uniforms.count do
+      self.uniforms.bindings[i - 1] = GpuUniformBinding:new(params.uniforms[i])
     end
   end
 end

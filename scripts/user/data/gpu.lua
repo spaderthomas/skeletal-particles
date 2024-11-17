@@ -371,15 +371,6 @@ return {
 			}
 		},
 		{
-			id = Shader.Sdf,
-			descriptor = {
-				kind = tdengine.enums.GpuShaderKind.Graphics,
-				name = 'sdf',
-				vertex_shader = 'sdf.vertex',
-				fragment_shader = 'sdf.fragment'
-			}
-		},
-		{
 			id = Shader.SdfNormal,
 			descriptor = {
 				kind = tdengine.enums.GpuShaderKind.Graphics,

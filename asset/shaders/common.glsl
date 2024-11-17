@@ -1,18 +1,25 @@
 #version 450 core
 
-// UNIFORMS
+//////////////
+// UNIFORMS //
+//////////////
 uniform float master_time;
 uniform vec2 camera;
 uniform vec2 output_resolution;
 uniform vec2 native_resolution;
 
-//const vec2 output_resolution = vec2(1920.0, 1080.0) * vec2(.0375, .125);  
 
-// CONSTANTS
+///////////////
+// CONSTANTS //
+///////////////
 const float pi = 3.14159265359;
+const float gamma = 2.2;
 #define THREADS_PER_WORKGROUP 32
 
-// COLORS
+
+////////////
+// COLORS //
+////////////
 const vec4 red   = vec4(1.0, 0.0, 0.0, 1.0);
 const vec4 green = vec4(0.0, 1.0, 0.0, 1.0);
 const vec4 blue  = vec4(0.0, 0.0, 1.0, 1.0);
@@ -65,6 +72,10 @@ vec4 color_255(float r, float g, float b, float a) {
 	return vec4(r, g, b, a) / 255.0;
 }
 
+
+////////////////////////
+// COLOR CALCULATIONS //
+////////////////////////
 float calc_brightness(vec4 color) {
 	const vec3 weights = vec3(0.2126, 0.7152, 0.0722);
 	return dot(color.rgb, weights);
@@ -87,16 +98,15 @@ float calc_perceived_lightness(vec4 color) {
 	return lightness / 100.0;
 }
 
-// All components are in the range [0…1], including hue.
-vec3 rgb_to_hsv(vec3 c)
-{
-    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+vec3 rgb_to_hsv(vec3 c) {
+	// All components are in the range [0…1], including hue.
+	vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+	vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+	vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
 
-    float d = q.x - min(q.w, q.y);
-    float e = 1.0e-10;
-    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+	float d = q.x - min(q.w, q.y);
+	float e = 1.0e-10;
+	return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 }
 
 vec4 rgb_to_hsv_4(vec4 c) {
@@ -104,12 +114,11 @@ vec4 rgb_to_hsv_4(vec4 c) {
 }
 
 
-// All components are in the range [0…1], including hue.
-vec3 hsv_to_rgb(vec3 c)
-{
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+vec3 hsv_to_rgb(vec3 c) {
+	// All components are in the range [0…1], including hue.
+	vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+	return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
 vec4 hsv_to_rgb_4(vec4 c) {
@@ -120,8 +129,37 @@ vec4 hsv_to_rgb_4(vec4 c) {
 #define HSV_SATURATION(color) ((color).y)
 #define HSV_HUE(color) ((color).x)
 
+float linear_to_srgb(float linear) {
+    if (linear <= 0.0031308) {
+        return linear * 12.92;
+    } else {
+        return 1.055 * pow(linear, 1.0 / gamma) - 0.055;
+    }
+}
 
-// RANDOM SHIT
+vec4 linear_to_srgb(vec4 linear) {
+	return vec4(
+		linear_to_srgb(linear.r),
+		linear_to_srgb(linear.g),
+		linear_to_srgb(linear.b),
+		linear.a
+	);
+}
+
+bool is_edge_3(vec4 sample_center, vec4 sample_left, vec4 sample_right, float edge_threshold) {
+	float brightness = calc_brightness(sample_center);
+	float brightness_right = calc_brightness(sample_right);
+	float brightness_left = calc_brightness(sample_left);
+	float brightness_delta = max(abs(brightness - brightness_left), abs(brightness - brightness_right));
+
+	bool is_edge = brightness_delta > edge_threshold;
+	return is_edge;
+}
+
+
+/////////////////
+// RANDOM SHIT //
+/////////////////
 float nonlinear_weight(float x, float exp, float low) {
 	return max(pow(x, exp), low);
 }
@@ -145,8 +183,16 @@ vec2 quantize_uv(vec2 uv, float horizontal_bands) {
 	);
 }
 
+float plot(vec2 uv, float pct){
+  return  smoothstep( pct-0.02, pct, uv.y) -
+          smoothstep( pct, pct+0.02, uv.y);
+}
 
 
+
+//////////
+// MATH //
+//////////
 float radians_to_turns(float theta) {
 	return theta / (2 * pi);
 }
@@ -167,7 +213,51 @@ float atan_cyclic_turns(float y, float x) {
 	float theta = abs(atan(y, x));
 	return radians_to_turns(theta);
 }
-// RNG
+
+mat3 scale_matrix(vec2 scale) {
+	return mat3(
+		scale.x, 0.0,     0.0,
+		0.0,     scale.y, 0.0,
+		0.0,     0.0,     1.0
+	);
+}
+
+mat3 translation_matrix(vec2 translation) {
+	return mat3(
+		1.0,           0.0,           0.0,
+		0.0,           1.0,           0.0,
+		translation.x, translation.y, 1.0
+	);
+}
+
+mat3 rotation_matrix(float rotation) {
+	float c = cos(rotation);
+	float s = sin(rotation);
+	return mat3(
+		c,   -s,   0.0,
+		s,    c,   0.0,
+		0.0,  0.0, 1.0
+	);
+}
+
+mat3 transformation_matrix(vec2 translation, float rotation, vec2 scale) {
+	return translation_matrix(translation) * rotation_matrix(rotation) * scale_matrix(scale);
+}
+// mat3 transform_2(vec2 translation, float rotation, vec2 scale) {
+// 	float c = cos(rotation);
+// 	float s = sin(rotation);
+// 	return mat3(
+// 		c * scale.x,  0.0, 0.0,
+// 		0.0,  c * scale.y, 0.0,
+// 		translation.x,         translation.y,        1.0
+// 	);
+
+// }
+
+
+/////////
+// RNG //
+/////////
 float random_float(vec2 seed, float min, float max) {
 	const vec2 hash_vector = vec2(12.9898, 78.233);
 	const float large_multiplier = 43758.5453;
@@ -184,6 +274,10 @@ void jitter_rng_seed(inout vec2 seed) {
 
 #define RANDOM_FLOAT(seed, vmin, vmax) random_float((seed), (vmin), (vmax)); jitter_rng_seed(seed);
 
+
+/////////////////
+// OSCILLATORS //
+/////////////////
 float ranged_sin(float x, float vmin, float vmax) {
 	float coefficient = (vmax - vmin) / 2.0;
 	float offset = (vmax + vmin) / 2.0;
@@ -199,7 +293,6 @@ float timed_sin(float speed, float vmin, float vmax) {
 	return timed_sin_ex(speed, vmin, vmax, 0.0);
 }
 
-
 float triangle_wave(float x) {
     return clamp(1.0 - abs(x), 0.0, 1.0);
 }
@@ -210,17 +303,15 @@ float map_range(float x, float min_a, float max_a, float min_b, float max_b) {
     return clamp(coefficient * x + offset, min_b, max_b);
 }
 
-float plot(vec2 uv, float pct){
-  return  smoothstep( pct-0.02, pct, uv.y) -
-          smoothstep( pct, pct+0.02, uv.y);
-}
 
+////////////
+// EASING //
+////////////
 float ease_in_out_cubic(float t) {
   return t < 0.5
     ? 4.0 * t * t * t
     : 0.5 * pow(2.0 * t - 2.0, 3.0) + 1.0;
 }
-
 
 float interp_in_out_cubic(float x, float y, float t) {
 	return mix(x, y, ease_in_out_cubic(t));
@@ -242,7 +333,6 @@ float ease_out_quartic(float t) {
 	return 1.0 - pow(1.0 - t, 4);
 }
 
-
 float ease_in_quadratic(float t) {
 	return pow(t, 2);
 }
@@ -251,6 +341,10 @@ float ease_in_cubic(float t) {
 	return pow(t, 3);
 }
 
+
+//////////////////
+// THRESHOLDING //
+//////////////////
 float is_higher_than(float x, float threshold) {
 	return step(threshold, x);
 }
@@ -272,7 +366,9 @@ float double_pass(float x, float low, float high) {
 }
 
 
-// BLUR HELPERS
+//////////////////
+// BLUR HELPERS //
+//////////////////
 vec4 sample_neighbor_h(sampler2D source_texture, vec2 uv, float pixel_offset) {
 	const vec2 uv_per_px = 1.0 / native_resolution;
 
@@ -322,7 +418,10 @@ void add_nonlinear_blur_h(sampler2D source_texture, vec2 uv, float pixel_offset,
 	total_weights += weight;
 }
 
-// BLUR KERNELS
+
+//////////////////
+// BLUR KERNELS //
+//////////////////
 vec4 box_blur_n_h(sampler2D source_texture, vec2 uv, int num_taps, float pixel_offset) {
 	vec4 blurred_color = vec4(0.0);
 
@@ -376,35 +475,4 @@ vec4 nonlinear_blur_n_h(sampler2D source_texture, vec2 uv, uint num_taps, float 
 	add_nonlinear_blur_h(source_texture, uv, 0, power, total_weights, blurred_color);
 
 	return blurred_color / total_weights;
-}
-
-
-
-const float gamma = 2.2;
-
-float linear_to_srgb(float linear) {
-    if (linear <= 0.0031308) {
-        return linear * 12.92;
-    } else {
-        return 1.055 * pow(linear, 1.0 / gamma) - 0.055;
-    }
-}
-
-vec4 linear_to_srgb(vec4 linear) {
-	return vec4(
-		linear_to_srgb(linear.r),
-		linear_to_srgb(linear.g),
-		linear_to_srgb(linear.b),
-		linear.a
-	);
-}
-
-bool is_edge_3(vec4 sample_center, vec4 sample_left, vec4 sample_right, float edge_threshold) {
-	float brightness = calc_brightness(sample_center);
-	float brightness_right = calc_brightness(sample_right);
-	float brightness_left = calc_brightness(sample_left);
-	float brightness_delta = max(abs(brightness - brightness_left), abs(brightness - brightness_right));
-
-	bool is_edge = brightness_delta > edge_threshold;
-	return is_edge;
 }

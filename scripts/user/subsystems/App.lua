@@ -26,7 +26,7 @@ function App:on_start_game()
 	tdengine.ffi.use_editor_layout('gbuffer')
 
 	tdengine.editor.find('EditorUtility').style.grid.size = 12
-	tdengine.editor.find('EditorUtility').enabled.grid = true
+	tdengine.editor.find('EditorUtility').enabled.grid = false
 
 	tdengine.editor.find('DialogueEditor').hidden = true
 

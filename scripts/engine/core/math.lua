@@ -69,6 +69,10 @@ function tdengine.math.ranged_cos(x, min, max)
   return tdengine.math.ranged_sin(x + tdengine.math.pi / 2, min, max)
 end
 
+function tdengine.math.timed_sin(speed, min, max)
+  return tdengine.math.ranged_sin(tdengine.elapsed_time * speed, min, max)
+end
+
 function tdengine.math.random_float(min, max)
   local random = math.random()
   local range = max - min

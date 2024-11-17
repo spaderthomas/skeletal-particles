@@ -145,6 +145,24 @@ function tdengine.ffi.init()
 		}
 	)
 
+	GpuUniformKind = tdengine.enum.define(
+		'GpuUniformKind',
+		{
+			None = tdengine.ffi.GPU_UNIFORM_NONE,
+			Matrix4 = tdengine.ffi.GPU_UNIFORM_MATRIX4,
+			Matrix3 = tdengine.ffi.GPU_UNIFORM_MATRIX3,
+			Matrix2 = tdengine.ffi.GPU_UNIFORM_MATRIX2,
+			Vector4 = tdengine.ffi.GPU_UNIFORM_VECTOR4,
+			Vector3 = tdengine.ffi.GPU_UNIFORM_VECTOR3,
+			Vector2 = tdengine.ffi.GPU_UNIFORM_VECTOR2,
+			F32 = tdengine.ffi.GPU_UNIFORM_F32,
+			I32 = tdengine.ffi.GPU_UNIFORM_I32,
+			Texture = tdengine.ffi.GPU_UNIFORM_TEXTURE,
+			Enum = tdengine.ffi.GPU_UNIFORM_ENUM,
+		}
+	)
+
+
 	VertexAttributeKind = tdengine.enum.define_from_ctype('VertexAttributeKind')
 	GpuBufferKind = tdengine.enum.define_from_ctype('GpuBufferKind')
 	GpuBufferUsage = tdengine.enum.define_from_ctype('GpuBufferUsage')
@@ -195,7 +213,7 @@ function tdengine.ffi.init()
 		}
 	)
 
-	tdengine.enum.define(
+	Sdf = tdengine.enum.define(
 		'Sdf',
 		{
 			Circle = 0,
@@ -620,6 +638,10 @@ function SdfInstance:init(params)
 	self.position = params.position
 	self.color = params.color
 	self.rotation = params.rotation
+
+	if Sdf.Circle:match(params.shape) then
+		self.sdf_params[0] = params.shape_data.radius
+	end
 end
 
 -------------------
@@ -679,9 +701,13 @@ function BackedGpuBuffer:init(ctype, capacity, gpu_buffer)
   self.gpu_buffer = GpuBuffer:new(ctype, capacity, gpu_buffer)
 end
 
+function BackedGpuBuffer:size()
+	return self.cpu_buffer.size
+end
+
 function BackedGpuBuffer:sync()
   tdengine.ffi.gpu_buffer_sync_subdata(
-  	self.gpu_buffer.ssbo, self.cpu_buffer.data,
+  	self.gpu_buffer:to_ctype(), self.cpu_buffer.data,
   	ffi.sizeof(self.ctype) * self.cpu_buffer.size,
   	0)
 end
@@ -693,19 +719,23 @@ GpuBuffer = tdengine.class.define('GpuBuffer')
 function GpuBuffer:init(ctype, capacity, gpu_buffer)
   self.ctype = ctype
   self.capacity = capacity
-  self.ssbo = gpu_buffer or tdengine.ffi.gpu_buffer_create(GpuBufferDescriptor:new({
+  self.buffer = gpu_buffer or tdengine.ffi.gpu_buffer_create(GpuBufferDescriptor:new({
 		kind = GpuBufferKind.Storage,
 		usage = GpuBufferUsage.Static,
 		size = ffi.sizeof(ctype) * capacity
 	}))
 end
 
+function GpuBuffer:to_ctype()
+	return self.buffer
+end
+
 function GpuBuffer:zero()
-  tdengine.ffi.gpu_buffer_zero(self.ssbo, self.capacity * ffi.sizeof(self.ctype))
+  tdengine.ffi.gpu_buffer_zero(self.buffer, self.capacity * ffi.sizeof(self.ctype))
 end
 
 function GpuBuffer:bind_base(base)
-  tdengine.ffi.gpu_buffer_bind_base(self.ssbo, base)
+  tdengine.ffi.gpu_buffer_bind_base(self.buffer, base)
 end
 
 

@@ -463,7 +463,8 @@ typedef enum {
 	GPU_UNIFORM_VECTOR2 = 6,
 	GPU_UNIFORM_I32 = 7,
 	GPU_UNIFORM_F32 = 8,
-	GPU_UNIFORM_TEXTURE = 100,
+	GPU_UNIFORM_TEXTURE = 9,
+	GPU_UNIFORM_ENUM = 10,
 } GpuUniformKind;
 
 
@@ -472,15 +473,15 @@ typedef enum {
 //////////////
 
 typedef union {
+  Matrix4 mat4;
+  Matrix3 mat3;
+  Matrix2 mat2;
+  Vector4 vec4;
+  Vector3 vec3;
+  Vector2 vec2;
+  float f32;
   i32 texture;
   i32 i32;
-  float f32;
-  Vector2 vec2;
-  Vector3 vec3;
-  Vector4 vec4;
-  Matrix2 mat2;
-  Matrix3 mat3;
-  Matrix4 mat4;
 } GpuUniformData;
 
 typedef struct {
@@ -488,21 +489,46 @@ typedef struct {
   GpuUniformKind kind;
 } GpuUniformDescriptor;
 
-typedef struct GpuUniform GpuUniform;
+typedef struct {
+  char name [64];
+  GpuUniformKind kind;
+} GpuUniform;
 
 
-////////////////////////
-// BINDABLE RESOURCES //
-////////////////////////
+/////////////////////
+// GPU RENDER PASS //
+/////////////////////
 typedef struct {
   GpuRenderTarget* color;
 } GpuRenderPass;
 
+
+////////////////////////
+// GPU BUFFER BINDING //
+////////////////////////
+typedef struct {
+  GpuBuffer* buffer;
+} GpuVertexBufferBinding;
+
+typedef struct {
+  GpuUniformData data;
+  GpuUniform* uniform;
+  u32 binding_index;
+} GpuUniformBinding;
+
 typedef struct {
   struct {
-    GpuBuffer** buffers;
+    GpuVertexBufferBinding* bindings;
     u32 count;
   } vertex;
+
+  struct {
+    GpuUniformBinding* bindings;
+    u32 count;
+  } uniforms;
+
+  // UBO
+  // SSBO
 } GpuBufferBinding;
 
 
@@ -568,11 +594,12 @@ void              _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer);
 void              _gpu_bind_pipeline(GpuCommandBuffer* command_buffer, GpuPipeline pipeline);
 void              _gpu_begin_render_pass(GpuCommandBuffer* command_buffer, GpuRenderPass render_pass);
 void              _gpu_end_render_pass(GpuCommandBuffer* command_buffer);
-void              _gpu_bind_buffers(GpuCommandBuffer* command_buffer, GpuBufferBinding buffers);
+void              _gpu_apply_bindings(GpuCommandBuffer* command_buffer, GpuBufferBinding bindings);
 void              _gpu_bind_render_state(GpuCommandBuffer* command_buffer, GpuRendererState render);
 void              _gpu_set_layer(GpuCommandBuffer* command_buffer, u32 layer);
 void              _gpu_set_world_space(GpuCommandBuffer* command_buffer, bool world_space);
 void              _gpu_set_camera(GpuCommandBuffer* command_buffer, Vector2 camera);
+GpuUniform*       _gpu_uniform_create(GpuUniformDescriptor descriptor);
 
 
 
@@ -613,8 +640,8 @@ typedef struct {
 } SdfVertex;
 
 typedef struct {
-  Vector2 position;
   Vector3 color;
+  Vector2 position;
   float rotation;
   float sdf_params [6];
 } SdfInstance;

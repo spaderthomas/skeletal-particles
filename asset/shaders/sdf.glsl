@@ -1,33 +1,9 @@
-// SDF
 #define SDF_CIRCLE 0
 #define SDF_RING 1
 #define SDF_BOX 2
 #define SDF_ORIENTED_BOX 3
 
 uniform int shape;
-uniform float edge_thickness;
-
-uniform vec2 point;
-uniform float radius;
-
-uniform float inner_radius;
-
-uniform vec2 size;
-
-uniform vec2 center_a;
-uniform vec2 center_b;
-uniform float thickness;
-
-#define SDF_BUFFER_LENGTH 1024
-
-struct SdfCircle {
-    vec2 position;
-    float radius;
-};
-
-layout (std430, binding = 0) buffer SdfBuffer {
-	SdfCircle sdf_circles [SDF_BUFFER_LENGTH];
-};
 
 float sdf_circle(vec2 point, vec2 center, float radius) {
 	return length(point - center) - radius;	

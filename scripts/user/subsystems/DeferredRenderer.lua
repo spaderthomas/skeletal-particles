@@ -79,12 +79,12 @@ function DeferredRenderer:on_start_game()
   self.sdf_instances = BackedGpuBuffer:new('SdfInstance', 1024, instance_buffer)
 
   local sdf_quad = {
-    ffi.new('SdfVertex', { {0, 1}, {0, 1} }),
-    ffi.new('SdfVertex', { {0, 0}, {0, 0} }),
-    ffi.new('SdfVertex', { {1, 0}, {1, 0} }),
-    ffi.new('SdfVertex', { {0, 1}, {0, 1} }),
-    ffi.new('SdfVertex', { {1, 0}, {1, 0} }),
-    ffi.new('SdfVertex', { {1, 1}, {1, 1} }),
+    ffi.new('SdfVertex', { {-0.5, 0.5}, {-0.5, 0.5} }),
+    ffi.new('SdfVertex', { {-0.5, -0.5}, {-0.5, -0.5} }),
+    ffi.new('SdfVertex', { {0.5, -0.5}, {0.5, -0.5} }),
+    ffi.new('SdfVertex', { {-0.5, 0.5}, {-0.5, 0.5} }),
+    ffi.new('SdfVertex', { {0.5, -0.5}, {0.5, -0.5} }),
+    ffi.new('SdfVertex', { {0.5, 0.5}, {0.5, 0.5} }),
   }
   for sdf_vertex in tdengine.iterator.values(sdf_quad) do
     self.sdf_vertices.cpu_buffer:push(sdf_vertex)
@@ -94,9 +94,12 @@ function DeferredRenderer:on_start_game()
   self.sdf_instances.cpu_buffer:push(SdfInstance:new({
     position = Vector2:new(tdengine.math.random_float(0, 100), 10),
     color = tdengine.colors.red:to_vec3(),
-    rotation = 0.0
+    rotation = 0.0,
+    sdf_params = {
+      0.0, 0.5, 1.0
+    }
   }))
-self.sdf_instances:sync()
+  self.sdf_instances:sync()
 
 
   self.command_buffer = tdengine.gpu.command_buffer_create(GpuCommandBufferDescriptor:new({
@@ -128,7 +131,17 @@ self.sdf_instances:sync()
       {
         vertex_attributes = {
           {
+            count = 3,
+            kind = tdengine.enums.VertexAttributeKind.Float,
+            divisor = 1
+          },
+          {
             count = 2,
+            kind = tdengine.enums.VertexAttributeKind.Float,
+            divisor = 1
+          },
+          {
+            count = 1,
             kind = tdengine.enums.VertexAttributeKind.Float,
             divisor = 1
           },
@@ -138,26 +151,22 @@ self.sdf_instances:sync()
             divisor = 1
           },
           {
-            count = 1,
+            count = 3,
             kind = tdengine.enums.VertexAttributeKind.Float,
             divisor = 1
-          },
-          {
-            count = 1,
-            kind = tdengine.enums.VertexAttributeKind.U32,
-            divisor = 1
-          } 
+          }
         }
       }
    }
   })
 
-  self.buffers = GpuBufferBinding:new({
-    vertex = {
-      vertex_buffer,
-      instance_buffer
-    }
-  })
+  self.uniforms = {
+    shape = tdengine.gpu.uniform_create(GpuUniformDescriptor:new({
+      name = 'shape',
+      kind = GpuUniformKind.Enum
+    }))
+  }
+
 end
 
 function DeferredRenderer:on_begin_frame()
@@ -166,6 +175,18 @@ function DeferredRenderer:on_begin_frame()
   -- end
 
   self.lights.cpu_buffer:fast_clear()
+end
+
+function DeferredRenderer:draw_circle(px, py, radius, rotation, color)
+  self.sdf_instances.cpu_buffer:push(SdfInstance:new({
+    position = Vector2:new(px, py),
+    color = color:to_vec3(),
+    rotation = rotation,
+    shape = Sdf.Circle,
+    shape_data = {
+      radius = 10
+    }
+  }))
 end
 
 function DeferredRenderer:on_scene_rendered()
@@ -180,13 +201,10 @@ function DeferredRenderer:on_scene_rendered()
   if self.timer:update() then
     self.sdf_instances.cpu_buffer:fast_clear()
 
-    for i = 1, 10 do
-      self.sdf_instances.cpu_buffer:push(SdfInstance:new({
-        position = Vector2:new(tdengine.math.random_float(0, 100), 10),
-        color = tdengine.colors.red:to_vec3(),
-        rotation = 0.0
-      }))
-    end
+    -- for i = 1, 10 do
+      -- self:draw_circle(tdengine.math.random_float(0, 100), 10, 20, tdengine.colors.indian_red)
+    -- end
+    self:draw_circle(0, 10, 20, 1.0, tdengine.colors.indian_red)
     self.sdf_instances:sync()
 
     
@@ -194,17 +212,39 @@ function DeferredRenderer:on_scene_rendered()
   end
 
 
+  self.sdf_instances.cpu_buffer:fast_clear()
+
+  -- for i = 1, 10 do
+    -- self:draw_circle(tdengine.math.random_float(0, 100), 10, 20, tdengine.colors.indian_red)
+  -- end
+  self:draw_circle(0, 10, 20, tdengine.math.timed_sin(1, 0, 2 * tdengine.math.pi), tdengine.colors.indian_red)
+  self.sdf_instances:sync()
+
+
+  self.bindings = GpuBufferBinding:new({
+    vertex = {
+      self.sdf_vertices.gpu_buffer:to_ctype(),
+      self.sdf_instances.gpu_buffer:to_ctype(),
+    },
+    uniforms = {
+      {
+        uniform = self.uniforms.shape,
+        value = Sdf.Circle
+      }
+    }
+  })
+
   -- begin a render pass
   tdengine.gpu.begin_render_pass(self.command_buffer, self.render_pass)
   tdengine.gpu.bind_pipeline(self.command_buffer, self.pipeline)
-  tdengine.gpu.bind_buffers(self.command_buffer, self.buffers)
+  tdengine.gpu.apply_bindings(self.command_buffer, self.bindings)
   tdengine.gpu.set_world_space(self.command_buffer, true)
   tdengine.gpu.set_camera(self.command_buffer, tdengine.editor.find('EditorCamera').offset:to_ctype())
   tdengine.gpu.command_buffer_draw(self.command_buffer, GpuDrawCall:new({
     mode = GpuDrawMode.Instance,
     vertex_offset = 0,
     num_vertices = 6,
-    num_instances = 10,
+    num_instances = self.sdf_instances:size(),
   }))
   tdengine.gpu.end_render_pass(self.command_buffer)
   tdengine.gpu.command_buffer_submit(self.command_buffer)
@@ -227,8 +267,4 @@ function DeferredRenderer:on_scene_rendered()
   -- self.shapes:render()
 
   -- tdengine.subsystem.find('PostProcess'):upscale()
-end
-
-function DeferredRenderer:draw_circle(sdf_circle)
-  -- self.shape_buffers.circle.cpu_buffer:push(sdf_circle)
 end

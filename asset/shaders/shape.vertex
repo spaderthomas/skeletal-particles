@@ -1,21 +1,52 @@
 #include "common.glsl"
+#include "sdf.glsl"
 
 layout (location = 0) in vec2  vertex_position;
 layout (location = 1) in vec2  vertex_uv;
-layout (location = 2) in vec2  position;
-layout (location = 3) in vec3  color;
+layout (location = 2) in vec3  color;
+layout (location = 3) in vec2  position;
 layout (location = 4) in float rotation;
-layout (location = 5) in uint  shape;
+layout (location = 5) in float sdf_params_1 [3];
+layout (location = 6) in float sdf_params_2 [3];
 
 out vec3 f_color;
 out vec2 f_uv;
+out vec2 f_position;
+out float f_sdf_params_1 [3];
+out float f_sdf_params_2 [3];
 
 uniform mat4 projection;
 uniform mat4 view;
 
+
 void main() {
-	gl_Position = projection * view * vec4(vertex_position + position, 1.0, 1.0);
+	// if (shape == SDF_CIRCLE) {
+	// 	color = red;
+	// }
+	// else if (shape == SDF_BOX) {
+	// 	color = blue;
+	// }
+	// else if (shape == SDF_RING) {
+	// 	color = green;
+	// }
+
+	if (shape == SDF_CIRCLE) {
+		float radius = sdf_params_1[0];
+
+		vec2 translation = position;
+		mat3 transform_matrix = transformation_matrix(translation, rotation, vec2(radius * 2));
+		vec3 transformed_position = transform_matrix * vec3(vertex_position, 1.0);
+		gl_Position = projection * view * vec4(transformed_position.xy, 1.0, 1.0);
+	}
+	else {
+		vec2 transformed_position = vertex_position + position;
+		gl_Position = projection * view * vec4(transformed_position, 1.0, 1.0);
+	}
+
 	// f_color = color;
+		f_uv = vertex_uv;
+	f_position = position;
 	f_color = color;
-	f_uv = vertex_uv;
+	f_sdf_params_1 = sdf_params_1;
+	f_sdf_params_2 = sdf_params_2;
 }
