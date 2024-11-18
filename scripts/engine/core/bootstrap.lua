@@ -644,6 +644,14 @@ typedef struct {
   Vector2 uv;
 } Vertex;
 
+typedef enum {
+  SDF_SHAPE_CIRCLE = 0,
+  SDF_SHAPE_RING = 1,
+  SDF_SHAPE_BOX = 2,
+  SDF_SHAPE_ORIENTED_BOX = 3,
+  SDF_SHAPE_COMBINE = 100,
+} SdfShape;
+
 typedef struct {
   Vector2 position;
   Vector2 uv;
@@ -659,6 +667,7 @@ typedef struct {
   Vector2 position;
   float rotation;
   float edge_thickness;
+  SdfShape shape;
 } SdfHeader;
 
 typedef struct {
@@ -672,7 +681,15 @@ typedef struct {
   float outer_radius;
 } SdfRing;
 
+typedef struct {
+  SdfHeader header;
+  Vector2 size;
+} SdfBox;
 
+typedef struct {
+  SdfHeader header;
+  Vector2 size;
+} SdfOrientedBox;
 
 void draw_quad(Vector2 position, Vector2 size, Vector4 color);
 void draw_line(Vector2 start, Vector2 end, f32 thickness, Vector4 color);

@@ -216,11 +216,12 @@ function tdengine.ffi.init()
 	Sdf = tdengine.enum.define(
 		'Sdf',
 		{
-			Circle = 0,
-			Ring = 1,
-			Box = 2,
-			OrientedBox = 3,
-			}
+			Circle = tdengine.ffi.SDF_SHAPE_CIRCLE,
+			Ring = tdengine.ffi.SDF_SHAPE_RING,
+			Box = tdengine.ffi.SDF_SHAPE_BOX,
+			OrientedBox = tdengine.ffi.SDF_SHAPE_ORIENTED_BOX,
+			Combine = tdengine.ffi.SDF_SHAPE_COMBINE
+		}
 	)
 
 	imgui.internal.init_c_api()
@@ -630,6 +631,7 @@ end
 
 SdfHeader = tdengine.class.metatype('SdfHeader')
 function SdfHeader:init(params)
+	self.shape = params.shape:to_number()
 	self.color = tdengine.color(params.color):to_vec3()
   self.position = Vector2:new(params.position.x or 0, params.position.y or 0)
   self.rotation = params.rotation or 0
@@ -638,16 +640,26 @@ end
 
 SdfCircle = tdengine.class.metatype('SdfCircle')
 function SdfCircle:init(params)
+	params.shape = Sdf.Circle
 	self.header = SdfHeader:new(params)
   self.radius = params.radius or 10
 end
 
 SdfRing = tdengine.class.metatype('SdfRing')
 function SdfRing:init(params)
+	params.shape = Sdf.Ring
 	self.header = SdfHeader:new(params)
   self.inner_radius = params.inner_radius or 10
   self.outer_radius = params.outer_radius or 20
 end
+
+SdfOrientedBox = tdengine.class.metatype('SdfOrientedBox')
+function SdfOrientedBox:init(params)
+	params.shape = Sdf.OrientedBox
+	self.header = SdfHeader:new(params)
+  self.size = Vector2:new(params.size.x or 20, params.size.y or 2)
+end
+
 
 -------------------
 -- DYNAMIC ARRAY --

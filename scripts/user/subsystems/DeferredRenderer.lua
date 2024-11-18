@@ -25,6 +25,14 @@ function SdfRenderer:init()
       usage = GpuBufferUsage.Dynamic
     }))
 
+  self.sdf_combine_data = BackedGpuBuffer:owned(
+    'u32',
+    1024,
+    GpuBufferDescriptor:new({
+      kind = GpuBufferKind.Storage,
+      usage = GpuBufferUsage.Dynamic
+    }))
+
   -- There's only one quad in the vertex buffer for SDF shapes. They're transformed in the
   -- vertex shader according to the instance data.
   local sdf_quad = {
@@ -40,24 +48,44 @@ function SdfRenderer:init()
   end
   self.vertex_buffer:sync()
 
-  self:draw_circle(SdfCircle:new({
-    color = tdengine.colors.indian_red,
-    position = Vector2:new(0, 0),
-    rotation = 0,
-    radius = 10,
-    edge_thickness = 20,
-  }))
+  -- Some pretty interpolations for the shapes
+  self:build_interpolations()
 
-  self.instance_buffer:sync()
-  self.sdf_data:sync()
+  self.__editor_controls = {
+    reset_interpolation = false
+  }
 
-  self.interpolation = tdengine.interpolation.EaseInOut:new({
-    start = 12,
-    target = 15,
-    exponent = 3,
-    time = 1
+  tdengine.editor.set_editor_callbacks(self.__editor_controls, {
+    on_change_field = function(field)
+      self:on_change_field(field)
+    end
   })
 end
+
+function SdfRenderer:build_interpolations()
+  self.interpolation = {
+    ring_thickness = tdengine.interpolation.EaseInOut:new({
+      start = 12,
+      target = 15,
+      exponent = 3,
+      time = 1
+    }),
+    box_rotation = tdengine.interpolation.EaseInOutBounce:new({
+      start = 0,
+      target = 2 * tdengine.math.pi,
+      exponent = 2,
+      time = 1.5
+    }),
+  }
+end
+
+function SdfRenderer:on_change_field(field)
+  if field == 'reset_interpolation' then
+    self:build_interpolations()
+    self.__editor_controls.reset_interpolation = false
+  end
+end
+
 
 function SdfRenderer:push_header(sdf_header)
   self.sdf_data:push(sdf_header.color.x)
@@ -90,12 +118,33 @@ function SdfRenderer:draw_ring(sdf_ring)
   self.sdf_data:push(sdf_ring.outer_radius)
 end
 
+function SdfRenderer:draw_oriented_box(sdf_oriented_box)
+  self.instance_buffer:push(SdfInstance:new({
+    kind = Sdf.OrientedBox,
+    buffer_index = self.sdf_data:size()
+  }))
 
-function SdfRenderer:clear()
+  self:push_header(sdf_oriented_box.header)
+  self.sdf_data:push(sdf_oriented_box.size.x)
+  self.sdf_data:push(sdf_oriented_box.size.y)
+end
 
+function SdfRenderer:draw_combination(...)
+	local args = table.pack(...)
+end
+
+
+function SdfRenderer:update()
+  for interpolation in tdengine.iterator.values(self.interpolation) do
+    if interpolation:update() then
+      interpolation:reset()
+      interpolation:reverse()
+    end
+  end
   
   self.instance_buffer:fast_clear()
   self.sdf_data:fast_clear()
+  self.sdf_combine_data:fast_clear()
 
   self:draw_circle(SdfCircle:new({
     position = Vector2:new(0, 0),
@@ -113,10 +162,6 @@ function SdfRenderer:clear()
     radius = 10,
   }))
 
-  if self.interpolation:update() then
-    self.interpolation:reset()
-    self.interpolation:reverse()
-  end
 
   self:draw_ring(SdfRing:new({
     position = Vector2:new(50, 0),
@@ -124,12 +169,38 @@ function SdfRenderer:clear()
     rotation = 0,
     edge_thickness = 1.5,
     inner_radius = 10,
-    outer_radius = self.interpolation:get_value(),
+    outer_radius = self.interpolation.ring_thickness:get_value(),
   }))
 
+  self:draw_oriented_box(SdfOrientedBox:new({
+    position = Vector2:new(150, 0),
+    color = tdengine.colors.cadet_gray,
+    rotation = self.interpolation.box_rotation:get_value(),
+    edge_thickness = 1.5,
+    size = Vector2:new(40, 10)
+  }))
+
+  -- self:draw_combination(
+  --   SdfCircle:new({
+  --     position = Vector2:new(200, 0),
+  --     color = tdengine.colors.zomp,
+  --     edge_thickness = 1.5,
+  --     rotation = 0,
+  --     radius = 20,
+  --   }),
+  --   SdfCircle:new({
+  --     position = Vector2:new(210, 0),
+  --     color = tdengine.colors.zomp,
+  --     edge_thickness = 1.5,
+  --     rotation = 0,
+  --     radius = 20,
+  --   }))
+
+  -- )
 
   self.instance_buffer:sync()
   self.sdf_data:sync()
+  self.sdf_combine_data:sync()
 end
 
 DeferredRenderer = tdengine.subsystem.define('DeferredRenderer')
@@ -195,8 +266,9 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
-  self.sdf_renderer:clear()
-   self.bindings = GpuBufferBinding:new({
+  self.sdf_renderer:update()
+
+  self.bindings = GpuBufferBinding:new({
     vertex = {
       self.sdf_renderer.vertex_buffer.gpu_buffer:to_ctype(),
       self.sdf_renderer.instance_buffer.gpu_buffer:to_ctype(),
@@ -205,6 +277,10 @@ function DeferredRenderer:on_scene_rendered()
       {
         buffer = self.sdf_renderer.sdf_data.gpu_buffer:to_ctype(),
         base = 0
+      },
+      {
+        buffer = self.sdf_renderer.sdf_combine_data.gpu_buffer:to_ctype(),
+        base = 1
       }
     }
   })

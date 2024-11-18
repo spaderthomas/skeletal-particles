@@ -23,7 +23,10 @@ void main() {
 		sdf_distance = sdf_ring(world, header.position, ring.inner_radius, ring.outer_radius);
 	}
 	else if (sdf_index.shape == SDF_ORIENTED_BOX) {
-		DBG(red);
+		SdfOrientedBox box = pull_oriented_box(sdf_index.buffer_index);
+		vec2 axis = vec2(cos(header.rotation), sin(header.rotation));
+		vec2 offset = axis * box.size.x / 2;
+		sdf_distance = sdf_oriented_box(world, header.position - offset, header.position + offset, box.size.y);
 	}
 	else {
 		DBG(green);
