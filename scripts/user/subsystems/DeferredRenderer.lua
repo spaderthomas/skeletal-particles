@@ -50,6 +50,13 @@ function SdfRenderer:init()
 
   self.instance_buffer:sync()
   self.sdf_data:sync()
+
+  self.interpolation = tdengine.interpolation.EaseInOut:new({
+    start = 12,
+    target = 15,
+    exponent = 3,
+    time = 1
+  })
 end
 
 function SdfRenderer:push_header(sdf_header)
@@ -85,22 +92,43 @@ end
 
 
 function SdfRenderer:clear()
+
+  
   self.instance_buffer:fast_clear()
   self.sdf_data:fast_clear()
 
-  self.instance_buffer:push(SdfInstance:new({
-    kind = Sdf.Circle,
-    buffer_index = self.sdf_data:size()
-  }))
-  self.instance_buffer:sync()
-
   self:draw_circle(SdfCircle:new({
     position = Vector2:new(0, 0),
-    radius = 20,
     color = tdengine.colors.zomp,
-    edge_thickness = 2,
-    rotation = 0
+    edge_thickness = 1.5,
+    rotation = 0,
+    radius = 20,
   }))
+
+  self:draw_circle(SdfCircle:new({
+    position = Vector2:new(100, 0),
+    color = tdengine.colors.indian_red,
+    edge_thickness = 1.5,
+    rotation = 0,
+    radius = 10,
+  }))
+
+  if self.interpolation:update() then
+    self.interpolation:reset()
+    self.interpolation:reverse()
+  end
+
+  self:draw_ring(SdfRing:new({
+    position = Vector2:new(50, 0),
+    color = tdengine.colors.cadet_gray,
+    rotation = 0,
+    edge_thickness = 1.5,
+    inner_radius = 10,
+    outer_radius = self.interpolation:get_value(),
+  }))
+
+
+  self.instance_buffer:sync()
   self.sdf_data:sync()
 end
 

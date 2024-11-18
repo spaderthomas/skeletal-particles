@@ -18,6 +18,10 @@ void main() {
 		SdfCircle circle = pull_circle(sdf_index.buffer_index);
 		sdf_distance = sdf_circle(world, header.position, circle.radius);
 	}
+	else if (sdf_index.shape == SDF_RING) {
+		SdfRing ring = pull_ring(sdf_index.buffer_index);
+		sdf_distance = sdf_ring(world, header.position, ring.inner_radius, ring.outer_radius);
+	}
 	else if (sdf_index.shape == SDF_ORIENTED_BOX) {
 		DBG(red);
 	}

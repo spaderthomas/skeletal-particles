@@ -51,6 +51,7 @@ end
 
 function EaseInOutBounce:reset()
   self.accumulated = 0
+  self.t = 0
 end
 
 function EaseInOutBounce:reverse()
@@ -108,6 +109,7 @@ end
 
 function EaseInOutBounce2:reset()
   self.accumulated = 0
+  self.t = 0
 end
 
 function EaseInOutBounce2:reverse()

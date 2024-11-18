@@ -34,6 +34,7 @@ end
 
 function Lerp:reset()
   self.accumulated = 0
+  self.t = 0
 end
 
 function Lerp:reverse()
@@ -89,6 +90,7 @@ end
 
 function Lerp2:reset()
   self.accumulated = 0
+  self.t = 0
 end
 
 function Lerp2:reverse()
