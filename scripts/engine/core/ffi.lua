@@ -622,19 +622,31 @@ end
 ----------------
 -- SDF CIRCLE --
 ----------------
-SdfCircle = tdengine.class.metatype('SdfCircle')
-function SdfCircle:init(params)
-	self.color = tdengine.color(params.color):to_vec3()
-  self.position = Vector2:new(params.position.x or 0, params.position.y or 0)
-  self.radius = params.radius or 10
-  self.rotation = params.rotation or 0
-	self.edge_thickness = params.edge_thickness or 1
-end
-
 SdfInstance = tdengine.class.metatype('SdfInstance')
 function SdfInstance:init(params)
 	self.buffer_index = params.buffer_index or 0
 	self.kind = params.kind:to_number()
+end
+
+SdfHeader = tdengine.class.metatype('SdfHeader')
+function SdfHeader:init(params)
+	self.color = tdengine.color(params.color):to_vec3()
+  self.position = Vector2:new(params.position.x or 0, params.position.y or 0)
+  self.rotation = params.rotation or 0
+	self.edge_thickness = params.edge_thickness or 1
+end
+
+SdfCircle = tdengine.class.metatype('SdfCircle')
+function SdfCircle:init(params)
+	self.header = SdfHeader:new(params)
+  self.radius = params.radius or 10
+end
+
+SdfRing = tdengine.class.metatype('SdfRing')
+function SdfRing:init(params)
+	self.header = SdfHeader:new(params)
+  self.inner_radius = params.inner_radius or 10
+  self.outer_radius = params.outer_radius or 20
 end
 
 -------------------
@@ -697,6 +709,14 @@ end
 function BackedGpuBuffer:owned(ctype, capacity, gpu_buffer_descriptor)
 	gpu_buffer_descriptor.size = ffi.sizeof(ctype) * capacity
 	return BackedGpuBuffer:new(ctype, capacity, tdengine.ffi.gpu_buffer_create(gpu_buffer_descriptor))
+end
+
+function BackedGpuBuffer:fast_clear()
+	return self.cpu_buffer:fast_clear()
+end
+
+function BackedGpuBuffer:push(data)
+	return self.cpu_buffer:push(data)
 end
 
 function BackedGpuBuffer:size()

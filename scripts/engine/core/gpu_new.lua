@@ -160,6 +160,17 @@ function GpuVertexBufferBinding:init(buffer)
   end
 end
 
+GpuStorageBufferBinding = tdengine.class.metatype('GpuStorageBufferBinding')
+function GpuStorageBufferBinding:init(params)
+  if type(params.buffer) == 'cdata' then
+    self.buffer = params.buffer
+  else
+    self.buffer = tdengine.gpus.find(params.buffer)
+  end
+
+  self.base = params.base
+end
+
 GpuBufferBinding = tdengine.class.metatype('GpuBufferBinding')
 function GpuBufferBinding:init(params)
   local allocator = tdengine.ffi.ma_find('standard')
@@ -179,6 +190,15 @@ function GpuBufferBinding:init(params)
       self.uniforms.bindings[i - 1] = GpuUniformBinding:new(params.uniforms[i])
     end
   end
+
+  if params.storage then
+    self.storage.count = #params.storage
+    self.storage.bindings = allocator:alloc_array('GpuStorageBufferBinding', self.storage.count)
+    for i = 1, self.storage.count do
+      self.storage.bindings[i - 1] = GpuStorageBufferBinding:new(params.storage[i])
+    end
+  end
+
 end
 
 

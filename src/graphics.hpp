@@ -90,6 +90,11 @@ typedef struct {
 } GpuVertexBufferBinding;
 
 typedef struct {
+  GpuBuffer* buffer;
+  u32 base;
+} GpuStorageBufferBinding;
+
+typedef struct {
   GpuUniformData data;
   GpuUniform* uniform;
   u32 binding_index;
@@ -105,6 +110,11 @@ typedef struct {
     GpuUniformBinding* bindings;
     u32 count;
   } uniforms;
+
+  struct {
+    GpuStorageBufferBinding* bindings;
+    u32 count;
+  } storage;
 
   // UBO
   // SSBO
@@ -339,6 +349,13 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
           }
         }
 
+        auto& storage = command.bindings.storage;
+        for (u32 i = 0; i < storage.count; i++) {
+          auto& binding = storage.bindings[i];
+
+          assert(binding.buffer->kind == GpuBufferKind::Storage);
+          glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding.base, binding.buffer->handle);
+        }
 
         command_buffer->bindings = command.bindings;
       } break;

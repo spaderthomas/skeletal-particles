@@ -1,11 +1,65 @@
 #define SDF_CIRCLE 0
 #define SDF_RING 1
-#define SDF_BOX 2
+#define SDF_BOX 2   
 #define SDF_ORIENTED_BOX 3
 
 layout (std430, binding = 0) readonly buffer SdfBuffer {
     float sdf_data [];
+};
+
+////////////////////
+// VERTEX PULLING //
+////////////////////
+struct SdfIndex {
+    uint shape;
+    uint buffer_index;
+};
+
+SdfIndex decode_sdf_index(uint index) {
+    SdfIndex sdf_index;
+    sdf_index.shape = index & 0xFFFFu;
+	sdf_index.buffer_index = (index >> 16) & 0xFFFFu;
+    return sdf_index;
 }
+
+struct SdfHeader {
+    vec3 color;
+    vec2 position;
+    float rotation;
+    float edge_thickness;
+};
+
+SdfHeader pull_header(inout uint buffer_index) {
+    SdfHeader header;
+    header.color          = PULL_VEC3(sdf_data, buffer_index);
+    header.position       = PULL_VEC2(sdf_data, buffer_index);
+    header.rotation       = PULL_F32(sdf_data, buffer_index);
+    header.edge_thickness = PULL_F32(sdf_data, buffer_index);
+    return header;
+}
+
+struct SdfCircle {
+    float radius;
+};
+
+SdfCircle pull_circle(inout uint buffer_index) {
+    SdfCircle circle;
+    circle.radius = PULL_F32(sdf_data, buffer_index);
+    return circle;
+}
+
+struct SdfRing {
+    float inner_radius;
+    float outer_radius;
+};
+
+SdfRing pull_ring(inout uint buffer_index) {
+    SdfRing ring;
+    ring.inner_radius = PULL_F32(sdf_data, buffer_index);
+    ring.outer_radius = PULL_F32(sdf_data, buffer_index);
+    return ring;
+}
+
 
 float sdf_circle(vec2 point, vec2 center, float radius) {
 	return length(point - center) - radius;	

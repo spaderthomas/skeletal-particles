@@ -511,6 +511,11 @@ typedef struct {
 } GpuVertexBufferBinding;
 
 typedef struct {
+  GpuBuffer* buffer;
+  u32 base;
+} GpuStorageBufferBinding;
+
+typedef struct {
   GpuUniformData data;
   GpuUniform* uniform;
   u32 binding_index;
@@ -527,9 +532,14 @@ typedef struct {
     u32 count;
   } uniforms;
 
+  struct {
+    GpuStorageBufferBinding* bindings;
+    u32 count;
+  } storage;
+
   // UBO
-  // SSBO
 } GpuBufferBinding;
+
 
 
 //////////////////
@@ -647,10 +657,21 @@ typedef struct {
 typedef struct {
   Vector3 color;
   Vector2 position;
-  float radius;
   float rotation;
   float edge_thickness;
+} SdfHeader;
+
+typedef struct {
+  SdfHeader header;
+  float radius;
 } SdfCircle;
+
+typedef struct {
+  SdfHeader header;
+  float inner_radius;
+  float outer_radius;
+} SdfRing;
+
 
 
 void draw_quad(Vector2 position, Vector2 size, Vector4 color);

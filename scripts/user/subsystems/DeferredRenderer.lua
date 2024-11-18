@@ -36,20 +36,30 @@ function SdfRenderer:init()
     ffi.new('SdfVertex', { {0.5, 0.5}, {0.5, 0.5} }),
   }
   for vertex in tdengine.iterator.values(sdf_quad) do
-    self.vertex_buffer.cpu_buffer:push(vertex)
+    self.vertex_buffer:push(vertex)
   end
   self.vertex_buffer:sync()
 
   self:draw_circle(SdfCircle:new({
-    position = Vector2:new(0, 0),
-    radius = 10,
     color = tdengine.colors.indian_red,
+    position = Vector2:new(0, 0),
+    rotation = 0,
+    radius = 10,
     edge_thickness = 20,
-    rotation = 0
   }))
 
   self.instance_buffer:sync()
   self.sdf_data:sync()
+end
+
+function SdfRenderer:push_header(sdf_header)
+  self.sdf_data:push(sdf_header.color.x)
+  self.sdf_data:push(sdf_header.color.y)
+  self.sdf_data:push(sdf_header.color.z)
+  self.sdf_data:push(sdf_header.position.x)
+  self.sdf_data:push(sdf_header.position.y)
+  self.sdf_data:push(sdf_header.rotation)
+  self.sdf_data:push(sdf_header.edge_thickness)
 end
 
 function SdfRenderer:draw_circle(sdf_circle)
@@ -58,16 +68,41 @@ function SdfRenderer:draw_circle(sdf_circle)
     buffer_index = self.sdf_data:size()
   }))
 
-  self.sdf_data:push(sdf_circle.color.x)
-  self.sdf_data:push(sdf_circle.color.y)
-  self.sdf_data:push(sdf_circle.color.z)
-  self.sdf_data:push(sdf_circle.position.x)
-  self.sdf_data:push(sdf_circle.position.y)
+  self:push_header(sdf_circle.header)
   self.sdf_data:push(sdf_circle.radius)
-  self.sdf_data:push(sdf_circle.rotation)
-  self.sdf_data:push(sdf_circle.edge_thickness)
 end
 
+function SdfRenderer:draw_ring(sdf_ring)
+  self.instance_buffer:push(SdfInstance:new({
+    kind = Sdf.Ring,
+    buffer_index = self.sdf_data:size()
+  }))
+
+  self:push_header(sdf_ring.header)
+  self.sdf_data:push(sdf_ring.inner_radius)
+  self.sdf_data:push(sdf_ring.outer_radius)
+end
+
+
+function SdfRenderer:clear()
+  self.instance_buffer:fast_clear()
+  self.sdf_data:fast_clear()
+
+  self.instance_buffer:push(SdfInstance:new({
+    kind = Sdf.Circle,
+    buffer_index = self.sdf_data:size()
+  }))
+  self.instance_buffer:sync()
+
+  self:draw_circle(SdfCircle:new({
+    position = Vector2:new(0, 0),
+    radius = 20,
+    color = tdengine.colors.zomp,
+    edge_thickness = 2,
+    rotation = 0
+  }))
+  self.sdf_data:sync()
+end
 
 DeferredRenderer = tdengine.subsystem.define('DeferredRenderer')
 
@@ -132,10 +167,17 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
+  self.sdf_renderer:clear()
    self.bindings = GpuBufferBinding:new({
     vertex = {
-      self.sdf_vertices.gpu_buffer:to_ctype(),
-      self.sdf_instances.gpu_buffer:to_ctype(),
+      self.sdf_renderer.vertex_buffer.gpu_buffer:to_ctype(),
+      self.sdf_renderer.instance_buffer.gpu_buffer:to_ctype(),
+    },
+    storage = {
+      {
+        buffer = self.sdf_renderer.sdf_data.gpu_buffer:to_ctype(),
+        base = 0
+      }
     }
   })
 
