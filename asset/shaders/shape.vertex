@@ -3,34 +3,21 @@
 
 layout (location = 0) in vec2  vertex_position;
 layout (location = 1) in vec2  vertex_uv;
-layout (location = 2) in vec3  color;
-layout (location = 3) in vec2  position;
-layout (location = 4) in float rotation;
-layout (location = 5) in float sdf_params_1 [3];
-layout (location = 6) in float sdf_params_2 [3];
+layout (location = 2) in uint  buffer_index;
 
-out vec3 f_color;
+
 out vec2 f_uv;
 out vec2 f_position;
-out float f_sdf_params_1 [3];
-out float f_sdf_params_2 [3];
 
 uniform mat4 projection;
 uniform mat4 view;
 
 
 void main() {
-	// if (shape == SDF_CIRCLE) {
-	// 	color = red;
-	// }
-	// else if (shape == SDF_BOX) {
-	// 	color = blue;
-	// }
-	// else if (shape == SDF_RING) {
-	// 	color = green;
-	// }
-
+	uint shape = buffer_index & 0xFFFFu;
+	uint index = (buffer_index >> 16) & 0xFFFFu;
 	if (shape == SDF_CIRCLE) {
+		float radius = sdf_data[index];
 		float radius = sdf_params_1[0];
 
 		vec2 translation = position;

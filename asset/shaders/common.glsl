@@ -188,7 +188,8 @@ float plot(vec2 uv, float pct){
           smoothstep( pct, pct+0.02, uv.y);
 }
 
-
+#define PULL_VERTEX(buf, offset) (buf)[(offset)++]
+#define PULL_VEC3(buf, offset) vec3(PULL_VERTEX(buf, offset), PULL_VERTEX(buf, offset), PULL_VERTEX(buf, offset))
 
 //////////
 // MATH //

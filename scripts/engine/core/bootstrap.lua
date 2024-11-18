@@ -640,14 +640,15 @@ typedef struct {
 } SdfVertex;
 
 typedef struct {
-  Vector3 color;
-  Vector2 position;
-  float rotation;
-  float sdf_params [6];
+  u16 kind;
+  u16 buffer_index;
 } SdfInstance;
 
 typedef struct {
+  Vector3 color;
+  Vector2 position;
   float radius;
+  float rotation;
   float edge_thickness;
 } SdfCircle;
 

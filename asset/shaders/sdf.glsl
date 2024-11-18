@@ -3,7 +3,9 @@
 #define SDF_BOX 2
 #define SDF_ORIENTED_BOX 3
 
-uniform int shape;
+layout (std430, binding = 0) readonly buffer SdfBuffer {
+    float sdf_data [];
+}
 
 float sdf_circle(vec2 point, vec2 center, float radius) {
 	return length(point - center) - radius;	

@@ -553,9 +553,6 @@ function Matrix3:serialize()
 	return serialized
 end
 
-local m = Matrix3:Identity()
-local z = m[0]
--- print(m[0])
 
 Matrix4 = tdengine.class.metatype('Matrix4')
 
@@ -626,22 +623,18 @@ end
 -- SDF CIRCLE --
 ----------------
 SdfCircle = tdengine.class.metatype('SdfCircle')
-function SdfCircle:init(px, py, radius, edge_thickness)
-  self.position.x = px
-  self.position.y = py
-  self.radius = radius
-	self.edge_thickness = edge_thickness
+function SdfCircle:init(params)
+	self.color = tdengine.color(params.color):to_vec3()
+  self.position = Vector2:new(params.position.x or 0, params.position.y or 0)
+  self.radius = params.radius or 10
+  self.rotation = params.rotation or 0
+	self.edge_thickness = params.edge_thickness or 1
 end
 
 SdfInstance = tdengine.class.metatype('SdfInstance')
 function SdfInstance:init(params)
-	self.position = params.position
-	self.color = params.color
-	self.rotation = params.rotation
-
-	if Sdf.Circle:match(params.shape) then
-		self.sdf_params[0] = params.shape_data.radius
-	end
+	self.buffer_index = params.buffer_index or 0
+	self.kind = params.kind:to_number()
 end
 
 -------------------
@@ -699,6 +692,11 @@ function BackedGpuBuffer:init(ctype, capacity, gpu_buffer)
   self.ctype = ctype
   self.cpu_buffer = CpuBuffer:new(ctype, capacity)
   self.gpu_buffer = GpuBuffer:new(ctype, capacity, gpu_buffer)
+end
+
+function BackedGpuBuffer:owned(ctype, capacity, gpu_buffer_descriptor)
+	gpu_buffer_descriptor.size = ffi.sizeof(ctype) * capacity
+	return BackedGpuBuffer:new(ctype, capacity, tdengine.ffi.gpu_buffer_create(gpu_buffer_descriptor))
 end
 
 function BackedGpuBuffer:size()
