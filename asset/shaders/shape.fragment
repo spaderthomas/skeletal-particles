@@ -6,52 +6,70 @@ out vec4 color;
 in vec2 f_uv;
 flat in uint f_index;
 
+float sdf_to_alpha(float sdf_distance, float edge_thickness) {
+	return smoothstep(0.0, -edge_thickness, sdf_distance);
+}
+
+vec4 sdf_primitive(vec2 world, inout SdfDecodeContext context) {
+	context.header = pull_header(context.index.buffer_index);
+
+	context.sdf_distance = 0.0;	
+	if (context.index.shape == SDF_CIRCLE) {
+		SdfCircle circle = pull_circle(context.index.buffer_index);
+		context.sdf_distance = sdf_circle(world, context.header.position, circle.radius);
+	}
+	else if (context.index.shape == SDF_RING) {
+		SdfRing ring = pull_ring(context.index.buffer_index);
+		context.sdf_distance = sdf_ring(world, context.header.position, ring.inner_radius, ring.outer_radius);
+	}
+	else if (context.index.shape == SDF_ORIENTED_BOX) {
+		SdfOrientedBox box = pull_oriented_box(context.index.buffer_index);
+
+		vec2 axis = vec2(cos(context.header.rotation), sin(context.header.rotation));
+		vec2 offset = axis * box.size.x / 2;
+		context.sdf_distance = sdf_oriented_box(world, context.header.position - offset, context.header.position + offset, box.size.y);
+	}
+	return vec4(context.header.color, sdf_to_alpha(context.sdf_distance, context.header.edge_thickness));
+}
+
+vec4 sdf_combination(vec2 world, inout SdfDecodeContext context) {
+	uint combine_index = context.index.buffer_index;
+
+	uint num_sdfs = PULL_U32(sdf_combine_data, combine_index);
+
+	SdfCombineEntry entry = pull_sdf_combine_entry(combine_index);
+	context.index = entry.index;
+	sdf_primitive(world, context);
+
+	float sdf_distance = context.sdf_distance;
+	for (uint i = 1; i < num_sdfs; i++) {
+		SdfCombineEntry entry = pull_sdf_combine_entry(combine_index);
+		context.index = entry.index;
+		sdf_primitive(world, context);
+
+		if (entry.combine_op == SDF_COMBINE_OP_UNION) {
+			sdf_distance = sdf_op_union(sdf_distance, context.sdf_distance, entry.kernel);
+		}
+		else if (entry.combine_op == SDF_COMBINE_OP_SUBTRACTION) {
+			sdf_distance = sdf_op_subtraction(sdf_distance, context.sdf_distance, entry.kernel);
+		}
+		else if (entry.combine_op == SDF_COMBINE_OP_INTERSECTION) {
+			sdf_distance = sdf_op_intersection(sdf_distance, context.sdf_distance, entry.kernel);
+		}
+
+
+	}
+	return vec4(context.header.color, sdf_to_alpha(sdf_distance, context.header.edge_thickness));
+}
 
 void main() {
 	vec2 world = gl_FragCoord.xy + camera;
-	SdfIndex sdf_index = decode_sdf_index(f_index);
+	SdfDecodeContext context = sdf_decode_context(f_index);
 
-	SdfHeader header = pull_header(sdf_index.buffer_index);
-	float sdf_distance = 0.0;
-
-	if (sdf_index.shape == SDF_CIRCLE) {
-		SdfCircle circle = pull_circle(sdf_index.buffer_index);
-		sdf_distance = sdf_circle(world, header.position, circle.radius);
-	}
-	else if (sdf_index.shape == SDF_RING) {
-		SdfRing ring = pull_ring(sdf_index.buffer_index);
-		sdf_distance = sdf_ring(world, header.position, ring.inner_radius, ring.outer_radius);
-	}
-	else if (sdf_index.shape == SDF_ORIENTED_BOX) {
-		SdfOrientedBox box = pull_oriented_box(sdf_index.buffer_index);
-		vec2 axis = vec2(cos(header.rotation), sin(header.rotation));
-		vec2 offset = axis * box.size.x / 2;
-		sdf_distance = sdf_oriented_box(world, header.position - offset, header.position + offset, box.size.y);
+	if (context.index.shape == SDF_COMBINE) {
+		color = sdf_combination(world, context);
 	}
 	else {
-		DBG(green);
+		color = sdf_primitive(world, context);
 	}
-
-	// float dist = 0.0;
-	// if (shape == SDF_CIRCLE) {
-	// 	float radius = f_sdf_params_1[0];
-	// 	dist = sdf_circle(world, f_position, radius);
-	// }
-
-	// const float edge_thickness = 1;
-
-	float alpha = smoothstep(0.0, -header.edge_thickness, sdf_distance);
-	color = vec4(header.color, alpha);
-	// color = vec4(f_uv.x, f_uv.y, 1.0, alpha); 
-
-
-
-
-
-	// DBG_MIX(color, red, .5);
-	// color = vec4(f_color.xyz, alpha);
-
-// 	// if (f_sdf_params[1] == 0.5) {
-// 	// 	color = white;
-// 	// }
 }

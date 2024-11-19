@@ -2,8 +2,14 @@
 #define SDF_RING 1
 #define SDF_BOX 2   
 #define SDF_ORIENTED_BOX 3
-
 #define SDF_COMBINE 100
+
+#define SDF_COMBINE_OP_UNION 0
+#define SDF_COMBINE_OP_INTERSECTION 1
+#define SDF_COMBINE_OP_SUBTRACTION 2
+
+#define SDF_SMOOTH_KERNEL_NONE 0
+#define SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC 1
 
 layout (std430, binding = 0) readonly buffer SdfBuffer {
     float sdf_data [];
@@ -12,21 +18,6 @@ layout (std430, binding = 0) readonly buffer SdfBuffer {
 layout (std430, binding = 1) readonly buffer SdfCombineBuffer {
     uint sdf_combine_data [];
 };
-
-///////////////
-// SDF INDEX //
-///////////////
-struct SdfIndex {
-    uint shape;
-    uint buffer_index;
-};
-
-SdfIndex decode_sdf_index(uint index) {
-    SdfIndex sdf_index;
-    sdf_index.shape = index & 0xFFFFu;
-	sdf_index.buffer_index = (index >> 16) & 0xFFFFu;
-    return sdf_index;
-}
 
 
 ////////////////
@@ -134,4 +125,90 @@ float sdf_triangle_isosceles(vec2 point, vec2 size) {
     vec2 d = min(da, db);
                   
     return -sqrt(d.x) * sign(d.y);
+}
+
+
+///////////////
+// SDF INDEX //
+///////////////
+struct SdfIndex {
+    uint shape;
+    uint buffer_index;
+};
+
+
+struct SdfCombineEntry {
+    SdfIndex index;
+    uint combine_op;
+    uint kernel;
+};
+
+
+SdfIndex decode_sdf_index(uint index) {
+    SdfIndex sdf_index;
+    sdf_index.shape = index & 0xFFFFu;
+	sdf_index.buffer_index = (index >> 16) & 0xFFFFu;
+    return sdf_index;
+}
+
+SdfCombineEntry pull_sdf_combine_entry(inout uint index) {
+    SdfCombineEntry entry;
+    entry.index.shape = PULL_U32(sdf_combine_data, index);
+    entry.index.buffer_index = PULL_U32(sdf_combine_data, index);
+    entry.combine_op = PULL_U32(sdf_combine_data, index);
+    entry.kernel = PULL_U32(sdf_combine_data, index);
+    return entry;
+}
+
+
+////////////////////
+// SDF OPERATIONS //
+////////////////////
+float sdf_op_union(float a, float b, uint kernel) {
+    if (kernel == SDF_SMOOTH_KERNEL_NONE) {
+        return min(a, b);
+    }
+    else if (kernel == SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC) {
+        float k = 16.0;
+        float h = clamp( 0.5 + 0.5*(b-a)/k, 0.0, 1.0 );
+        return mix( b, a, h ) - k*h*(1.0-h);
+    }
+    return a;
+}
+
+float sdf_op_subtraction(float a, float b, uint kernel) {
+    if (kernel == SDF_SMOOTH_KERNEL_NONE) {
+        return max(-a, b);
+    }
+    else if (kernel == SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC) {
+        
+    }
+    return a;
+}
+
+float sdf_op_intersection(float a, float b, uint kernel) {
+    if (kernel == SDF_SMOOTH_KERNEL_NONE) {
+        return max(a, b);
+    }
+    else if (kernel == SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC) {
+        
+    }
+    return a;
+}
+
+
+////////////////////////
+// SDF DECODE CONTEXT //
+////////////////////////
+struct SdfDecodeContext {
+    SdfIndex index;
+    SdfHeader header;
+    float sdf_distance;
+    vec4 color;
+};
+
+SdfDecodeContext sdf_decode_context(uint index) {
+    SdfDecodeContext context;
+    context.index = decode_sdf_index(index);
+    return context;
 }

@@ -652,6 +652,18 @@ typedef enum {
   SDF_SHAPE_COMBINE = 100,
 } SdfShape;
 
+typedef enum {
+  SDF_COMBINE_OP_UNION = 0,
+  SDF_COMBINE_OP_INTERSECTION = 1,
+  SDF_COMBINE_OP_SUBTRACTION = 2,
+} SdfCombineOp;
+
+typedef enum {
+  SDF_SMOOTH_KERNEL_NONE = 0,
+  SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC = 1,
+} SdfSmoothingKernel;
+
+
 typedef struct {
   Vector2 position;
   Vector2 uv;
@@ -661,6 +673,17 @@ typedef struct {
   u16 kind;
   u16 buffer_index;
 } SdfInstance;
+
+typedef struct {
+  u32 num_sdfs;
+} SdfCombineHeader;
+
+typedef struct {
+  u32 kind;
+  u32 buffer_index;
+  SdfCombineOp combine_op;
+  SdfSmoothingKernel kernel;
+} SdfCombineEntry;
 
 typedef struct {
   Vector3 color;

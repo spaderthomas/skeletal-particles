@@ -42,6 +42,7 @@ const vec4 indian_red   = vec4(180.0 / 255.0, 101.0 / 255.0, 111.0 / 255.0, 255.
 #define DBG_VEC2(value) color = (vec4((value).rg, 0.0, 1.0)); return;
 #define DBG_VEC3(value) color = (vec4((value).rgb, 1.0)); return;
 #define DBG_MIX(sample_color, debug_color, t) color = mix((sample_color), (debug_color), (t)); return;
+#define DBG_SCALAR_GEQ(scalar, threshold) if ((scalar) >= threshold) { DBG(green); } else { DBG(red); }
 
 vec4 gray(float v) {
 	return vec4(vec3(v), 1.0);
@@ -188,6 +189,7 @@ float plot(vec2 uv, float pct){
           smoothstep( pct, pct+0.02, uv.y);
 }
 
+#define PULL_U32(buf, offset) (buf)[(offset)++]
 #define PULL_F32(buf, offset) (buf)[(offset)++]
 #define PULL_VEC2(buf, offset) vec2(PULL_F32(buf, offset), PULL_F32(buf, offset))
 #define PULL_VEC3(buf, offset) vec3(PULL_F32(buf, offset), PULL_F32(buf, offset), PULL_F32(buf, offset))

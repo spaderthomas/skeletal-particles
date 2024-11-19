@@ -224,6 +224,23 @@ function tdengine.ffi.init()
 		}
 	)
 
+	SdfCombineOp = tdengine.enum.define(
+		'SdfCombineOp',
+		{
+			Union = tdengine.ffi.SDF_COMBINE_OP_UNION,
+			Intersection = tdengine.ffi.SDF_COMBINE_OP_INTERSECTION,
+			Subtraction = tdengine.ffi.SDF_COMBINE_OP_SUBTRACTION,
+		}
+	)
+
+	SdfSmoothingKernel = tdengine.enum.define(
+		'SdfSmoothingKernel',
+		{
+			None = tdengine.ffi.SDF_SMOOTH_KERNEL_NONE,
+			PolynomialQuadratic = tdengine.ffi.SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC,
+		}
+	)
+
 	imgui.internal.init_c_api()
 	imgui.internal.init_lua_api()
 	imgui.internal.init_lua_api_overwrites()
@@ -626,7 +643,20 @@ end
 SdfInstance = tdengine.class.metatype('SdfInstance')
 function SdfInstance:init(params)
 	self.buffer_index = params.buffer_index or 0
-	self.kind = params.kind:to_number()
+	self.kind = tdengine.enum.is_enum(params.kind) and params.kind:to_number() or params.kind
+end
+
+SdfCombineHeader = tdengine.class.metatype('SdfCombineHeader')
+function SdfCombineHeader:init(params)
+	self.num_sdfs = params.num_sdfs
+end
+
+SdfCombineEntry = tdengine.class.metatype('SdfCombineEntry')
+function SdfCombineEntry:init(params)
+	self.kind = params.kind
+	self.buffer_index = params.buffer_index
+	self.combine_op = params.combine_op:to_number()
+	self.kernel = params.kernel:to_number()
 end
 
 SdfHeader = tdengine.class.metatype('SdfHeader')
