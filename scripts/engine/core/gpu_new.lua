@@ -64,7 +64,9 @@ GpuBufferDescriptor = tdengine.class.metatype('GpuBufferDescriptor')
 function GpuBufferDescriptor:init(params)
   self.kind = tdengine.enum.load(params.kind):to_number()
   self.usage = tdengine.enum.load(params.usage):to_number()
-  self.size = params.size or 0
+  -- self.size = params.size or 0
+  self.capacity = params.size
+  self.element_size = 1
 end
 
 

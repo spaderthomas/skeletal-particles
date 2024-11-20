@@ -269,7 +269,7 @@ void TextureAtlas::build_from_source() {
 		float32 left   = rect->x            / (float32)TEXTURE_ATLAS_SIZE;
 		float32 right  = (rect->x + size.x) / (float32)TEXTURE_ATLAS_SIZE;
 			
-		Vector2 uv [6] = fm_quad(top, bottom, left, right);
+		Vector2 uv [6] = TD_MAKE_QUAD(top, bottom, left, right);
 		memcpy(item->sprite->uv, uv, sizeof(Vector2) * 6);
 
 		// Copy the sprite into the image buffer
@@ -631,7 +631,7 @@ void create_sprite_ex(Sprite* sprite, const char* id, u8* data, i32 width, i32 h
 	sprite->size = Vector2I(width, height);
 	strncpy(sprite->file_path, id, MAX_PATH_LEN);
 
-	Vector2 uv [6] = fm_quad(0, 1, 0, 1);
+	Vector2 uv [6] = TD_MAKE_QUAD(0, 1, 0, 1);
 	memcpy(sprite->uv, uv, sizeof(Vector2) * 6);
 }
 

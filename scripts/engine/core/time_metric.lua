@@ -5,7 +5,7 @@ function tdengine.time_metric.init(name)
   self.metrics:add('frame') -- Created in C, so we don't need to check for its existence just for the first frame
   self.add('update')
   self.add('render')
-
+  self.add('gc')
 end
 
 function tdengine.time_metric.add(name)

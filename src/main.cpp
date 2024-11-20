@@ -8,6 +8,7 @@
 #include "utils/log.hpp"
 #include "utils/enum.hpp"
 #include "utils/array.hpp"
+#include "utils/fixed_array.hpp"
 #include "utils/memory.hpp"
 #include "utils/stack_array.hpp"
 #include "utils/ring_buffer.hpp"
@@ -77,6 +78,8 @@
 #define DYNAMIC_ARRAY_IMPLEMENTATION
 #include "utils/dyn_array.hpp"
 #include "utils/file_monitor.cpp"
+#define FIXED_ARRAY_IMPLEMENTATION
+#include "utils/fixed_array.hpp"
 #include "utils/log.cpp"
 #include "utils/memory.cpp"
 #include "utils/path.cpp"

@@ -148,24 +148,39 @@ function tdengine.ffi.init()
 	GpuUniformKind = tdengine.enum.define(
 		'GpuUniformKind',
 		{
-			None = tdengine.ffi.GPU_UNIFORM_NONE,
+			None =    tdengine.ffi.GPU_UNIFORM_NONE,
 			Matrix4 = tdengine.ffi.GPU_UNIFORM_MATRIX4,
 			Matrix3 = tdengine.ffi.GPU_UNIFORM_MATRIX3,
 			Matrix2 = tdengine.ffi.GPU_UNIFORM_MATRIX2,
 			Vector4 = tdengine.ffi.GPU_UNIFORM_VECTOR4,
 			Vector3 = tdengine.ffi.GPU_UNIFORM_VECTOR3,
 			Vector2 = tdengine.ffi.GPU_UNIFORM_VECTOR2,
-			F32 = tdengine.ffi.GPU_UNIFORM_F32,
-			I32 = tdengine.ffi.GPU_UNIFORM_I32,
+			F32 =     tdengine.ffi.GPU_UNIFORM_F32,
+			I32 =     tdengine.ffi.GPU_UNIFORM_I32,
 			Texture = tdengine.ffi.GPU_UNIFORM_TEXTURE,
-			Enum = tdengine.ffi.GPU_UNIFORM_ENUM,
+			Enum =    tdengine.ffi.GPU_UNIFORM_ENUM,
 		}
 	)
 
 
 	VertexAttributeKind = tdengine.enum.define_from_ctype('VertexAttributeKind')
-	GpuBufferKind = tdengine.enum.define_from_ctype('GpuBufferKind')
-	GpuBufferUsage = tdengine.enum.define_from_ctype('GpuBufferUsage')
+
+	GpuBufferUsage = tdengine.enum.define(
+		'GpuBufferUsage',
+		{
+			Static =  tdengine.ffi.GPU_BUFFER_USAGE_STATIC,
+			Dynamic = tdengine.ffi.GPU_BUFFER_USAGE_DYNAMIC,
+			Stream =  tdengine.ffi.GPU_BUFFER_USAGE_STREAM,
+		}
+	)
+
+	GpuBufferKind = tdengine.enum.define(
+		'GpuBufferKind',
+		{
+			Storage = tdengine.ffi.GPU_BUFFER_KIND_STORAGE,
+			Array = tdengine.ffi.GPU_BUFFER_KIND_ARRAY,
+		}
+	)
 
 	UniformKind = tdengine.enum.define(
 		'UniformKind',
@@ -668,6 +683,16 @@ function SdfHeader:init(params)
 	self.edge_thickness = params.edge_thickness or 1
 end
 
+function SdfHeader:init_raw(params)
+	local header = ffi.new('SdfHeader')
+	header.color = params[1]
+  header.position = params[2]
+  header.rotation = params[3]
+	header.edge_thickness = params[4]
+	header.shape = params[5]
+	return header
+end
+
 SdfCircle = tdengine.class.metatype('SdfCircle')
 function SdfCircle:init(params)
 	params.shape = Sdf.Circle
@@ -727,10 +752,9 @@ function CpuBuffer:init(ctype, capacity)
 end
 
 function CpuBuffer:push(element)
-  tdengine.debug.assert(self.size < self.capacity)
+  -- tdengine.debug.assert(self.size < self.capacity)
 
-	local slot = self.data + self.size
-	if element then slot[0] = element end
+	if element then self.data[self.size] = element end
   self.size = self.size + 1
 
 	return slot
@@ -740,6 +764,24 @@ function CpuBuffer:fast_clear()
   self.size = 0
 end
 
+function CpuBuffer:fast_push(value)
+	self.data[self.size] = value
+	self.size = self.size + 1
+end
+
+function tdengine.class.define_fast(name)
+
+end
+
+FastCpuBuffer = {}
+setmetatable(FastCpuBuffer, {
+	__index = {
+		push = function(self, value)
+			self.data[self.size] = value
+			self.size = self.size + 1
+		end
+	}
+})
 
 BackedGpuBuffer = tdengine.class.define('BackedGpuBuffer')
 function BackedGpuBuffer:init(ctype, capacity, gpu_buffer)

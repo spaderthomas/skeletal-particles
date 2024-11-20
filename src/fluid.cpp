@@ -409,7 +409,7 @@ void ef_draw(ArenaHandle handle) {
 
 	ef_bind(handle);
 
-	Vector2 uv [6] = fm_quad(1.0, 0.0, 0.0, 1.0);
+	Vector2 uv [6] = TD_MAKE_QUAD(1.0, 0.0, 0.0, 1.0);
 	float px = 0;
 	float py = system->render_size;
 	float dx = system->render_size;

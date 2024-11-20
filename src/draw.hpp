@@ -51,24 +51,12 @@ enum class GpuMemoryBarrier : u32 {
 	BufferUpdate = 1,
 };
 
-enum class GpuBufferKind : u32 {
-	Storage = 0,
-	Array = 1,
-};
 
-enum class GpuBufferUsage : u32 {
-	Static = 0,
-	Dynamic = 1,
-	Stream = 2,
-};
 
 i32 convert_blend_mode(BlendMode mode);
 u32 convert_draw_mode(DrawMode mode);
 u32 convert_gl_id(GlId id);
 u32 convert_memory_barrier(GpuMemoryBarrier barrier);
-u32 convert_buffer_kind(GpuBufferKind kind);
-u32 convert_buffer_usage(GpuBufferUsage usage);
-u32 buffer_kind_to_barrier(GpuBufferKind kind);
 
 
 enum class VertexAttributeKind : u32 {
@@ -192,30 +180,11 @@ FM_LUA_EXPORT void draw_quad_ex(float px, float py, float sx, float sy, Vector4 
 FM_LUA_EXPORT void draw_quad(Vector2 position, Vector2 size, Vector4 color);
 
 
-///////////////////
-// VERTEX BUFFER //
-///////////////////
-struct VertexBuffer {
-	u8* data;
-	u32 size;
-	u32 capacity;
-
-	u32 vertex_size;
-};
-
-void vertex_buffer_init(VertexBuffer* vertex_buffer, u32 max_vertices, u32 vertex_size);
-u8*  vertex_buffer_push(VertexBuffer* vertex_buffer, void* data, u32 count);
-u8*  vertex_buffer_reserve(VertexBuffer* vertex_buffer, u32 count);
-void vertex_buffer_clear(VertexBuffer* vertex_buffer);
-u32  vertex_buffer_byte_size(VertexBuffer* vertex_buffer);
-u8*  vertex_buffer_at(VertexBuffer* vertex_buffer, u32 index);
-
-
 /////////
 // GPU //
 /////////
 struct GpuGraphicsPipeline;
-struct GpuBuffer;
+typedef struct GpuBuffer GpuBuffer;
 
 struct GpuSsboBinding {
 	GpuBuffer* buffer;
@@ -252,7 +221,7 @@ struct GpuCommandBufferBatchedDescriptor {
 	u32 max_draw_calls = 1024;
 };
 struct GpuCommandBufferBatched {
-	VertexBuffer vertex_buffer;
+	FixedArray vertex_buffer;
 	Array<DrawCall> draw_calls;
 
 	u32 vao;
@@ -270,49 +239,10 @@ struct GpuGraphicsPipeline {
 };
 
 
-struct GpuBufferDescriptor {
-	GpuBufferKind kind;
-  GpuBufferUsage usage;
-	u32 size;
-};
-struct GpuBuffer {
-	GpuBufferKind kind;
-  GpuBufferUsage usage;
-	u32 size;
-	u32 handle;
-};
-
-// struct GpuCommandBufferDescriptor {
-// 	GpuVertexLayout* vertex_layout;
-// 	GpuBuffer* vertex_buffer;
-// 	u32 max_vertices;
-// 	u32 max_draw_calls;
-// };
-// struct GpuCommandBuffer {
-// 	Array<DrawCall> draw_calls;
-// 	GpuVertexLayout* vertex_layout;
-// 	GpuBuffer* vertex_buffer;
-// 	GpuBuffer* instance_buffer;
-// };
-//
-//
-//struct DefaultRenderer {
-//	GpuGraphicsPipeline* pipeline;
-//	GpuCommandBuffer* command_buffer;
-//	GpuRenderTarget* render_target;
-//	VertexBuffer vertex_buffer;
-//
-//	static constexpr u32 max_vertices = 64 * 1024;
-//	static constexpr u32 max_draw_calls = 1024;
-//};
-//DefaultRenderer default_renderer;
-
 struct RenderEngine {
 	Array<GpuCommandBufferBatched, 32>  command_buffers;
-	// Array<GpuCommandBuffer,        32>  commands;
 	Array<GpuRenderTarget,         32>  targets;
 	Array<GpuGraphicsPipeline,     32>  graphics_pipelines;
-	Array<GpuBuffer,               32>  gpu_buffers;
 	Array<GpuShader,               128> shaders;
 
 	GpuGraphicsPipeline* pipeline;
@@ -327,14 +257,6 @@ struct RenderEngine {
 };
 RenderEngine render;
 
-// FM_LUA_EXPORT GpuCommandBuffer* gpu_commands_create(GpuCommandBufferDescriptor descriptor);
-// FM_LUA_EXPORT DrawCall*         gpu_commands_alloc_draw_call(GpuCommandBuffer* command_buffer);
-// FM_LUA_EXPORT DrawCall*         gpu_commands_find_draw_call(GpuCommandBuffer* command_buffer);
-// FM_LUA_EXPORT DrawCall*         gpu_commands_flush_draw_call(GpuCommandBuffer* command_buffer);
-// FM_LUA_EXPORT void              gpu_commands_bind(GpuCommandBuffer* command_buffer);
-// FM_LUA_EXPORT void              gpu_commands_preprocess(GpuCommandBuffer* command_buffer);
-// FM_LUA_EXPORT void              gpu_commands_render(GpuCommandBuffer* command_buffer);
-// FM_LUA_EXPORT void              gpu_commands_submit(GpuCommandBuffer* command_buffer);
 
 /////////
 // GPU //
@@ -361,16 +283,16 @@ FM_LUA_EXPORT DrawCall*                gpu_graphics_pipeline_alloc_draw_call(Gpu
 FM_LUA_EXPORT void                     gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline);
 FM_LUA_EXPORT void                     gpu_graphics_pipeline_bind(GpuGraphicsPipeline* pipeline);
 FM_LUA_EXPORT void                     gpu_graphics_pipeline_submit(GpuGraphicsPipeline* pipeline);
-FM_LUA_EXPORT GpuBuffer*               gpu_buffer_create(GpuBufferDescriptor descriptor);
-FM_LUA_EXPORT void                     gpu_buffer_bind(GpuBuffer* buffer);
-FM_LUA_EXPORT void                     gpu_buffer_bind_base(GpuBuffer* buffer, u32 base);
-FM_LUA_EXPORT void                     gpu_buffer_sync(GpuBuffer* buffer, void* data, u32 size);
-FM_LUA_EXPORT void                     gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset);
-FM_LUA_EXPORT void                     gpu_buffer_zero(GpuBuffer* buffer, u32 size);
 
 FM_LUA_EXPORT void                     gpu_memory_barrier(GpuMemoryBarrier barrier);
 FM_LUA_EXPORT void                     gpu_dispatch_compute(GpuBuffer* buffer, u32 size);
 FM_LUA_EXPORT void                     gpu_swap_buffers();
+
+///////////////////////
+// BACKED GPU BUFFER //
+///////////////////////
+
+
 
 //////////////////////////////////
 // BATCHED OPENGL CONFIGURATION //

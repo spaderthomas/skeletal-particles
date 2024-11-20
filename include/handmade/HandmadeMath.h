@@ -289,6 +289,11 @@ typedef union HMM_Vec3
 
     struct
     {
+        float r, g, b;
+    };
+
+    struct
+    {
         HMM_Vec2 XY;
         float _Ignored0;
     };

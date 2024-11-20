@@ -332,7 +332,7 @@ void Background::load_tiles() {
 		sprite->size = { texture->width, texture->height };
 
 		// Each tile spans the entire image, so use trivial UVs
-		Vector2 uv [6] = fm_quad(0, 1, 0, 1);
+		Vector2 uv [6] = TD_MAKE_QUAD(0, 1, 0, 1);
 		for (u32 i = 0; i < 6; i++) sprite->uv[i] = uv[i];
 
 		// Mark the data to be loaded to the GPU

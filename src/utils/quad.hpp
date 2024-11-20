@@ -32,7 +32,7 @@ struct Primitive {
 	};
 };
 
-#define fm_quad(top, bottom, left, right) \
+#define TD_MAKE_QUAD(top, bottom, left, right) \
     {                                     \
         { left, top },                    \
         { left, bottom },                 \
@@ -42,27 +42,3 @@ struct Primitive {
         { right, bottom },                \
         { right, top }                    \
     }                                     
-
-#define fm_quad3(top, bottom, left, right, layer) \
-    { \
-        { left, top, layer }, \
-		{ left, bottom, layer }, \
-		{ right, bottom, layer }, \
-                          \
-        { left, top, layer }, \
-		{ right, bottom, layer }, \
-		{ right, top, layer } \
-    }                                     
-
-#define fm_quad_color(color) { color, color, color, color, color, color }
-
-// Cast sets of six vertices to this to make editing easier
-struct fm_quadview {
-	Vector2 tl;
-	Vector2 bl;
-	Vector2 br;
-	Vector2 tl2;
-	Vector2 br2;
-	Vector2 tr;
-};
-

@@ -22,12 +22,12 @@ void push_quad(float px, float py, float dx, float dy, Vector2* uv, float opacit
 }
 
 void push_quad(float px, float py, float dx, float dy, Vector2* uv, Vector4 color) {
-	static Vector2 default_uvs [6] = fm_quad(1, 0, 0, 1);
+	static Vector2 default_uvs [6] = TD_MAKE_QUAD(1, 0, 0, 1);
 	if (!uv) uv = default_uvs;
 
 	assert(render.pipeline);
 
-	Vector2 vx [6] = fm_quad(py, py - dy, px, px + dx);
+	Vector2 vx [6] = TD_MAKE_QUAD(py, py - dy, px, px + dx);
 	for (i32 i = 0; i < 6; i++) {
 		auto vertex = (Vertex*)gpu_command_buffer_alloc_vertex_data(render.pipeline->command_buffer, 1);
 		vertex->position.x = vx[i].x;
@@ -41,7 +41,7 @@ void draw_quad_ex(float px, float py, float sx, float sy, Vector4 color) {
 	set_active_shader("solid");
 	set_draw_mode(DrawMode::Triangles);
 		
-	Vector2 vxs [6] = fm_quad(py, py - sy, px, px + sx);
+	Vector2 vxs [6] = TD_MAKE_QUAD(py, py - sy, px, px + sx);
 	for (int32 i = 0; i < 6; i++) {
 		push_vertex(vxs[i].x, vxs[i].y, color);
 	}
@@ -624,52 +624,6 @@ void APIENTRY on_opengl_message(
 	int x = 0;
 }
 
-///////////////////
-// VERTEX BUFFER //
-///////////////////
-void vertex_buffer_init(VertexBuffer* buffer, u32 max_vertices, u32 vertex_size) {
-	assert(buffer);
-
-	buffer->size = 0;
-	buffer->capacity = max_vertices;
-	buffer->vertex_size = vertex_size;
-	buffer->data = (u8*)ma_alloc(&standard_allocator, max_vertices * vertex_size);
-}
-
-u8* vertex_buffer_at(VertexBuffer* buffer, u32 index) {
-	assert(buffer);
-	return buffer->data + (index * buffer->vertex_size);
-}
-
-u8* vertex_buffer_push(VertexBuffer* buffer, void* data, u32 count) {
-	assert(buffer);
-	assert(buffer->size < buffer->capacity);
-
-	auto vertices = vertex_buffer_reserve(buffer, count);
-	copy_memory(data, vertices, buffer->vertex_size * count);
-	return vertices;
-}
-
-u8* vertex_buffer_reserve(VertexBuffer* buffer, u32 count) {
-	assert(buffer);
-	
-	auto vertex = vertex_buffer_at(buffer, buffer->size);
-	buffer->size += count;
-	return vertex;
-}
-
-void vertex_buffer_clear(VertexBuffer* buffer) {
-	assert(buffer);
-
-	buffer->size = 0;
-}
-
-u32 vertex_buffer_byte_size(VertexBuffer* buffer) {
-	assert(buffer);
-
-	return buffer->size * buffer->vertex_size;
-}
-
 
 
 ////////////////
@@ -774,7 +728,7 @@ GpuCommandBufferBatched* gpu_create_command_buffer(GpuCommandBufferBatchedDescri
 	}
 
 	// Set up the CPU buffers
-	vertex_buffer_init(&buffer->vertex_buffer, descriptor.max_vertices, vertex_size);
+	fixed_array_init(&buffer->vertex_buffer, descriptor.max_vertices, vertex_size);
 	arr_init(&buffer->draw_calls, descriptor.max_draw_calls);
 
 	// Set up the GPU buffers
@@ -843,7 +797,7 @@ u8* gpu_command_buffer_alloc_vertex_data(GpuCommandBufferBatched* command_buffer
 	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
 	draw_call->count += count;
 
-	return vertex_buffer_reserve(&command_buffer->vertex_buffer, count);
+	return fixed_array_reserve(&command_buffer->vertex_buffer, count);
 }
 
 u8* gpu_command_buffer_push_vertex_data(GpuCommandBufferBatched* command_buffer, void* data, u32 count) {
@@ -852,14 +806,14 @@ u8* gpu_command_buffer_push_vertex_data(GpuCommandBufferBatched* command_buffer,
 	auto draw_call = gpu_command_buffer_find_draw_call(command_buffer);
 	draw_call->count += count;
 
-	return vertex_buffer_push(&command_buffer->vertex_buffer, data, count);
+	return fixed_array_push(&command_buffer->vertex_buffer, data, count);
 }
 
 void gpu_command_buffer_bind(GpuCommandBufferBatched* command_buffer) {
 	assert(command_buffer);
 	glBindVertexArray(command_buffer->vao);
 	glBindBuffer(GL_ARRAY_BUFFER, command_buffer->vbo);
-	glBufferData(GL_ARRAY_BUFFER, vertex_buffer_byte_size(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW); // @VERTEX
+	glBufferData(GL_ARRAY_BUFFER, fixed_array_byte_size(&command_buffer->vertex_buffer), command_buffer->vertex_buffer.data, GL_STREAM_DRAW); // @VERTEX
 }
 
 void gpu_command_buffer_preprocess(GpuCommandBufferBatched* command_buffer) {
@@ -889,7 +843,7 @@ void gpu_command_buffer_render(GpuCommandBufferBatched* command_buffer) {
 	}
 		
 	arr_clear(&command_buffer->draw_calls);
-	vertex_buffer_clear(&command_buffer->vertex_buffer); // @VERTEX
+	fixed_array_clear(&command_buffer->vertex_buffer); // @VERTEX
 }
 
 void gpu_command_buffer_submit(GpuCommandBufferBatched* command_buffer) {
@@ -1014,50 +968,7 @@ DrawCall* gpu_graphics_pipeline_alloc_draw_call(GpuGraphicsPipeline* pipeline) {
 
 
 
-/////////////////////
-// STORAGE BUFFERS //
-/////////////////////
-GpuBuffer* gpu_buffer_create(GpuBufferDescriptor descriptor) {
-	auto buffer = arr_push(&render.gpu_buffers);
-	buffer->kind = descriptor.kind;
-	buffer->usage = descriptor.usage;
-	buffer->size = descriptor.size;
-	glGenBuffers(1, &buffer->handle);
-	
-	gpu_buffer_sync(buffer, nullptr, buffer->size);
 
-	return buffer;
-}
-
-void gpu_memory_barrier(GpuMemoryBarrier barrier) {
-	glMemoryBarrier(convert_memory_barrier(barrier));
-}
-
-void gpu_buffer_bind(GpuBuffer* buffer) {
-	glBindBuffer(convert_buffer_kind(buffer->kind), buffer->handle);
-}
-
-void gpu_buffer_bind_base(GpuBuffer* buffer, u32 base) {
-	glBindBufferBase(convert_buffer_kind(buffer->kind), base, buffer->handle);
-}
-
-void gpu_buffer_sync(GpuBuffer* buffer, void* data, u32 size) {
-	gpu_buffer_bind(buffer);
-	glBufferData(convert_buffer_kind(buffer->kind), size, data, convert_buffer_usage(buffer->usage));
-	glMemoryBarrier(buffer_kind_to_barrier(buffer->kind));
-}
-
-void gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 byte_size, u32 byte_offset) {
-	gpu_buffer_bind(buffer);
-	glBufferSubData(convert_buffer_kind(buffer->kind), byte_offset, byte_size, data);
-	glMemoryBarrier(buffer_kind_to_barrier(buffer->kind));
-}
-
-
-void gpu_buffer_zero(GpuBuffer* buffer, u32 size) {
-	auto data = bump_allocator.alloc<u8>(size);
-	gpu_buffer_sync(buffer, data, size);
-}
 
 void gpu_dispatch_compute(GpuBuffer* buffer, u32 size) {
 
@@ -1073,7 +984,6 @@ void init_render() {
 	// arr_init(&render.commands);
 	arr_init(&render.targets);
 	arr_init(&render.graphics_pipelines);
-	arr_init(&render.gpu_buffers);
 	arr_init(&render.shaders);
 
 	auto swapchain = arr_push(&render.targets);
@@ -1315,11 +1225,11 @@ u32 convert_memory_barrier(GpuMemoryBarrier barrier) {
 	return 0;
 }
 
-u32 convert_buffer_kind(GpuBufferKind kind) {
-	if (kind == GpuBufferKind::Storage) {
+u32 buffer_kind_to_gl_buffer_kind(GpuBufferKind kind) {
+	if (kind == GPU_BUFFER_KIND_STORAGE) {
 		return GL_SHADER_STORAGE_BUFFER;
 	}
-	else if (kind == GpuBufferKind::Array) {
+	else if (kind == GPU_BUFFER_KIND_ARRAY) {
 		return GL_ARRAY_BUFFER;
 	}
 
@@ -1327,14 +1237,14 @@ u32 convert_buffer_kind(GpuBufferKind kind) {
 	return 0;
 }
 
-u32 convert_buffer_usage(GpuBufferUsage usage) {
-	if (usage == GpuBufferUsage::Static) {
+u32 buffer_usage_to_gl_buffer_usage(GpuBufferUsage usage) {
+	if (usage == GPU_BUFFER_USAGE_STATIC) {
 			return GL_STATIC_DRAW;
 	}
-	else if (usage == GpuBufferUsage::Dynamic) {
+	else if (usage == GPU_BUFFER_USAGE_DYNAMIC) {
 			return GL_DYNAMIC_DRAW;
 	}
-	else if (usage == GpuBufferUsage::Stream) {
+	else if (usage == GPU_BUFFER_USAGE_STREAM) {
 			return GL_STREAM_DRAW;
 	}
 
@@ -1342,11 +1252,11 @@ u32 convert_buffer_usage(GpuBufferUsage usage) {
 	return 0;
 }
 
-u32 buffer_kind_to_barrier(GpuBufferKind kind) {
-	if (kind == GpuBufferKind::Storage) {
+u32 buffer_kind_to_gl_barrier(GpuBufferKind kind) {
+	if (kind == GPU_BUFFER_KIND_STORAGE) {
 		return GL_SHADER_STORAGE_BARRIER_BIT;
 	}
-	else if (kind == GpuBufferKind::Array) {
+	else if (kind == GPU_BUFFER_KIND_ARRAY) {
 		return GL_BUFFER_UPDATE_BARRIER_BIT;
 	}
 

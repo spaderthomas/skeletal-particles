@@ -442,9 +442,9 @@ typedef void (APIENTRY  *GLVULKANPROCNV)(void);
 #ifndef GL_NV_gpu_shader5
 typedef khronos_int64_t GLint64EXT;
 #endif /* GL_NV_gpu_shader5 */
-#ifndef GL_NV_vertex_buffer_unified_memory
+#ifndef GL_NV_fixed_array_unified_memory
 typedef void (APIENTRYP PFNGLGETINTEGERUI64I_VNVPROC) (GLenum value, GLuint index, GLuint64EXT *result);
-#endif /* GL_NV_vertex_buffer_unified_memory */
+#endif /* GL_NV_fixed_array_unified_memory */
 #ifdef __cplusplus
 }
 #endif

@@ -3,5 +3,8 @@
 // function prototypes and structs in a header and implementations in a source file, the worst you'll have
 // to do is a forward declaration for circular dependencies.
 #include "user/user_callbacks.hpp"
+#include "user/sdf.h"
 
 #include "user/user_callbacks.cpp"
+#define SDF_IMPLEMENTATION
+#include "user/sdf.h"

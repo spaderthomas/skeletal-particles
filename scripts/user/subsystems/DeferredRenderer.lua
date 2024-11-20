@@ -1,9 +1,12 @@
 SdfRenderer = tdengine.class.define('SdfRenderer')
 
 function SdfRenderer:init()
+  local buffer_size = 256 * 1024
+  self.c_renderer = ffi.new('SdfRenderer [1]')
+  self.c_renderer[0] = ffi.C.sdf_renderer_create(buffer_size)
   self.vertex_buffer = BackedGpuBuffer:owned(
     'SdfVertex',
-    1024,
+    buffer_size,
     GpuBufferDescriptor:new({
       kind = GpuBufferKind.Array,
       usage = GpuBufferUsage.Static
@@ -11,7 +14,7 @@ function SdfRenderer:init()
 
   self.instance_buffer = BackedGpuBuffer:owned(
     'SdfInstance',
-    1024,
+    buffer_size,
     GpuBufferDescriptor:new({
       kind = GpuBufferKind.Array,
       usage = GpuBufferUsage.Static
@@ -19,7 +22,7 @@ function SdfRenderer:init()
 
   self.sdf_data = BackedGpuBuffer:owned(
     'float',
-    1024,
+    buffer_size,
     GpuBufferDescriptor:new({
       kind = GpuBufferKind.Storage,
       usage = GpuBufferUsage.Dynamic
@@ -27,7 +30,7 @@ function SdfRenderer:init()
 
   self.sdf_combine_data = BackedGpuBuffer:owned(
     'u32',
-    1024,
+    buffer_size,
     GpuBufferDescriptor:new({
       kind = GpuBufferKind.Storage,
       usage = GpuBufferUsage.Dynamic
@@ -47,6 +50,9 @@ function SdfRenderer:init()
     self.vertex_buffer:push(vertex)
   end
   self.vertex_buffer:sync()
+
+  -- Add a timer
+  tdengine.time_metric.add('sdf')
 
   -- Some pretty interpolations for the shapes
   self:build_interpolations()
@@ -171,7 +177,6 @@ function SdfRenderer:draw_combination(...)
   end
 end
 
-
 function SdfRenderer:update()
   for interpolation in tdengine.iterator.values(self.interpolation) do
     if interpolation:update() then
@@ -235,6 +240,78 @@ function SdfRenderer:update()
     })
   )
 
+  tdengine.ffi.tm_begin('sdf')
+  local fast = FastCpuBuffer
+  fast.data = self.sdf_data.cpu_buffer.data
+  fast.size = self.sdf_data.cpu_buffer.size
+
+  local faster = {
+    data = self.sdf_data.cpu_buffer.data,
+    size = self.sdf_data.cpu_buffer.size
+    }
+  local sdf = SdfCircle:new({
+    position = Vector2:new(x, y),
+    color = tdengine.colors.prussian_blue,
+    edge_thickness = 1.5,
+    rotation = 0,
+    radius = 5
+  })
+  local instance = SdfInstance:new({
+    kind = Sdf.Circle,
+    buffer_index = 0
+  })
+  local grid_width = 20
+  local grid_size = 400
+  -- for x = 0, grid_size, grid_width do
+  --     for y = 0, grid_size, grid_width do
+  self.c_renderer[0].vertex_data.size = 0
+  for i = 0, 10000 do
+    -- ffi.C.sdf_circle(self.c_renderer, 5);
+        -- instance.buffer_index = self.sdf_data:size()
+        -- self.instance_buffer:push(instance)
+  
+        -- faster.data[faster.size] = sdf.header.color.x
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.header.color.y
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.header.color.z
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.header.position.x
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.header.position.y
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.header.rotation
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.header.edge_thickness
+        -- faster.size = faster.size + 1
+        -- faster.data[faster.size] = sdf.radius
+        -- faster.size = faster.size + 1
+
+        -- fast:push(sdf.header.color.x)
+        -- fast:push(sdf.header.color.y)
+        -- fast:push(sdf.header.color.z)
+        -- fast:push(x)
+        -- fast:push(y)
+        -- fast:push(sdf.header.rotation)
+        -- fast:push(sdf.header.edge_thickness)
+        -- fast:push(sdf.radius)
+        -- self.sdf_data.cpu_buffer.size = fast.size
+
+
+        -- self.sdf_data:push(sdf.header.color.x)
+        -- self.sdf_data:push(sdf.header.color.y)
+        -- self.sdf_data:push(sdf.header.color.z)
+        -- self.sdf_data:push(i)
+        -- self.sdf_data:push(i)
+        -- self.sdf_data:push(sdf.header.rotation)
+        -- self.sdf_data:push(sdf.header.edge_thickness)
+        -- self.sdf_data:push(sdf.radius)
+      end
+  -- end
+
+  tdengine.ffi.tm_end('sdf')
+
+  -- print(self.sdf_data:size())
   self.instance_buffer:sync()
   self.sdf_data:sync()
   self.sdf_combine_data:sync()
@@ -246,19 +323,12 @@ function DeferredRenderer:init()
   self.render_enabled = true
   self.max_lights = 16;
   self.lights = nil
-  self.sdf_buffer_length = 1024
   self.shape_buffers = {}
 end
 
 function DeferredRenderer:on_start_game()
-  self.shape_buffers = {
-    circle = BackedGpuBuffer:new('SdfCircle', self.sdf_buffer_length)
-  }
-
-  self.lights = BackedGpuBuffer:new('Light', self.max_lights, tdengine.gpus.find(Buffer.Lights))
-  self.lights.gpu_buffer:zero()
-
-  self.sdf_renderer = SdfRenderer:new()
+  self.sdf_renderer = ffi.new('SdfRenderer [1]');
+  self.sdf_renderer = tdengine.ffi.sdf_renderer_create(1024)
 
   self.command_buffer = tdengine.gpu.command_buffer_create(GpuCommandBufferDescriptor:new({
     max_commands = 1024
@@ -267,92 +337,16 @@ function DeferredRenderer:on_start_game()
   self.render_pass = GpuRenderPass:new({
     color = RenderTarget.Color
   })
-
-  self.pipeline = GpuPipeline:new({
-    raster = {
-      shader = Shader.Shape,
-      primitive = GpuDrawPrimitive.Triangles
-    },
-    buffer_layouts = {
-      {
-        vertex_attributes = {
-          {
-            count = 2,
-            kind = tdengine.enums.GpuVertexAttributeKind.Float
-          },
-          {
-            count = 2,
-            kind = tdengine.enums.GpuVertexAttributeKind.Float
-          }
-        }
-      },
-      {
-        vertex_attributes = {
-          {
-            count = 1,
-            kind = tdengine.enums.VertexAttributeKind.U32,
-            divisor = 1
-          },
-        }
-      }
-    }
-  })
 end
 
 function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
-  self.sdf_renderer:update()
-
-  self.bindings = GpuBufferBinding:new({
-    vertex = {
-      self.sdf_renderer.vertex_buffer.gpu_buffer:to_ctype(),
-      self.sdf_renderer.instance_buffer.gpu_buffer:to_ctype(),
-    },
-    storage = {
-      {
-        buffer = self.sdf_renderer.sdf_data.gpu_buffer:to_ctype(),
-        base = 0
-      },
-      {
-        buffer = self.sdf_renderer.sdf_combine_data.gpu_buffer:to_ctype(),
-        base = 1
-      }
-    }
-  })
-
-  -- begin a render pass
   tdengine.gpu.begin_render_pass(self.command_buffer, self.render_pass)
-  tdengine.gpu.bind_pipeline(self.command_buffer, self.pipeline)
-  tdengine.gpu.apply_bindings(self.command_buffer, self.bindings)
   tdengine.gpu.set_world_space(self.command_buffer, true)
   tdengine.gpu.set_camera(self.command_buffer, tdengine.editor.find('EditorCamera').offset:to_ctype())
-  tdengine.gpu.command_buffer_draw(self.command_buffer, GpuDrawCall:new({
-    mode = GpuDrawMode.Instance,
-    vertex_offset = 0,
-    num_vertices = 6,
-    num_instances = self.sdf_renderer.instance_buffer:size(),
-  }))
+  tdengine.ffi.sdf_renderer_draw(self.sdf_renderer, self.command_buffer)
   tdengine.gpu.end_render_pass(self.command_buffer)
   tdengine.gpu.command_buffer_submit(self.command_buffer)
-
-  -- bind the buffers
-  -- draw a triangle
-  -- end the render pass
-  -- submit the commands
-
-  -- update dynamic uniforms
-  -- bind
-  -- draw a fullscreen quad
-  -- submit
-  -- self.visualize_light_map:add_uniform('num_lights', self.lights.cpu_buffer.size, tdengine.enums.UniformKind.I32)
-  -- self.visualize_light_map:render()
-
-  -- self.light_scene:render()
-  -- self.apply_lighting:add_uniform('num_lights', self.lights.cpu_buffer.size, tdengine.enums.UniformKind.I32)
-
-  -- self.shapes:render()
-
-  -- tdengine.subsystem.find('PostProcess'):upscale()
 end
