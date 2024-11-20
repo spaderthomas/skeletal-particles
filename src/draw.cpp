@@ -942,7 +942,7 @@ GpuGraphicsPipeline* gpu_graphics_pipeline_create(GpuGraphicsPipelineDescriptor 
 void gpu_graphics_pipeline_begin_frame(GpuGraphicsPipeline* pipeline) {
 	assert(pipeline);
 	auto& color_attachment = pipeline->color_attachment;
-	if (color_attachment.load_op == GpuLoadOp::Clear) {
+	if (color_attachment.load_op == GPU_LOAD_OP_CLEAR) {
 		gpu_render_target_clear(color_attachment.write);
 	}
 }

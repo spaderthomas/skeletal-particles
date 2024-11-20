@@ -57,47 +57,10 @@ function SdfRenderer:init()
   -- Some pretty interpolations for the shapes
   self:build_interpolations()
 
-  self.__editor_controls = {
-    reset_interpolation = false
-  }
 
-  tdengine.editor.set_editor_callbacks(self.__editor_controls, {
-    on_change_field = function(field)
-      self:on_change_field(field)
-    end
-  })
 end
 
-function SdfRenderer:build_interpolations()
-  self.interpolation = {
-    ring_thickness = tdengine.interpolation.EaseInOut:new({
-      start = 12,
-      target = 15,
-      exponent = 3,
-      time = 1
-    }),
-    box_rotation = tdengine.interpolation.EaseInOutBounce:new({
-      start = 0,
-      target = 2 * tdengine.math.pi,
-      exponent = 2,
-      time = 1.5
-    }),
-    merge_position = tdengine.interpolation.EaseInOut:new({
-      start = -10,
-      target = 10,
-      exponent = 2,
-      time = 1.5
-    }),
 
-  }
-end
-
-function SdfRenderer:on_change_field(field)
-  if field == 'reset_interpolation' then
-    self:build_interpolations()
-    self.__editor_controls.reset_interpolation = false
-  end
-end
 
 
 function SdfRenderer:push_instance(sdf)
@@ -324,18 +287,81 @@ function DeferredRenderer:init()
   self.max_lights = 16;
   self.lights = nil
   self.shape_buffers = {}
+
+  tdengine.time_metric.add('sdf')
+  tdengine.time_metric.add('sdf_c')
+
+
+  self.__editor_controls = {
+    reset_interpolation = false
+  }
+
+  self:build_interpolations()
+
+  tdengine.editor.set_editor_callbacks(self.__editor_controls, {
+    on_change_field = function(field)
+      self:on_change_field(field)
+    end
+  })
+end
+
+function DeferredRenderer:build_interpolations()
+  -- self.interpolation = {
+  --   ring_thickness = tdengine.interpolation.EaseInOut:new({
+  --     start = 12,
+  --     target = 15,
+  --     exponent = 3,
+  --     time = 1
+  --   }),
+  --   box_rotation = tdengine.interpolation.EaseInOutBounce:new({
+  --     start = 0,
+  --     target = 2 * tdengine.math.pi,
+  --     exponent = 2,
+  --     time = 1.5
+  --   }),
+  --   merge_position = tdengine.interpolation.EaseInOut:new({
+  --     start = -10,
+  --     target = 10,
+  --     exponent = 2,
+  --     time = 1.5
+  --   }),
+  -- }
+
+  self.interpolation = {}
+  for i = 1, 100 do
+    self.interpolation[i] = tdengine.interpolation.EaseInOut:new({
+      start = tdengine.math.random_float(3, 8),
+      target = tdengine.math.random_float(3, 8),
+      exponent = 3,
+      time = 1
+    })
+  end
+
+  self.interpolation_map = {}
+  self.interpolation_cache = {}
+end
+
+
+function DeferredRenderer:on_change_field(field)
+  if field == 'reset_interpolation' then
+    self:build_interpolations()
+    self.__editor_controls.reset_interpolation = false
+  end
 end
 
 function DeferredRenderer:on_start_game()
   self.sdf_renderer = ffi.new('SdfRenderer [1]');
-  self.sdf_renderer = tdengine.ffi.sdf_renderer_create(1024)
+  self.sdf_renderer = tdengine.ffi.sdf_renderer_create(256 * 1024)
 
   self.command_buffer = tdengine.gpu.command_buffer_create(GpuCommandBufferDescriptor:new({
     max_commands = 1024
   }))
 
   self.render_pass = GpuRenderPass:new({
-    color = RenderTarget.Color
+    color = {
+      attachment = RenderTarget.Color,
+      load = GpuLoadOp.Clear
+    }
   })
 end
 
@@ -343,14 +369,39 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
-  tdengine.ffi.sdf_circle_ex(
-    self.sdf_renderer,
-    0, 0,
-    1.0, 0.0, 1.0,
-    0.0,
-    1.5,
-    10
-  )
+  for name, interpolation in pairs(self.interpolation) do    
+    if interpolation:update() then
+      local jitter = tdengine.math.random_float(0, 1)
+      if jitter > .9 then
+      interpolation:reset()
+      interpolation:reverse()
+      end
+    end
+    self.interpolation_cache[name] = interpolation:get_value()
+  end
+
+  local render_in_c = false
+  local grid_width = 4
+  local grid_size = 400
+  if render_in_c then
+    tdengine.ffi.sdf_grid(self.sdf_renderer, grid_width, grid_size)
+  else
+    tdengine.ffi.tm_begin('sdf')
+    for x = 0, grid_size, grid_width do
+      for y = 0, grid_size, grid_width do
+        ffi.C.sdf_circle_ex(
+          self.sdf_renderer,
+          x, y,
+          x / grid_size, y / grid_size, 1.0,
+          0.0,
+          1.5,
+          8.0
+        )
+      end
+    end
+    tdengine.ffi.tm_end('sdf')
+  end
+
   tdengine.gpu.begin_render_pass(self.command_buffer, self.render_pass)
   tdengine.gpu.set_world_space(self.command_buffer, true)
   tdengine.gpu.set_camera(self.command_buffer, tdengine.editor.find('EditorCamera').offset:to_ctype())

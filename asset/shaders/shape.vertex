@@ -55,4 +55,7 @@ void main() {
 	// f_color = color;
 	f_uv = vertex_uv;
 	f_index = index;
+	// vec2 transformed_position = vertex_position * sdf_index.buffer_index;
+	// gl_Position = projection * view * vec4(transformed_position, 1.0, 1.0);
+
 }

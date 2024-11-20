@@ -132,7 +132,10 @@ end
 
 GpuRenderPass = tdengine.class.metatype('GpuRenderPass')
 function GpuRenderPass:init(params)
-  self.color = tdengine.gpus.find(params.color)
+  if params.color then
+    self.color.attachment = tdengine.gpus.find(params.color.attachment)
+    self.color.load = tdengine.enum.load(params.color.load):to_number()
+  end
 end
 
 GpuUniformBinding = tdengine.class.metatype('GpuUniformBinding')

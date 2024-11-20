@@ -64,27 +64,38 @@ function tdengine.ffi.init()
 	)
 
 	tdengine.enum.define(
+		'BlendFunction',
+		{
+			Add = tdengine.ffi.GPU_BLEND_FUNC_ADD,
+			Subtract = tdengine.ffi.GPU_BLEND_FUNC_SUBTRACT,
+			ReverseSubtract = tdengine.ffi.GPU_BLEND_FUNC_REVERSE_SUBTRACT,
+			Min = tdengine.ffi.GPU_BLEND_FUNC_MIN,
+			Max = tdengine.ffi.GPU_BLEND_FUNC_MAX,
+
+		}
+	)
+	tdengine.enum.define(
 		'BlendMode',
 		{
-			ZERO = tdengine.ffi.ZERO,
-			ONE = tdengine.ffi.ONE,
-			SRC_COLOR = tdengine.ffi.SRC_COLOR,
-			ONE_MINUS_SRC_COLOR = tdengine.ffi.ONE_MINUS_SRC_COLOR,
-			DST_COLOR = tdengine.ffi.DST_COLOR,
-			ONE_MINUS_DST_COLOR = tdengine.ffi.ONE_MINUS_DST_COLOR,
-			SRC_ALPHA = tdengine.ffi.SRC_ALPHA,
-			ONE_MINUS_SRC_ALPHA = tdengine.ffi.ONE_MINUS_SRC_ALPHA,
-			DST_ALPHA = tdengine.ffi.DST_ALPHA,
-			ONE_MINUS_DST_ALPHA = tdengine.ffi.ONE_MINUS_DST_ALPHA,
-			CONSTANT_COLOR = tdengine.ffi.CONSTANT_COLOR,
-			ONE_MINUS_CONSTANT_COLOR = tdengine.ffi.ONE_MINUS_CONSTANT_COLOR,
-			CONSTANT_ALPHA = tdengine.ffi.CONSTANT_ALPHA,
-			ONE_MINUS_CONSTANT_ALPHA = tdengine.ffi.ONE_MINUS_CONSTANT_ALPHA,
-			SRC_ALPHA_SATURATE = tdengine.ffi.SRC_ALPHA_SATURATE,
-			SRC1_COLOR = tdengine.ffi.SRC1_COLOR,
-			ONE_MINUS_SRC1_COLOR = tdengine.ffi.ONE_MINUS_SRC1_COLOR,
-			SRC1_ALPHA = tdengine.ffi.SRC1_ALPHA,
-			ONE_MINUS_SRC1_ALPHA = tdengine.ffi.ONE_MINUS_SRC1_ALPHA
+			ZERO = tdengine.ffi.GPU_BLEND_MODE_ZERO,
+			ONE = tdengine.ffi.GPU_BLEND_MODE_ONE,
+			SRC_COLOR = tdengine.ffi.GPU_BLEND_MODE_SRC_COLOR,
+			ONE_MINUS_SRC_COLOR = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_SRC_COLOR,
+			DST_COLOR = tdengine.ffi.GPU_BLEND_MODE_DST_COLOR,
+			ONE_MINUS_DST_COLOR = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_DST_COLOR,
+			SRC_ALPHA = tdengine.ffi.GPU_BLEND_MODE_SRC_ALPHA,
+			ONE_MINUS_SRC_ALPHA = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_SRC_ALPHA,
+			DST_ALPHA = tdengine.ffi.GPU_BLEND_MODE_DST_ALPHA,
+			ONE_MINUS_DST_ALPHA = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_DST_ALPHA,
+			CONSTANT_COLOR = tdengine.ffi.GPU_BLEND_MODE_CONSTANT_COLOR,
+			ONE_MINUS_CONSTANT_COLOR = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_CONSTANT_COLOR,
+			CONSTANT_ALPHA = tdengine.ffi.GPU_BLEND_MODE_CONSTANT_ALPHA,
+			ONE_MINUS_CONSTANT_ALPHA = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_CONSTANT_ALPHA,
+			SRC_ALPHA_SATURATE = tdengine.ffi.GPU_BLEND_MODE_SRC_ALPHA_SATURATE,
+			SRC1_COLOR = tdengine.ffi.GPU_BLEND_MODE_SRC1_COLOR,
+			ONE_MINUS_SRC1_COLOR = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_SRC1_COLOR,
+			SRC1_ALPHA = tdengine.ffi.GPU_BLEND_MODE_SRC1_ALPHA,
+			ONE_MINUS_SRC1_ALPHA = tdengine.ffi.GPU_BLEND_MODE_ONE_MINUS_SRC1_ALPHA
 		}
 	)
 
@@ -220,11 +231,11 @@ function tdengine.ffi.init()
 		}
 	)
 
-	tdengine.enum.define(
+	GpuLoadOp = tdengine.enum.define(
 		'GpuLoadOp',
 		{
-			None = 0,
-			Clear = 1,
+			None = tdengine.ffi.GPU_LOAD_OP_NONE,
+			Clear = tdengine.ffi.GPU_LOAD_OP_CLEAR,
 		}
 	)
 
@@ -863,23 +874,23 @@ function tdengine.draw_line(ax, ay, bx, by, thickness, color)
 end
 
 function tdengine.ffi.draw_image_l(image, position, size, opacity)
-	ffi.C.draw_image_ex(image, position.x, position.y, size.x, size.y, opacity or 1.0)
+	-- ffi.C.draw_image_ex(image, position.x, position.y, size.x, size.y, opacity or 1.0)
 end
 
 function tdengine.ffi.draw_line_l(a, b, thickness, color)
-	ffi.C.draw_line(a:to_ctype(), b:to_ctype(), thickness, tdengine.color_to_vec4(color))
+	-- ffi.C.draw_line(a:to_ctype(), b:to_ctype(), thickness, tdengine.color_to_vec4(color))
 end
 
 function tdengine.ffi.draw_circle_l(position, radius, color, edge_thickness)
-	ffi.C.draw_circle_sdf(position.x, position.y, radius, color:to_vec4(), edge_thickness or 2)
+	-- ffi.C.draw_circle_sdf(position.x, position.y, radius, color:to_vec4(), edge_thickness or 2)
 end
 
 function tdengine.ffi.draw_quad_l(position, size, color)
-	ffi.C.draw_quad(position:to_ctype(), size:to_ctype(), tdengine.color_to_vec4(color))
+	-- ffi.C.draw_quad(position:to_ctype(), size:to_ctype(), tdengine.color_to_vec4(color))
 end
 
 function tdengine.ffi.draw_quad_l_c(px, py, sx, sy, color)
-	ffi.C.draw_quad(ffi.new('Vector2', px, py), ffi.new('Vector2', sx, sy), tdengine.color_to_vec4(color))
+	-- ffi.C.draw_quad(ffi.new('Vector2', px, py), ffi.new('Vector2', sx, sy), tdengine.color_to_vec4(color))
 end
 
 function tdengine.set_blend_enabled(enabled)
@@ -896,7 +907,7 @@ function tdengine.get_mouse(coordinate)
 end
 
 function tdengine.ffi.draw_quad(px, py, sx, sy, color)
-	ffi.C.draw_quad(ffi.new('Vector2', px, py), ffi.new('Vector2', sx, sy), color)
+	-- ffi.C.draw_quad(ffi.new('Vector2', px, py), ffi.new('Vector2', sx, sy), color)
 end
 
 function tdengine.ffi.get_display_mode()

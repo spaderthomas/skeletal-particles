@@ -19,7 +19,7 @@ bool is_memory_equal(void* a, void* b, size_t len) {
     return 0 == memcmp(a, b, len);
 }
 
-void copy_memory(void* source, void* dest, u32 num_bytes) {
+inline void copy_memory(void* source, void* dest, u32 num_bytes) {
     std::memcpy(dest, source, num_bytes);
 }
 

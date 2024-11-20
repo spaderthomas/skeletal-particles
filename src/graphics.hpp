@@ -57,6 +57,37 @@ typedef enum {
 	GPU_BUFFER_USAGE_STREAM = 2,
 } GpuBufferUsage;
 
+typedef enum {
+  GPU_BLEND_FUNC_NONE,
+  GPU_BLEND_FUNC_ADD,
+  GPU_BLEND_FUNC_SUBTRACT,
+  GPU_BLEND_FUNC_REVERSE_SUBTRACT,
+  GPU_BLEND_FUNC_MIN,
+  GPU_BLEND_FUNC_MAX
+} GpuBlendFunction;
+
+typedef enum {
+	GPU_BLEND_MODE_ZERO,
+	GPU_BLEND_MODE_ONE,
+	GPU_BLEND_MODE_SRC_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_SRC_COLOR,
+	GPU_BLEND_MODE_DST_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_DST_COLOR,
+	GPU_BLEND_MODE_SRC_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_SRC_ALPHA,
+	GPU_BLEND_MODE_DST_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_DST_ALPHA,
+	GPU_BLEND_MODE_CONSTANT_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_CONSTANT_COLOR,
+	GPU_BLEND_MODE_CONSTANT_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_CONSTANT_ALPHA,
+	GPU_BLEND_MODE_SRC_ALPHA_SATURATE,
+	GPU_BLEND_MODE_SRC1_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_SRC1_COLOR,
+	GPU_BLEND_MODE_SRC1_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_SRC1_ALPHA
+} GpuBlendMode;
+
 //////////////
 // UNIFORMS //
 //////////////
@@ -113,7 +144,10 @@ typedef struct {
 // GPU RENDER PASS //
 /////////////////////
 typedef struct {
-  GpuRenderTarget* color;
+  struct {
+    GpuLoadOp load;
+    GpuRenderTarget* attachment;
+  } color;
 } GpuRenderPass;
 
 
@@ -160,6 +194,12 @@ typedef struct {
 // GPU PIPELINE //
 //////////////////
 typedef struct {
+  GpuBlendFunction fn;
+  GpuBlendMode source;
+  GpuBlendMode destination;
+} GpuBlendState;
+
+typedef struct {
   GpuShader* shader;
   GpuDrawPrimitive primitive;
 } GpuRasterState;
@@ -189,12 +229,14 @@ typedef struct {
 } GpuBufferLayout;
 
 typedef struct {
+  GpuBlendState blend;
   GpuRasterState raster;
 	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;
 } GpuPipelineDescriptor;
 
 typedef struct {
+  GpuBlendState blend;
   GpuRasterState raster;
 	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;
@@ -289,6 +331,8 @@ void* u32_to_gl_void_pointer(u32 value);
 u32 buffer_kind_to_gl_buffer_kind(GpuBufferKind kind);
 u32 buffer_usage_to_gl_buffer_usage(GpuBufferUsage usage);
 u32 buffer_kind_to_gl_barrier(GpuBufferKind kind);
+u32 blend_func_to_gl_blend_func(GpuBlendFunction func);
+u32 blend_mode_to_gl_blend_mode(GpuBlendMode mode);
 
 #endif // GRAPHICS_H
 
@@ -330,7 +374,13 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
 
     switch (command.kind) {
       case GPU_COMMAND_OP_BEGIN_RENDER_PASS: {
-        gpu_render_target_bind(command.render_pass.color);
+        switch (command.render_pass.color.load) {
+          case GPU_LOAD_OP_CLEAR: {
+            gpu_render_target_clear(command.render_pass.color.attachment);
+          }
+        }
+
+        gpu_render_target_bind(command.render_pass.color.attachment);
         command_buffer->render_pass = command.render_pass;
       } break;
 
@@ -343,11 +393,25 @@ void _gpu_command_buffer_submit(GpuCommandBuffer* command_buffer) {
       case GPU_COMMAND_OP_BIND_PIPELINE: {
         glUseProgram(command.pipeline->raster.shader->program);
 
-        auto target = command_buffer->render_pass.color;
+        auto target = command_buffer->render_pass.color.attachment;
         set_uniform_immediate_f32("master_time", engine.elapsed_time);
         set_uniform_immediate_mat4("projection", HMM_Orthographic_RH_NO(0, target->size.x, 0, target->size.y, GPU_NEAR_PLANE, GPU_FAR_PLANE));
         set_uniform_immediate_vec2("output_resolution", target->size);
         set_uniform_immediate_vec2("native_resolution", window.native_resolution);
+
+        if (command.pipeline->blend.fn == GPU_BLEND_FUNC_NONE) {
+          glDisable(GL_BLEND);
+        }
+        else {
+          glEnable(GL_BLEND);
+          glBlendEquation(blend_func_to_gl_blend_func(command.pipeline->blend.fn));
+          glBlendFunc(
+            blend_mode_to_gl_blend_mode(command.pipeline->blend.source), 
+            blend_mode_to_gl_blend_mode(command.pipeline->blend.destination)
+          );
+
+        }
+
         command_buffer->pipeline = command.pipeline;
       } break;
 
@@ -485,6 +549,7 @@ void _gpu_command_buffer_draw(GpuCommandBuffer* command_buffer, GpuDrawCall draw
 GpuPipeline* _gpu_pipeline_create(GpuPipelineDescriptor descriptor) {
   GpuPipeline* pipeline = arr_push(&command_renderer.pipelines);
   pipeline->raster = descriptor.raster;
+  pipeline->blend = descriptor.blend;
   copy_memory(descriptor.buffer_layouts, pipeline->buffer_layouts, descriptor.num_buffer_layouts * sizeof(GpuBufferLayout));
   pipeline->num_buffer_layouts = descriptor.num_buffer_layouts;
 
@@ -641,6 +706,8 @@ u32 gpu_backed_buffer_size(GpuBackedBuffer* buffer) {
 }
 
 void gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements) {
+  // std::memcpy(buffer->buffer.data + (buffer->buffer.size * buffer->buffer.vertex_size), data, buffer->buffer.vertex_size * num_elements);
+  // buffer->buffer.size += num_elements;
   fixed_array_push(&buffer->buffer, data, num_elements);
 }
 
@@ -659,6 +726,42 @@ u32 gpu_draw_primitive_to_gl_draw_primitive(GpuDrawPrimitive primitive) {
   }
 
   assert(false);
+  return 0;
+}
+
+u32 blend_func_to_gl_blend_func(GpuBlendFunction func) {
+  switch (func) {
+    case GPU_BLEND_FUNC_NONE:             return 0; break;
+    case GPU_BLEND_FUNC_ADD:              return GL_FUNC_ADD; break;
+    case GPU_BLEND_FUNC_SUBTRACT:         return GL_FUNC_SUBTRACT; break;
+    case GPU_BLEND_FUNC_REVERSE_SUBTRACT: return GL_FUNC_REVERSE_SUBTRACT; break;
+    case GPU_BLEND_FUNC_MIN:              return GL_MIN; break;
+    case GPU_BLEND_FUNC_MAX:              return GL_MAX; break;
+  };
+
+  TD_ASSERT(false);
+  return 0;
+}
+
+u32 blend_mode_to_gl_blend_mode(GpuBlendMode mode) {
+  switch (mode) {
+    case GPU_BLEND_MODE_ZERO: return GL_ZERO; break;
+    case GPU_BLEND_MODE_ONE: return GL_ONE; break;
+    case GPU_BLEND_MODE_SRC_COLOR: return GL_SRC_COLOR; break;
+    case GPU_BLEND_MODE_ONE_MINUS_SRC_COLOR: return GL_ONE_MINUS_SRC_COLOR; break;
+    case GPU_BLEND_MODE_DST_COLOR: return GL_DST_COLOR; break;
+    case GPU_BLEND_MODE_ONE_MINUS_DST_COLOR: return GL_ONE_MINUS_DST_COLOR; break;
+    case GPU_BLEND_MODE_SRC_ALPHA: return GL_SRC_ALPHA; break;
+    case GPU_BLEND_MODE_ONE_MINUS_SRC_ALPHA: return GL_ONE_MINUS_SRC_ALPHA; break;
+    case GPU_BLEND_MODE_DST_ALPHA: return GL_DST_ALPHA; break;
+    case GPU_BLEND_MODE_ONE_MINUS_DST_ALPHA: return GL_ONE_MINUS_DST_ALPHA; break;
+    case GPU_BLEND_MODE_CONSTANT_COLOR: return GL_CONSTANT_COLOR; break;
+    case GPU_BLEND_MODE_ONE_MINUS_CONSTANT_COLOR: return GL_ONE_MINUS_CONSTANT_COLOR; break;
+    case GPU_BLEND_MODE_CONSTANT_ALPHA: return GL_CONSTANT_ALPHA; break;
+    case GPU_BLEND_MODE_ONE_MINUS_CONSTANT_ALPHA: return GL_ONE_MINUS_CONSTANT_ALPHA; break;
+  }
+
+  TD_ASSERT(false);
   return 0;
 }
 

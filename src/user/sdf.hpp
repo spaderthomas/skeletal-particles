@@ -89,6 +89,7 @@ typedef struct {
 FM_LUA_EXPORT SdfRenderer sdf_renderer_create(u32 buffer_size);
 FM_LUA_EXPORT void sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer);
 FM_LUA_EXPORT void sdf_circle_ex(SdfRenderer* renderer, float px, float py, float r, float g, float b, float rotation, float edge_thickness, float radius);
+FM_LUA_EXPORT void sdf_grid(SdfRenderer* renderer, u32 grid_width, u32 grid_size);
 #endif
 
 #ifdef SDF_IMPLEMENTATION
@@ -155,6 +156,11 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   };
 
   renderer.pipeline = _gpu_pipeline_create({
+    .blend = {
+      .fn = GPU_BLEND_FUNC_ADD,
+      .source = GPU_BLEND_MODE_SRC_ALPHA,
+      .destination = GPU_BLEND_MODE_ONE_MINUS_SRC_ALPHA,
+    },
     .raster = {
       .shader = gpu_shader_find("shape"),
       .primitive = GPU_PRIMITIVE_TRIANGLES
@@ -169,7 +175,7 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
       },
       { 
         .vertex_attributes = {
-          { .kind = GPU_VERTEX_ATTRIBUTE_U32, .count = 2 },
+          { .kind = GPU_VERTEX_ATTRIBUTE_U32, .count = 2, .divisor = 1 },
         }, 
         .num_vertex_attributes = 1 
       },
@@ -178,23 +184,6 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   });
 
   return renderer;
-}
-
-void sdf_circle_ex(SdfRenderer* renderer, float px, float py, float r, float g, float b, float rotation, float edge_thickness, float radius) {
-  SdfInstance instance = {
-    .shape = SDF_SHAPE_CIRCLE,
-    .buffer_index = gpu_backed_buffer_size(&renderer->shape_data),
-  };
-  gpu_backed_buffer_push(&renderer->instances, &instance, 1);
-
-  gpu_backed_buffer_push(&renderer->shape_data, &r, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &g, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &b, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &px, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &py, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &rotation, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &edge_thickness, 1);
-  gpu_backed_buffer_push(&renderer->shape_data, &radius, 1);
 }
 
 void sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer) {
@@ -215,5 +204,40 @@ void sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer) 
   gpu_backed_buffer_clear(&renderer->shape_data);
   gpu_backed_buffer_clear(&renderer->combinations);
 }
+
+void sdf_circle_ex(SdfRenderer* renderer, float px, float py, float r, float g, float b, float rotation, float edge_thickness, float radius) {
+  SdfInstance instance = {
+    .shape = SDF_SHAPE_CIRCLE,
+    .buffer_index = gpu_backed_buffer_size(&renderer->shape_data),
+  };
+  gpu_backed_buffer_push(&renderer->instances, &instance, 1);
+
+  gpu_backed_buffer_push(&renderer->shape_data, &r, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &g, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &b, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &px, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &py, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &rotation, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &edge_thickness, 1);
+  gpu_backed_buffer_push(&renderer->shape_data, &radius, 1);
+}
+
+void sdf_grid(SdfRenderer* renderer, u32 grid_width, u32 grid_size) {
+  tm_begin("sdf_c");
+  for (u32 x = 0; x < grid_size; x += grid_width) {
+    for (u32 y = 0; y < grid_size; y += grid_width) {
+      sdf_circle_ex(renderer,
+        x, y,
+        0.40f, 0.65f, 0.55f, 
+        0.0f,
+        1.5f,
+        3.0f
+      );
+    }
+    
+  }
+  tm_end("sdf_c");
+}
+
 
 #endif

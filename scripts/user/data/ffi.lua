@@ -21,7 +21,8 @@ typedef struct {
 } SdfRenderer;
 
 SdfRenderer sdf_renderer_create(u32 buffer_size);
-void sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer);
-void sdf_circle_ex(SdfRenderer* renderer, float px, float py, float r, float g, float b, float rotation, float edge_thickness, float radius);
+void        sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer);
+void        sdf_circle_ex(SdfRenderer* renderer, float px, float py, float r, float g, float b, float rotation, float edge_thickness, float radius);
+void        sdf_grid(SdfRenderer* renderer, u32 grid_width, u32 grid_size);
 
 ]]

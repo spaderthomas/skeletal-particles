@@ -41,10 +41,6 @@ enum class GlId : u32 {
 };
 
 
-enum class GpuLoadOp : u32 {
-	None = 0,
-	Clear = 1
-};
 
 enum class GpuMemoryBarrier : u32 {
 	ShaderStorage = 0,
@@ -179,6 +175,10 @@ FM_LUA_EXPORT void draw_line(Vector2 start, Vector2 end, float thickness, Vector
 FM_LUA_EXPORT void draw_quad_ex(float px, float py, float sx, float sy, Vector4 color);
 FM_LUA_EXPORT void draw_quad(Vector2 position, Vector2 size, Vector4 color);
 
+typedef enum {
+	GPU_LOAD_OP_NONE = 0,
+	GPU_LOAD_OP_CLEAR = 1
+} GpuLoadOp;
 
 /////////
 // GPU //

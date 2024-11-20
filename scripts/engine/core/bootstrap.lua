@@ -448,8 +448,8 @@ typedef enum {
 } GlId;
 
 typedef enum {
-  GpuLoadOp_None,
-  GpuLoadOp_Clear,
+	GPU_LOAD_OP_NONE = 0,
+	GPU_LOAD_OP_CLEAR = 1
 } GpuLoadOp;
 
 typedef enum {
@@ -673,6 +673,37 @@ typedef enum {
 	GPU_UNIFORM_ENUM = 10,
 } GpuUniformKind;
 
+typedef enum {
+  GPU_BLEND_FUNC_NONE,
+  GPU_BLEND_FUNC_ADD,
+  GPU_BLEND_FUNC_SUBTRACT,
+  GPU_BLEND_FUNC_REVERSE_SUBTRACT,
+  GPU_BLEND_FUNC_MIN,
+  GPU_BLEND_FUNC_MAX
+} GpuBlendFunction;
+
+typedef enum {
+	GPU_BLEND_MODE_ZERO,
+	GPU_BLEND_MODE_ONE,
+	GPU_BLEND_MODE_SRC_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_SRC_COLOR,
+	GPU_BLEND_MODE_DST_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_DST_COLOR,
+	GPU_BLEND_MODE_SRC_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_SRC_ALPHA,
+	GPU_BLEND_MODE_DST_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_DST_ALPHA,
+	GPU_BLEND_MODE_CONSTANT_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_CONSTANT_COLOR,
+	GPU_BLEND_MODE_CONSTANT_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_CONSTANT_ALPHA,
+	GPU_BLEND_MODE_SRC_ALPHA_SATURATE,
+	GPU_BLEND_MODE_SRC1_COLOR,
+	GPU_BLEND_MODE_ONE_MINUS_SRC1_COLOR,
+	GPU_BLEND_MODE_SRC1_ALPHA,
+	GPU_BLEND_MODE_ONE_MINUS_SRC1_ALPHA
+} GpuBlendMode;
+
 
 //////////////
 // UNIFORMS //
@@ -705,9 +736,11 @@ typedef struct {
 // GPU RENDER PASS //
 /////////////////////
 typedef struct {
-  GpuRenderTarget* color;
+  struct {
+    GpuLoadOp load;
+    GpuRenderTarget* attachment;
+  } color;
 } GpuRenderPass;
-
 
 ////////////////////////
 // GPU BUFFER BINDING //
@@ -751,6 +784,12 @@ typedef struct {
 // GPU PIPELINE //
 //////////////////
 typedef struct {
+  GpuBlendFunction fn;
+  GpuBlendMode source;
+  GpuBlendMode destination;
+} GpuBlendState;
+
+typedef struct {
   GpuShader* shader;
   GpuDrawPrimitive primitive;
 } GpuRasterState;
@@ -779,12 +818,14 @@ typedef struct {
 } GpuBufferLayout;
 
 typedef struct {
+  GpuBlendState blend;
   GpuRasterState raster;
 	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;
 } GpuPipelineDescriptor;
 
 typedef struct {
+  GpuBlendState blend;
   GpuRasterState raster;
 	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;

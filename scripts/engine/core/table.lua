@@ -124,6 +124,20 @@ function table.collect_keys(t)
 	return keys
 end
 
+function table.random_key(t)
+	local keys = {}
+  for key in tdengine.iterator.keys(t) do 
+		table.insert(keys, key) 
+	end
+
+  return keys[math.random(#keys)]
+end
+
+function table.random_value(t)
+	return t[table.random_key(t)]
+end
+
+
 function table_address(t)
 	if not t then return '0x00000000' end
 

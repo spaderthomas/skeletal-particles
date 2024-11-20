@@ -10,3 +10,6 @@
 #define FM_LUA_EXPORT extern "C" __declspec(dllexport)
 
 #define TD_ALIGN(n) __declspec(align(n))
+
+// #define TD_ASSERT(condition) assert(condition)
+#define TD_ASSERT(condition)
