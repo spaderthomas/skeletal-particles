@@ -1,1 +1,1 @@
-const char* GIT_HASH = "dddf1f3";
+const char* GIT_HASH = "b24dd23";

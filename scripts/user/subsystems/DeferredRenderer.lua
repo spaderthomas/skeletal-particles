@@ -351,7 +351,7 @@ end
 
 function DeferredRenderer:on_start_game()
   self.sdf_renderer = ffi.new('SdfRenderer [1]');
-  self.sdf_renderer = tdengine.ffi.sdf_renderer_create(256 * 1024)
+  self.sdf_renderer = tdengine.ffi.sdf_renderer_create(1024 * 1024)
 
   self.command_buffer = tdengine.gpu.command_buffer_create(GpuCommandBufferDescriptor:new({
     max_commands = 1024
@@ -380,9 +380,11 @@ function DeferredRenderer:on_scene_rendered()
     self.interpolation_cache[name] = interpolation:get_value()
   end
 
+  local num_instances = 100000
+  local grid_width = 16
+  local grid_size = math.sqrt(num_instances) * grid_width
+
   local render_in_c = false
-  local grid_width = 4
-  local grid_size = 400
   if render_in_c then
     tdengine.ffi.sdf_grid(self.sdf_renderer, grid_width, grid_size)
   else

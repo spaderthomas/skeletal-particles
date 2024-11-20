@@ -94,7 +94,9 @@ FM_LUA_EXPORT void sdf_grid(SdfRenderer* renderer, u32 grid_width, u32 grid_size
 
 #ifdef SDF_IMPLEMENTATION
 SdfRenderer sdf_renderer_create(u32 buffer_size) {
-  SdfRenderer renderer;
+    SdfRenderer* r = standard_allocator.alloc<SdfRenderer>();
+    auto& renderer = *r;
+    printf("%p\n", &renderer);
 
   renderer.vertices = gpu_backed_buffer_create({
     .name = "SdfRendererVertices",
