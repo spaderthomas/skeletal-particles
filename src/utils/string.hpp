@@ -2,6 +2,11 @@ typedef char* tstring;
 typedef char* string;
 typedef const char* const_string;
 
+typedef struct {
+	u8* data;
+	u32 len;
+} String;
+
 char* copy_string(const_string str, u32 length, MemoryAllocator* allocator = nullptr);
 char* copy_string(const_string str, MemoryAllocator* allocator = nullptr);
 char* copy_string(const std::string& str, MemoryAllocator* allocator = nullptr);

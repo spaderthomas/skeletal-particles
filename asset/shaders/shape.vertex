@@ -3,18 +3,20 @@
 
 layout (location = 0) in vec2 vertex_position;
 layout (location = 1) in vec2 vertex_uv;
-layout (location = 2) in uint index;
+layout (location = 2) in uvec2 index;
 
 
 out vec2 f_uv;
-out uint f_index;
+out uvec2 f_index;
 
 uniform mat4 projection;
 uniform mat4 view;
 
 
 void main() {
-	SdfIndex sdf_index = decode_sdf_index(index);
+	SdfIndex sdf_index;
+	sdf_index.shape = index.x;
+	sdf_index.buffer_index = index.y;
 
 	SdfHeader header = pull_header(sdf_index.buffer_index);
 	if (sdf_index.shape == SDF_CIRCLE) {

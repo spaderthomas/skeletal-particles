@@ -4,7 +4,7 @@
 out vec4 color;
 
 in vec2 f_uv;
-flat in uint f_index;
+flat in uvec2 f_index;
 
 float sdf_to_alpha(float sdf_distance, float edge_thickness) {
 	return smoothstep(0.0, -edge_thickness, sdf_distance);

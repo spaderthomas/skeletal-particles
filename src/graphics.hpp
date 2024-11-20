@@ -87,6 +87,7 @@ typedef struct {
 // GPU BUFFERS //
 /////////////////
 typedef struct {
+  char name [64];
 	GpuBufferKind kind;
   GpuBufferUsage usage;
 	u32 capacity;
@@ -94,6 +95,7 @@ typedef struct {
 } GpuBufferDescriptor;
 
 struct GpuBuffer {
+  char name [64];
 	GpuBufferKind kind;
   GpuBufferUsage usage;
 	u32 size;
@@ -134,18 +136,18 @@ typedef struct {
 } GpuUniformBinding;
 
 typedef struct {
-  struct {
-    GpuVertexBufferBinding* bindings;
+  TD_ALIGN(16) struct {
+    GpuVertexBufferBinding bindings [8];
     u32 count;
   } vertex;
 
-  struct {
-    GpuUniformBinding* bindings;
+  TD_ALIGN(16) struct {
+    GpuUniformBinding bindings [8];
     u32 count;
   } uniforms;
 
-  struct {
-    GpuStorageBufferBinding* bindings;
+  TD_ALIGN(16) struct {
+    GpuStorageBufferBinding bindings [8];
     u32 count;
   } storage;
 
@@ -182,19 +184,19 @@ typedef struct {
 } GpuVertexAttribute;
 
 typedef struct {
-	GpuVertexAttribute* vertex_attributes;
+	GpuVertexAttribute vertex_attributes [8];
 	u32 num_vertex_attributes;
 } GpuBufferLayout;
 
 typedef struct {
   GpuRasterState raster;
-	GpuBufferLayout* buffer_layouts;
+	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;
 } GpuPipelineDescriptor;
 
 typedef struct {
   GpuRasterState raster;
-	GpuBufferLayout* buffer_layouts;
+	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;
 } GpuPipeline;
 
@@ -483,7 +485,6 @@ void _gpu_command_buffer_draw(GpuCommandBuffer* command_buffer, GpuDrawCall draw
 GpuPipeline* _gpu_pipeline_create(GpuPipelineDescriptor descriptor) {
   GpuPipeline* pipeline = arr_push(&command_renderer.pipelines);
   pipeline->raster = descriptor.raster;
-  pipeline->buffer_layouts = standard_allocator.alloc<GpuBufferLayout>(descriptor.num_buffer_layouts);
   copy_memory(descriptor.buffer_layouts, pipeline->buffer_layouts, descriptor.num_buffer_layouts * sizeof(GpuBufferLayout));
   pipeline->num_buffer_layouts = descriptor.num_buffer_layouts;
 
@@ -584,6 +585,7 @@ GpuUniform* _gpu_uniform_create(GpuUniformDescriptor descriptor) {
 /////////////////
 GpuBuffer* gpu_buffer_create(GpuBufferDescriptor descriptor) {
 	auto buffer = arr_push(&command_renderer.gpu_buffers);
+  copy_string_n(descriptor.name, 64, buffer->name, 64);
 	buffer->kind = descriptor.kind;
 	buffer->usage = descriptor.usage;
 	buffer->size = descriptor.capacity * descriptor.element_size;

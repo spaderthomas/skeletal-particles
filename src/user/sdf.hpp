@@ -78,13 +78,12 @@ typedef struct {
 } SdfOrientedBox;
 
 typedef struct {
+  GpuBufferBinding bindings;
   GpuBackedBuffer vertices;
   GpuBackedBuffer instances;
   GpuBackedBuffer combinations;
   GpuBackedBuffer shape_data;
-
   GpuPipeline* pipeline;
-  GpuBufferBinding bindings;
 } SdfRenderer;
 
 FM_LUA_EXPORT SdfRenderer sdf_renderer_create(u32 buffer_size);
@@ -97,6 +96,7 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   SdfRenderer renderer;
 
   renderer.vertices = gpu_backed_buffer_create({
+    .name = "SdfRendererVertices",
     .kind = GPU_BUFFER_KIND_ARRAY,
     .usage = GPU_BUFFER_USAGE_STATIC,
     .capacity = buffer_size,
@@ -104,6 +104,7 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   });
 
   renderer.instances = gpu_backed_buffer_create({
+    .name = "SdfRendererInstances",
     .kind = GPU_BUFFER_KIND_ARRAY,
     .usage = GPU_BUFFER_USAGE_DYNAMIC,
     .capacity = buffer_size,
@@ -111,6 +112,7 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   });
 
   renderer.combinations = gpu_backed_buffer_create({
+    .name = "SdfRendererCombinations",
     .kind = GPU_BUFFER_KIND_STORAGE,
     .usage = GPU_BUFFER_USAGE_DYNAMIC,
     .capacity = buffer_size,
@@ -118,7 +120,8 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   });
 
   renderer.shape_data = gpu_backed_buffer_create({
-    .kind = GPU_BUFFER_KIND_ARRAY,
+    .name = "SdfRendererShapeData",
+    .kind = GPU_BUFFER_KIND_STORAGE,
     .usage = GPU_BUFFER_USAGE_DYNAMIC,
     .capacity = buffer_size,
     .element_size = sizeof(float)
@@ -134,41 +137,21 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
   }
   gpu_backed_buffer_sync(&renderer.vertices);
 
-  // Buffer bindings
-  GpuVertexBufferBinding vertex_bindings [] = {
-    { .buffer = renderer.vertices.gpu_buffer },
-    { .buffer = renderer.instances.gpu_buffer },
-  };
-
-  GpuStorageBufferBinding storage_bindings [] = {
-    { .buffer = renderer.shape_data.gpu_buffer,   .base = 0 },
-    { .buffer = renderer.combinations.gpu_buffer, .base = 1 },
-  };
-
   renderer.bindings = {
     .vertex = {
-      .bindings = vertex_bindings,
+      .bindings = {
+        { .buffer = renderer.vertices.gpu_buffer },
+        { .buffer = renderer.instances.gpu_buffer },
+      },
       .count = 2
     },
     .storage = {
-      .bindings = storage_bindings,
+      .bindings = {
+        { .buffer = renderer.shape_data.gpu_buffer,   .base = 0 },
+        { .buffer = renderer.combinations.gpu_buffer, .base = 1 },
+      },
       .count = 2
     }
-  };
-
-  // Pipeline
-  GpuVertexAttribute vertex_attributes [] = {
-    { .kind = GPU_VERTEX_ATTRIBUTE_FLOAT, .count = 2 },
-    { .kind = GPU_VERTEX_ATTRIBUTE_FLOAT, .count = 2 },
-  };
-
-  GpuVertexAttribute instance_attributes [] = {
-    { .kind = GPU_VERTEX_ATTRIBUTE_U32, .count = 2 },
-  };
-
-  GpuBufferLayout buffer_layouts [] = {
-    { .vertex_attributes = vertex_attributes,   .num_vertex_attributes = 2 },
-    { .vertex_attributes = instance_attributes, .num_vertex_attributes = 1 },
   };
 
   renderer.pipeline = _gpu_pipeline_create({
@@ -176,7 +159,21 @@ SdfRenderer sdf_renderer_create(u32 buffer_size) {
       .shader = gpu_shader_find("shape"),
       .primitive = GPU_PRIMITIVE_TRIANGLES
     },
-    .buffer_layouts = buffer_layouts,
+    .buffer_layouts = {
+      { 
+        .vertex_attributes = {
+          { .kind = GPU_VERTEX_ATTRIBUTE_FLOAT, .count = 2 },
+          { .kind = GPU_VERTEX_ATTRIBUTE_FLOAT, .count = 2 },
+        },   
+        .num_vertex_attributes = 2 
+      },
+      { 
+        .vertex_attributes = {
+          { .kind = GPU_VERTEX_ATTRIBUTE_U32, .count = 2 },
+        }, 
+        .num_vertex_attributes = 1 
+      },
+    },
     .num_buffer_layouts = 2
   });
 
@@ -201,6 +198,10 @@ void sdf_circle_ex(SdfRenderer* renderer, float px, float py, float r, float g, 
 }
 
 void sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer) {
+  gpu_backed_buffer_sync(&renderer->instances);
+  gpu_backed_buffer_sync(&renderer->shape_data);
+  gpu_backed_buffer_sync(&renderer->combinations);
+
   _gpu_bind_pipeline(command_buffer, renderer->pipeline);
   _gpu_apply_bindings(command_buffer, renderer->bindings);
   _gpu_command_buffer_draw(command_buffer, {
@@ -209,6 +210,10 @@ void sdf_renderer_draw(SdfRenderer* renderer, GpuCommandBuffer* command_buffer) 
     .num_vertices = 6,
     .num_instances = gpu_backed_buffer_size(&renderer->instances)
   });
+  
+  gpu_backed_buffer_clear(&renderer->instances);
+  gpu_backed_buffer_clear(&renderer->shape_data);
+  gpu_backed_buffer_clear(&renderer->combinations);
 }
 
 #endif

@@ -17,6 +17,177 @@ typedef struct {
     char* data;
 } string;
 
+/*
+typedef union HMM_Vec2
+{
+    struct
+    {
+        float X, Y;
+    };
+
+    struct
+    {
+        float x, y;
+    };
+
+
+    struct
+    {
+        float U, V;
+    };
+
+    struct
+    {
+        float Left, Right;
+    };
+
+    struct
+    {
+        float Width, Height;
+    };
+
+    float Elements[2];
+} HMM_Vec2;
+
+typedef union HMM_Vec3
+{
+    struct
+    {
+        float X, Y, Z;
+    };
+
+    struct
+    {
+        float x, y, z;
+    };
+
+    struct
+    {
+        float U, V, W;
+    };
+
+    struct
+    {
+        float R, G, B;
+    };
+
+    struct
+    {
+        float r, g, b;
+    };
+
+    struct
+    {
+        HMM_Vec2 XY;
+        float _Ignored0;
+    };
+
+    struct
+    {
+        float _Ignored1;
+        HMM_Vec2 YZ;
+    };
+
+    struct
+    {
+        HMM_Vec2 UV;
+        float _Ignored2;
+    };
+
+    struct
+    {
+        float _Ignored3;
+        HMM_Vec2 VW;
+    };
+
+    float Elements[3];
+} HMM_Vec3;
+
+typedef union HMM_Vec4
+{
+    struct
+    {
+        union
+        {
+            HMM_Vec3 XYZ;
+            struct
+            {
+                float X, Y, Z;
+            };
+        };
+
+        float W;
+    };
+    struct
+    {
+        union
+        {
+            HMM_Vec3 RGB;
+            struct
+            {
+                float R, G, B;
+            };
+        };
+
+        float A;
+    };
+
+    struct
+    {
+        float x, y, z, w;
+    };
+
+    struct
+    {
+        float r, g, b, a;
+    };
+
+    struct
+    {
+        HMM_Vec2 XY;
+        float _Ignored0;
+        float _Ignored1;
+    };
+
+    struct
+    {
+        float _Ignored2;
+        HMM_Vec2 YZ;
+        float _Ignored3;
+    };
+
+    struct
+    {
+        float _Ignored4;
+        float _Ignored5;
+        HMM_Vec2 ZW;
+    };
+
+    float Elements[4];
+} HMM_Vec4;
+
+typedef union HMM_Mat2 {
+    float Elements[2][2];
+    HMM_Vec2 Columns[2];
+} HMM_Mat2;
+
+typedef union HMM_Mat3 {
+    float Elements[3][3];
+    HMM_Vec3 Columns[3];
+} HMM_Mat3;
+
+typedef union HMM_Mat4 {
+    float Elements[4][4];
+    HMM_Vec4 Columns[4];
+} HMM_Mat4;
+
+typedef HMM_Vec2 Vector2;
+typedef HMM_Vec3 Vector3;
+typedef HMM_Vec4 Vector4;
+typedef HMM_Mat2 Matrix2;
+typedef HMM_Mat3 Matrix3;
+typedef HMM_Mat4 Matrix4;
+*/
 typedef struct {
 	float x;
 	float y;
@@ -358,6 +529,7 @@ typedef struct {
 // GPU BUFFERS //
 /////////////////
 typedef struct {
+  char name [64];
 	GpuBufferKind kind;
   GpuBufferUsage usage;
 	u32 capacity;
@@ -365,6 +537,7 @@ typedef struct {
 } GpuBufferDescriptor;
 
 typedef struct {
+  char name [64];
 	GpuBufferKind kind;
   GpuBufferUsage usage;
 	u32 size;
@@ -555,23 +728,22 @@ typedef struct {
 } GpuUniformBinding;
 
 typedef struct {
-  struct {
-    GpuVertexBufferBinding* bindings;
+  __declspec(align(16)) struct {
+    GpuVertexBufferBinding bindings [8];
     u32 count;
   } vertex;
 
-  struct {
-    GpuUniformBinding* bindings;
+  __declspec(align(16)) struct {
+    GpuUniformBinding bindings [8];
     u32 count;
   } uniforms;
 
-  struct {
-    GpuStorageBufferBinding* bindings;
+  __declspec(align(16)) struct {
+    GpuStorageBufferBinding bindings [8];
     u32 count;
   } storage;
-
-  // UBO
 } GpuBufferBinding;
+
 
 
 
@@ -602,16 +774,22 @@ typedef struct {
 } GpuVertexAttribute;
 
 typedef struct {
-	GpuVertexAttribute* vertex_attributes;
+	GpuVertexAttribute vertex_attributes [8];
 	u32 num_vertex_attributes;
 } GpuBufferLayout;
 
 typedef struct {
   GpuRasterState raster;
+	GpuBufferLayout buffer_layouts [8];
+	u32 num_buffer_layouts;
+} GpuPipelineDescriptor;
 
-	GpuBufferLayout* buffer_layouts;
+typedef struct {
+  GpuRasterState raster;
+	GpuBufferLayout buffer_layouts [8];
 	u32 num_buffer_layouts;
 } GpuPipeline;
+
 
 
 ////////////////////////
@@ -1210,6 +1388,8 @@ function tdengine.init_phase_0()
     local file_path = ffi.string(ffi.C.resolve_format_path('engine_script', file_name).data)
     dofile(file_path)
   end
+
+
 end
 
 function tdengine.init_phase_1()

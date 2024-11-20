@@ -343,6 +343,14 @@ function DeferredRenderer:on_begin_frame()
 end
 
 function DeferredRenderer:on_scene_rendered()
+  tdengine.ffi.sdf_circle_ex(
+    self.sdf_renderer,
+    0, 0,
+    1.0, 0.0, 1.0,
+    0.0,
+    1.5,
+    10
+  )
   tdengine.gpu.begin_render_pass(self.command_buffer, self.render_pass)
   tdengine.gpu.set_world_space(self.command_buffer, true)
   tdengine.gpu.set_camera(self.command_buffer, tdengine.editor.find('EditorCamera').offset:to_ctype())

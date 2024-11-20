@@ -143,14 +143,6 @@ struct SdfCombineEntry {
     uint kernel;
 };
 
-
-SdfIndex decode_sdf_index(uint index) {
-    SdfIndex sdf_index;
-    sdf_index.shape = index & 0xFFFFu;
-	sdf_index.buffer_index = (index >> 16) & 0xFFFFu;
-    return sdf_index;
-}
-
 SdfCombineEntry pull_sdf_combine_entry(inout uint index) {
     SdfCombineEntry entry;
     entry.index.shape = PULL_U32(sdf_combine_data, index);
@@ -207,8 +199,9 @@ struct SdfDecodeContext {
     vec4 color;
 };
 
-SdfDecodeContext sdf_decode_context(uint index) {
+SdfDecodeContext sdf_decode_context(uvec2 index) {
     SdfDecodeContext context;
-    context.index = decode_sdf_index(index);
+    context.index.shape = index.x;
+    context.index.buffer_index = index.y;
     return context;
 }
