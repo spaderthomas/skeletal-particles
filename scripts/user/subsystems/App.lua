@@ -33,8 +33,8 @@ function App:on_start_game()
 	local game_views = tdengine.editor.find('GameViewManager')
   game_views:add_view(GameView:new(
 		'Game',
-		tdengine.gpus.find(RenderTarget.Editor),
-		tdengine.enums.GameViewSize.ExactSize, self.gbuffer_resolution,
+		tdengine.gpus.find(RenderTarget.Color),
+		tdengine.enums.GameViewSize.ExactSize, self.native_resolution,
 		tdengine.enums.GameViewPriority.Main))
 
   game_views:add_view(GameView:new(

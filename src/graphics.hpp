@@ -305,7 +305,7 @@ FM_LUA_EXPORT void               gpu_buffer_zero(GpuBuffer* buffer, u32 size);
 FM_LUA_EXPORT GpuBackedBuffer    gpu_backed_buffer_create(GpuBufferDescriptor descriptor);
 FM_LUA_EXPORT u32                gpu_backed_buffer_size(GpuBackedBuffer* buffer);
 FM_LUA_EXPORT void               gpu_backed_buffer_clear(GpuBackedBuffer* buffer);
-FM_LUA_EXPORT void               gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements);
+FM_LUA_EXPORT u8*                gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements);
 FM_LUA_EXPORT void               gpu_backed_buffer_sync(GpuBackedBuffer* buffer);
 
 
@@ -705,10 +705,8 @@ u32 gpu_backed_buffer_size(GpuBackedBuffer* buffer) {
   return buffer->buffer.size;
 }
 
-void gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements) {
-  // std::memcpy(buffer->buffer.data + (buffer->buffer.size * buffer->buffer.vertex_size), data, buffer->buffer.vertex_size * num_elements);
-  // buffer->buffer.size += num_elements;
-  fixed_array_push(&buffer->buffer, data, num_elements);
+u8* gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements) {
+  return fixed_array_push(&buffer->buffer, data, num_elements);
 }
 
 void gpu_backed_buffer_sync(GpuBackedBuffer* buffer) {

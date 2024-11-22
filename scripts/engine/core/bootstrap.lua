@@ -869,7 +869,7 @@ void               gpu_buffer_sync_subdata(GpuBuffer* buffer, void* data, u32 by
 void               gpu_buffer_zero(GpuBuffer* buffer, u32 size);
 GpuBackedBuffer    gpu_backed_buffer_create(GpuBufferDescriptor descriptor);
 u32                gpu_backed_buffer_size(GpuBackedBuffer* buffer);
-void               gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements);
+u8*                gpu_backed_buffer_push(GpuBackedBuffer* buffer, void* data, u32 num_elements);
 void               gpu_backed_buffer_sync(GpuBackedBuffer* buffer);
 
 
@@ -905,75 +905,6 @@ typedef struct {
   Vector2 uv;
 } Vertex;
 
-typedef enum {
-  SDF_SHAPE_CIRCLE = 0,
-  SDF_SHAPE_RING = 1,
-  SDF_SHAPE_BOX = 2,
-  SDF_SHAPE_ORIENTED_BOX = 3,
-  SDF_SHAPE_COMBINE = 100,
-} SdfShape;
-
-typedef enum {
-  SDF_COMBINE_OP_UNION = 0,
-  SDF_COMBINE_OP_INTERSECTION = 1,
-  SDF_COMBINE_OP_SUBTRACTION = 2,
-} SdfCombineOp;
-
-typedef enum {
-  SDF_SMOOTH_KERNEL_NONE = 0,
-  SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC = 1,
-} SdfSmoothingKernel;
-
-
-typedef struct {
-  Vector2 position;
-  Vector2 uv;
-} SdfVertex;
-
-typedef struct {
-  u16 kind;
-  u16 buffer_index;
-} SdfInstance;
-
-typedef struct {
-  u32 num_sdfs;
-} SdfCombineHeader;
-
-typedef struct {
-  u32 kind;
-  u32 buffer_index;
-  SdfCombineOp combine_op;
-  SdfSmoothingKernel kernel;
-} SdfCombineEntry;
-
-typedef struct {
-  Vector3 color;
-  Vector2 position;
-  float rotation;
-  float edge_thickness;
-  SdfShape shape;
-} SdfHeader;
-
-typedef struct {
-  SdfHeader header;
-  float radius;
-} SdfCircle;
-
-typedef struct {
-  SdfHeader header;
-  float inner_radius;
-  float outer_radius;
-} SdfRing;
-
-typedef struct {
-  SdfHeader header;
-  Vector2 size;
-} SdfBox;
-
-typedef struct {
-  SdfHeader header;
-  Vector2 size;
-} SdfOrientedBox;
 
 void draw_quad(Vector2 position, Vector2 size, Vector4 color);
 void draw_line(Vector2 start, Vector2 end, f32 thickness, Vector4 color);
@@ -1449,6 +1380,8 @@ function tdengine.init_phase_1()
   tdengine.audio.init()
   tdengine.gui.init()
   tdengine.scene.init()
+  tdengine.math.init()
+
 end
 
 function tdengine.init_phase_2()
@@ -1460,7 +1393,6 @@ function tdengine.init_phase_2()
   tdengine.window.init()
   tdengine.fonts.init()
   tdengine.shaders.init()
-  tdengine.math.init()
   tdengine.save.init()
   tdengine.editor.init()
   tdengine.persistent.init()

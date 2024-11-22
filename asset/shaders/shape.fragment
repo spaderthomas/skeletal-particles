@@ -41,10 +41,12 @@ vec4 sdf_combination(vec2 world, inout SdfDecodeContext context) {
 	context.index = entry.index;
 	sdf_primitive(world, context);
 
+
 	float sdf_distance = context.sdf_distance;
 	for (uint i = 1; i < num_sdfs; i++) {
 		SdfCombineEntry entry = pull_sdf_combine_entry(combine_index);
 		context.index = entry.index;
+	// FN_DBG_SCALAR_EQ(context.index.shape, SDF_CIRCLE);
 		sdf_primitive(world, context);
 
 		if (entry.combine_op == SDF_COMBINE_OP_UNION) {

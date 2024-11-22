@@ -45,7 +45,7 @@ u8* fixed_array_push(FixedArray* buffer, void* data, u32 count) {
 	TD_ASSERT(buffer->size < buffer->capacity);
 
 	auto vertices = fixed_array_reserve(buffer, count);
-	copy_memory(data, vertices, buffer->vertex_size * count);
+	if (data) copy_memory(data, vertices, buffer->vertex_size * count);
 	return vertices;
 }
 

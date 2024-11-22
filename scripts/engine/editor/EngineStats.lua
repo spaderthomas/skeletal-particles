@@ -130,8 +130,7 @@ function EngineStats:engine_viewer()
 	imgui.PopFont()
 
 	if imgui.TreeNode('Time') then
-		self.metrics.target_fps = tdengine.ffi.get_target_fps()
-		self.metrics.actual_fps = math.floor(1000.0 / self.metrics.frame.average)
+		
 	
 		imgui.extensions.Table(self.metrics)
 		imgui.TreePop()
@@ -439,9 +438,11 @@ function EngineStats:calculate_framerate()
 	if self.fps_timer:update(tdengine.dt) then
 		self.fps_timer:reset()
 
-		-- @imgui_buffer
 		local metrics = tdengine.time_metric.query_all()
 		table.merge(metrics, self.metrics)
+
+		self.metrics.target_fps = tdengine.ffi.get_target_fps()
+		self.metrics.actual_fps = math.floor(1000.0 / self.metrics.frame.average)
 	end
 end
 

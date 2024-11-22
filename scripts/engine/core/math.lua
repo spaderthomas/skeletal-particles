@@ -141,6 +141,10 @@ function tdengine.math.seed_rng()
   math.randomseed(os.clock() * 1000000)
 end
 
+function tdengine.math.turns_to_rads(turns)
+  return turns * 2 * tdengine.math.pi
+end
+
 -- Hash lookup table as defined by Ken Perlin
 -- This is a randomly arranged array of all numbers from 0-255 inclusive
 local permutation_raw = { 151, 160, 137, 91, 90, 15,

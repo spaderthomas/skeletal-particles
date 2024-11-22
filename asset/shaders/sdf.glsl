@@ -145,8 +145,8 @@ struct SdfCombineEntry {
 
 SdfCombineEntry pull_sdf_combine_entry(inout uint index) {
     SdfCombineEntry entry;
-    entry.index.shape = PULL_U32(sdf_combine_data, index);
     entry.index.buffer_index = PULL_U32(sdf_combine_data, index);
+    entry.index.shape = PULL_U32(sdf_combine_data, index);
     entry.combine_op = PULL_U32(sdf_combine_data, index);
     entry.kernel = PULL_U32(sdf_combine_data, index);
     return entry;
@@ -161,7 +161,7 @@ float sdf_op_union(float a, float b, uint kernel) {
         return min(a, b);
     }
     else if (kernel == SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC) {
-        float k = 16.0;
+        float k = 8.0;
         float h = clamp( 0.5 + 0.5*(b-a)/k, 0.0, 1.0 );
         return mix( b, a, h ) - k*h*(1.0-h);
     }
@@ -173,7 +173,9 @@ float sdf_op_subtraction(float a, float b, uint kernel) {
         return max(-a, b);
     }
     else if (kernel == SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC) {
-        
+        float k = 4.0;
+        float h = clamp( 0.5 - 0.5*(b + a)/k, 0.0, 1.0 );
+        return mix( b, -a, h ) + k*h*(1.0-h);
     }
     return a;
 }
@@ -183,7 +185,9 @@ float sdf_op_intersection(float a, float b, uint kernel) {
         return max(a, b);
     }
     else if (kernel == SDF_SMOOTH_KERNEL_POLYNOMIAL_QUADRATIC) {
-        
+        float k = 4.0;
+        float h = clamp( 0.5 - 0.5*(b - 1)/k, 0.0, 1.0 );
+        return mix( b, a, h ) + k*h*(1.0-h);
     }
     return a;
 }

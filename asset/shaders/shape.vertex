@@ -41,7 +41,7 @@ void main() {
 		gl_Position = projection * view * vec4(transformed_position.xy, 1.0, 1.0);
 	}
 	else if (sdf_index.shape == SDF_COMBINE) {
-		vec2 transformed_position = vertex_position * 100;
+		vec2 transformed_position = vertex_position * 5000;
 		gl_Position = projection * view * vec4(transformed_position, 1.0, 1.0);
 	}
 

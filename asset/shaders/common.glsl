@@ -43,6 +43,17 @@ const vec4 indian_red   = vec4(180.0 / 255.0, 101.0 / 255.0, 111.0 / 255.0, 255.
 #define DBG_VEC3(value) color = (vec4((value).rgb, 1.0)); return;
 #define DBG_MIX(sample_color, debug_color, t) color = mix((sample_color), (debug_color), (t)); return;
 #define DBG_SCALAR_GEQ(scalar, threshold) if ((scalar) >= threshold) { DBG(green); } else { DBG(red); }
+#define DBG_SCALAR_EQ(scalar, threshold)  if ((scalar) == value)     { DBG(green); } else { DBG(red); }
+
+#define FN_DBG(debug_color) return (vec4((debug_color).rgb, 1.0));
+#define FN_DBG_TEX(debug_texture) return texture(debug_texture, f_uv);
+#define FN_DBG_FLOAT(value) return make_red(value);
+#define FN_DBG_VEC2(value) return (vec4((value).rg, 0.0, 1.0));
+#define FN_DBG_VEC3(value) return (vec4((value).rgb, 1.0));
+#define FN_DBG_MIX(sample_color, debug_color, t) return mix((sample_color), (debug_color), (t));
+#define FN_DBG_BOOL(expr)  if (expr) { FN_DBG(green); } else { FN_DBG(red); }
+#define FN_DBG_SCALAR_GEQ(scalar, threshold) FN_DBG_BOOL((scalar) >= (threshold))
+#define FN_DBG_SCALAR_EQ(scalar, value)  FN_DBG_BOOL((scalar) == (value))
 
 vec4 gray(float v) {
 	return vec4(vec3(v), 1.0);
